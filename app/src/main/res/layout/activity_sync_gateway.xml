@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0F111A"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="32dp">
+
+        <!-- LOGO DINÁMICO (Oculto en el primer inicio) -->
+        <ImageView
+            android:id="@+id/logoGateway"
+            android:layout_width="220dp"
+            android:layout_height="120dp"
+            android:layout_marginBottom="40dp"
+            android:visibility="gone"
+            android:adjustViewBounds="true"
+            android:contentDescription="Gateway Icon" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:maxWidth="400dp"
+            android:orientation="vertical">
+
+            <EditText
+                android:id="@+id/inputAlpha"
+                android:layout_width="match_parent"
+                android:layout_height="55dp"
+                android:background="#1A1D29"
+                android:hint="Account ID"
+                android:textColorHint="#888888"
+                android:textColor="#FFFFFF"
+                android:padding="16dp"
+                android:inputType="textNoSuggestions"
+                android:layout_marginBottom="16dp"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:nextFocusDown="@+id/inputBeta" />
+
+            <EditText
+                android:id="@+id/inputBeta"
+                android:layout_width="match_parent"
+                android:layout_height="55dp"
+                android:background="#1A1D29"
+                android:hint="Secure Key"
+                android:textColorHint="#888888"
+                android:textColor="#FFFFFF"
+                android:padding="16dp"
+                android:inputType="textPassword"
+                android:layout_marginBottom="24dp"
+                android:focusable="true"
+                android:focusableInTouchMode="true"
+                android:nextFocusUp="@+id/inputAlpha"
+                android:nextFocusDown="@+id/btnSync" />
+
+            <Button
+                android:id="@+id/btnSync"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:text="CONNECT SYSTEM"
+                android:textColor="#FFFFFF"
+                android:backgroundTint="#E50914"
+                android:textStyle="bold"
+                android:focusable="true"
+                android:nextFocusUp="@+id/inputBeta" />
+
+            <ProgressBar
+                android:id="@+id/progressSync"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginTop="20dp"
+                android:visibility="gone"
+                android:indeterminateTint="#E50914"/>
+
+            <TextView
+                android:id="@+id/txtStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:gravity="center"
+                android:textColor="#FF5252"
+                android:textStyle="bold"
+                android:visibility="gone"/>
+
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

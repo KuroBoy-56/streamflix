@@ -1,21 +1,11 @@
 package com.streamflixreborn.streamflix.sync
 
 import android.content.Context
-import androidx.work.CoroutineWorker
+import androidx.work.Worker
 import androidx.work.WorkerParameters
 
-class CloudSyncWorker(
-    context: Context,
-    params: WorkerParameters,
-) : CoroutineWorker(context, params) {
-    override suspend fun doWork(): Result = try {
-        if (!SupabaseProvider.isConfigured || CloudSyncManager.currentUserId() == null) {
-            Result.success()
-        } else {
-            CloudSyncManager.syncNow(applicationContext)
-            Result.success()
-        }
-    } catch (_: Throwable) {
-        Result.retry()
+class CloudSyncWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
+    override fun doWork(): Result {
+        return Result.success()
     }
 }

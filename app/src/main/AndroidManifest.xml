@@ -24,13 +24,11 @@
         <intent>
             <action android:name="android.speech.RecognitionService" />
         </intent>
-        <!-- Package visibility for SmartTube (Stable & Beta) and YouTube -->
         <package android:name="org.smarttube.stable" />
         <package android:name="org.smarttube.beta" />
         <package android:name="com.google.android.youtube" />
         <package android:name="com.google.android.tv.youtube" />
 
-        <!-- Generic Video Players Visibility -->
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:mimeType="video/*" />
@@ -44,7 +42,6 @@
             <data android:mimeType="application/vnd.apple.mpegurl" />
         </intent>
 
-        <!-- Intent queries for YouTube links -->
         <intent>
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="https" android:host="www.youtube.com" />
@@ -53,7 +50,6 @@
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="https" android:host="youtu.be" />
         </intent>
-
     </queries>
 
     <application
@@ -68,6 +64,32 @@
         android:supportsRtl="true"
         android:usesCleartextTraffic="true">
 
+        <!-- ACTIVIDAD PRINCIPAL REAL (Oculta del Launcher directo, los Alias la lanzan) -->
+        <activity
+            android:name=".activities.sync.SyncGatewayActivity"
+            android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize"
+            android:exported="true"
+            android:theme="@style/AppTheme.SplashScreen">
+        </activity>
+
+        <!-- ============================================== -->
+        <!-- ALIAS 0: DUEÑO MAESTRO (HABILITADO POR DEFECTO)-->
+        <!-- ============================================== -->
+        <activity-alias
+            android:name=".activities.sync.SyncGatewayActivity.Master"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher"
+            android:banner="@mipmap/ic_banner"
+            android:label="@string/app_name"
+            android:targetActivity=".activities.sync.SyncGatewayActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <activity
             android:name=".activities.main.MainMobileActivity"
             android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize"
@@ -75,17 +97,10 @@
             android:supportsPictureInPicture="true"
             android:theme="@style/AppTheme.SplashScreen">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-            <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
-
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-
-                <data android:scheme="streamflix"
-                        android:host="resolve"/>
+                <data android:scheme="streamflix" android:host="resolve"/>
             </intent-filter>
         </activity>
 
@@ -103,10 +118,6 @@
             android:name=".activities.main.MainTvActivity"
             android:exported="true"
             android:theme="@style/AppTheme.Tv">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-            </intent-filter>
         </activity>
 
         <provider
@@ -120,6 +131,4 @@
         </provider>
 
     </application>
-
-
 </manifest>

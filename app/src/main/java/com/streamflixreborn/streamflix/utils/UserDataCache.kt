@@ -3,9 +3,6 @@ package com.streamflixreborn.streamflix.utils
 import android.content.Context
 import android.util.Log
 import com.google.gson.Gson
-import com.google.gson.JsonSyntaxException
-import com.google.gson.reflect.TypeToken
-import com.streamflixreborn.streamflix.adapters.AppAdapter
 import com.streamflixreborn.streamflix.database.AppDatabase
 import com.streamflixreborn.streamflix.models.Episode
 import com.streamflixreborn.streamflix.models.Movie
@@ -13,10 +10,14 @@ import com.streamflixreborn.streamflix.models.Season
 import com.streamflixreborn.streamflix.models.TvShow
 import com.streamflixreborn.streamflix.models.WatchItem
 import com.streamflixreborn.streamflix.providers.Provider
+import com.streamflixreborn.streamflix.sync.CloudSyncManager
 import com.streamflixreborn.streamflix.sync.CloudSyncHooks
 import com.streamflixreborn.streamflix.ui.UserDataNotifier
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 object UserDataCache {
 
@@ -92,6 +93,13 @@ object UserDataCache {
         }
 
         UserDataNotifier.notifyChanged()
+
+        // ⚡️ DISPARADOR UNIVERSAL: Sincroniza automáticamente con tu servidor JSON en la nube
+        try {
+            CloudSyncManager.syncLocalToCloud(context)
+        } catch (e: Exception) {
+            Log.e("UserDataCache", "Error disparando sync a la nube: ${e.message}")
+        }
     }
 
     fun clear(context: Context, provider: Provider) {
@@ -189,6 +197,15 @@ object UserDataCache {
             continueWatchingMovies = (current.continueWatchingMovies + movie.toCached())
                 .distinctBy { it.id }
         ))
+
+        // Esto es necesario para que PlayerMobileFragment compile
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val db = AppDatabase.getInstanceForProvider(provider.name, context)
+                db.movieDao().insert(movie)
+            } catch (e: Exception) {}
+        }
+
         CloudSyncHooks.movie(context, provider, movie)
         UserDataNotifier.notifyChanged()
     }
@@ -239,6 +256,15 @@ object UserDataCache {
             continueWatchingEpisodes = (current.continueWatchingEpisodes + episode.toCached())
                 .distinctBy { it.id }
         ))
+
+        // Esto es necesario para que PlayerMobileFragment compile
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val db = AppDatabase.getInstanceForProvider(provider.name, context)
+                db.episodeDao().insert(episode)
+            } catch (e: Exception) {}
+        }
+
         UserDataNotifier.notifyChanged()
         CloudSyncHooks.episode(context, provider, episode)
     }
@@ -278,14 +304,14 @@ object UserDataCache {
 
     fun syncMovieToCache(context: Context, provider: Provider, movie: Movie) {
         val current = read(context, provider) ?: UserData()
-        
+
         val updatedContinueWatching = if (movie.watchHistory != null) {
             (current.continueWatchingMovies.filter { it.id != movie.id } + movie.toCached())
                 .distinctBy { it.id }
         } else {
             current.continueWatchingMovies.filter { it.id != movie.id }
         }
-        
+
         val updatedFavorites = if (movie.isFavorite) {
             (current.favoritesMovies.filter { it.id != movie.id } + movie.toCached().copy(
                 favoritedAtMillis = movie.favoritedAtMillis
@@ -296,7 +322,7 @@ object UserDataCache {
         } else {
             current.favoritesMovies.filter { it.id != movie.id }
         }
-        
+
         write(context, provider, current.copy(
             continueWatchingMovies = updatedContinueWatching,
             favoritesMovies = updatedFavorites
@@ -307,14 +333,14 @@ object UserDataCache {
 
     fun syncEpisodeToCache(context: Context, provider: Provider, episode: Episode) {
         val current = read(context, provider) ?: UserData()
-        
+
         val updatedContinueWatching = if (episode.watchHistory != null) {
             (current.continueWatchingEpisodes.filter { it.id != episode.id } + episode.toCached())
                 .distinctBy { it.id }
         } else {
             current.continueWatchingEpisodes.filter { it.id != episode.id }
         }
-        
+
         write(context, provider, current.copy(
             continueWatchingEpisodes = updatedContinueWatching
         ))
@@ -342,10 +368,6 @@ object UserDataCache {
         UserDataNotifier.notifyChanged()
         CloudSyncHooks.tvShow(context, provider, tvShow)
     }
-
-
-
-
 
     data class CachedMovie(
         val id: String,
@@ -401,7 +423,6 @@ object UserDataCache {
         val seasonTitle: String? = null,
         val seasonPoster: String? = null,
     )
-
 
     fun CachedMovie.toMovie() = Movie(
         id = id,
@@ -476,6 +497,7 @@ object UserDataCache {
             )
         }
     }
+
     fun Movie.toCached() = UserDataCache.CachedMovie(
         id = id,
         title = title,
@@ -494,6 +516,7 @@ object UserDataCache {
         lastPlaybackPositionMillis = watchHistory?.lastPlaybackPositionMillis,
         durationMillis = watchHistory?.durationMillis
     )
+
     fun TvShow.toCached() = UserDataCache.CachedTvShow(
         id = id,
         title = title,
@@ -508,6 +531,7 @@ object UserDataCache {
         isFavorite = isFavorite,
         favoritedAtMillis = favoritedAtMillis,
     )
+
     fun Episode.toCached() = UserDataCache.CachedEpisode(
         id = id,
         number = number,

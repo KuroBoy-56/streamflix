@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "87266418878",
+    "project_id": "vod-dual",
+    "storage_bucket": "vod-dual.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:87266418878:android:ba0e0012b8af6e7597feef",
+        "android_client_info": {
+          "package_name": "com.streamlat.garevynvod"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB8jDy4pdcCrov22D3sExh9WnWSr2CBSjI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

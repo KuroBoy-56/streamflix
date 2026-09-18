@@ -8,6 +8,7 @@ import android.view.View
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.flowWithLifecycle
@@ -50,12 +51,10 @@ class MainTvActivity : FragmentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Il setup delle preferenze è già avvenuto in StreamFlixApp
         setTheme(ThemeManager.tvThemeRes(UserPreferences.selectedTheme))
-        
+
         super.onCreate(savedInstanceState)
-        
-        // Inizializza il provider con il context dell'attività per gestire eventuali bypass visibili
+
         AnimeOnlineNinjaProvider.init(this)
         Cine24hProvider.init(this)
         FilmyOnlineCcProvider.init(this)
@@ -103,30 +102,24 @@ class MainTvActivity : FragmentActivity() {
             binding.navMain.headerView?.apply {
                 val header = ContentHeaderMenuMainTvBinding.bind(this)
 
+                val panelLogo = UserPreferences.customLogoUrl
+                val fallbackLogo = UserPreferences.currentProvider?.logo?.takeIf { it.isNotEmpty() } ?: R.drawable.ic_provider_default_logo
+
                 Glide.with(context)
-                    .load(UserPreferences.currentProvider?.logo?.takeIf { it.isNotEmpty() } ?: R.drawable.ic_provider_default_logo)
+                    .load(panelLogo.takeIf { it.isNotEmpty() } ?: fallbackLogo)
                     .error(R.drawable.ic_provider_default_logo)
                     .into(header.ivNavigationHeaderIcon)
-                header.tvNavigationHeaderTitle.text = UserPreferences.currentProvider?.name
-                header.tvNavigationHeaderSubtitle.text = getString(R.string.main_menu_change_provider)
-                val palette = ThemeManager.palette(UserPreferences.selectedTheme)
-                header.tvNavigationHeaderTitle.setTextColor(palette.tvHeaderPrimary)
-                header.tvNavigationHeaderSubtitle.setTextColor(palette.tvHeaderSecondary)
-                setBackgroundColor(palette.tvNavBackground)
 
-                setOnOpenListener {
-                    header.tvNavigationHeaderTitle.visibility = View.VISIBLE
-                    header.tvNavigationHeaderSubtitle.visibility = View.VISIBLE
-                }
-                setOnCloseListener {
-                    header.tvNavigationHeaderTitle.visibility = View.GONE
-                    header.tvNavigationHeaderSubtitle.visibility = View.GONE
-                }
+                // --- 1. Agrandar el Logo para que sea el foco visual ---
+                header.ivNavigationHeaderIcon.layoutParams.width = 250 // Más grande
+                header.ivNavigationHeaderIcon.layoutParams.height = 120
+                header.ivNavigationHeaderIcon.requestLayout()
 
-                setOnClickListener {
-                    // Navigazione manuale per evitare dipendenza da Safe Args Directions non generate
-                    navController.navigate(R.id.providers)
-                }
+                // --- 2. Ocultar textos para que queden solo los íconos flotando ---
+                header.tvNavigationHeaderTitle.visibility = View.GONE
+                header.tvNavigationHeaderSubtitle.visibility = View.GONE
+
+                setOnClickListener(null)
             }
 
             when (destination.id) {
@@ -142,12 +135,16 @@ class MainTvActivity : FragmentActivity() {
             viewModel.state.flowWithLifecycle(lifecycle, Lifecycle.State.STARTED).collect { state ->
                 when (state) {
                     is MainViewModel.State.SuccessCheckingUpdate -> {
-                        updateAppDialog = UpdateAppTvDialog(this@MainTvActivity, state.newReleases).also {
-                            it.setOnUpdateClickListener { _ ->
-                                if (!it.isLoading) viewModel.downloadUpdate(this@MainTvActivity, state.asset)
+                        androidx.appcompat.app.AlertDialog.Builder(this@MainTvActivity)
+                            .setTitle("Actualización Disponible")
+                            .setMessage("Nueva versión ${state.newReleases.firstOrNull()?.tagName}\n\n${state.newReleases.firstOrNull()?.body}")
+                            .setCancelable(false)
+                            .setPositiveButton("Actualizar") { _, _ ->
+                                viewModel.downloadUpdate(this@MainTvActivity, state.asset)
+                                Toast.makeText(this@MainTvActivity, "Descargando actualización...", Toast.LENGTH_SHORT).show()
                             }
-                            it.show()
-                        }
+                            .setNegativeButton("Ignorar", null)
+                            .show()
                     }
                     MainViewModel.State.DownloadingUpdate -> if (::updateAppDialog.isInitialized) updateAppDialog.isLoading = true
                     is MainViewModel.State.SuccessDownloadingUpdate -> {
@@ -189,15 +186,17 @@ class MainTvActivity : FragmentActivity() {
         val palette = ThemeManager.palette(UserPreferences.selectedTheme)
         window.statusBarColor = palette.systemBar
         window.navigationBarColor = palette.systemBar
-        binding.navMain.setBackgroundColor(palette.tvNavBackground)
+
+        // --- 3. Hacer el menú lateral completamente transparente ---
+        binding.navMain.setBackgroundColor(android.graphics.Color.TRANSPARENT)
         binding.navMain.headerView?.let { headerView ->
-            headerView.setBackgroundColor(palette.tvNavBackground)
+            headerView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
             val header = ContentHeaderMenuMainTvBinding.bind(headerView)
             header.tvNavigationHeaderTitle.setTextColor(palette.tvHeaderPrimary)
             header.tvNavigationHeaderSubtitle.setTextColor(palette.tvHeaderSecondary)
         }
     }
-    
+
     private fun updateNavigationVisibility() {
         UserPreferences.currentProvider?.let { provider ->
             binding.navMain.menu.findItem(R.id.movies)?.isVisible = Provider.supportsMovies(provider)

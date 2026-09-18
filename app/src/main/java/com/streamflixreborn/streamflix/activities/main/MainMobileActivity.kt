@@ -273,14 +273,18 @@ class MainMobileActivity : FragmentActivity() {
         if (isFinishing || isDestroyed) return
 
         dismissUpdateDialog()
-        updateAppDialog = UpdateAppMobileDialog(this, state.newReleases).also { dialog ->
-            dialog.setOnUpdateClickListener {
-                if (!dialog.isLoading) {
-                    viewModel.downloadUpdate(this@MainMobileActivity, state.asset)
-                }
+
+        // Creamos un diálogo nativo en vez de usar la clase del creador original
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Actualización Disponible")
+            .setMessage("Nueva versión ${state.newReleases.firstOrNull()?.tagName}\n\n${state.newReleases.firstOrNull()?.body}")
+            .setCancelable(false)
+            .setPositiveButton("Actualizar") { _, _ ->
+                viewModel.downloadUpdate(this@MainMobileActivity, state.asset)
+                Toast.makeText(this, "Descargando actualización...", Toast.LENGTH_SHORT).show()
             }
-            dialog.show()
-        }
+            .setNegativeButton("Ignorar", null)
+            .show()
     }
 
     private fun dismissUpdateDialog() {

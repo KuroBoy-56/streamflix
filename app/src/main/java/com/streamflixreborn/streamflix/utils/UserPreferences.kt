@@ -23,6 +23,16 @@ object UserPreferences {
 
     private lateinit var prefs: SharedPreferences
 
+    // --- MARCA BLANCA: LOGO Y APP_ID ---
+    var customLogoUrl: String
+        get() = prefs.getString("custom_logo_url", "") ?: ""
+        set(value) { prefs.edit { putString("custom_logo_url", value) } }
+
+    var savedAppId: Int
+        get() = prefs.getInt("saved_app_id", 0)
+        set(value) { prefs.edit { putInt("saved_app_id", value) } }
+    // ---------------------------------
+
     // Default DoH Provider URL (Cloudflare)
     private const val DEFAULT_DOH_PROVIDER_URL = "https://cloudflare-dns.com/dns-query"
     const val DOH_DISABLED_VALUE = "" // Value to represent DoH being disabled
@@ -61,7 +71,6 @@ object UserPreferences {
         }
     }
 
-
     var currentProvider: Provider?
         get() {
             val providerName = Key.CURRENT_PROVIDER.getString()
@@ -72,15 +81,12 @@ object UserPreferences {
             return Provider.providers.keys.find { it.name == providerName }
         }
         set(value) {
-            // CRITICO: Resetta l'istanza del database prima di cambiare provider
-            // per forzare la creazione di un nuovo database file corretto.
             AppDatabase.resetInstance()
 
             Key.CURRENT_PROVIDER.setString(value?.name)
             runCatching {
                 ArtworkRepairScheduler.schedule(StreamFlixApp.instance, value)
             }
-            // Notify all ViewModels that the provider has changed
             ProviderChangeNotifier.notifyProviderChanged()
         }
 
@@ -141,7 +147,7 @@ object UserPreferences {
         }
 
     var immersiveMode: Boolean
-        get() = Key.IMMERSIVE_MODE.getBoolean() ?: false // Default changed to false
+        get() = Key.IMMERSIVE_MODE.getBoolean() ?: false
         set(value) {
             Key.IMMERSIVE_MODE.setBoolean(value)
         }
@@ -497,7 +503,7 @@ object UserPreferences {
 
     fun setFavoriteCategoryOrder(providerName: String, order: List<String>) {
         val normalized = (order.filter { it == "movies" || it == "tv_shows" } +
-            listOf("movies", "tv_shows")).distinct()
+                listOf("movies", "tv_shows")).distinct()
         prefs.edit { putString("FAVORITE_CATEGORY_ORDER_$providerName", normalized.joinToString(",")) }
     }
 

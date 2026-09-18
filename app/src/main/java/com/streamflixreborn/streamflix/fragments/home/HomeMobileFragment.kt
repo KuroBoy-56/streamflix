@@ -40,6 +40,7 @@ class HomeMobileFragment : Fragment() {
     private val viewModel: HomeViewModel by lazy {
         val providerKey = UserPreferences.currentProvider?.name ?: "default"
         val factory = object : ViewModelProvider.Factory {
+            // AQUÍ ESTABA EL ERROR DE TIPEO (Class<T) ahora es Class<T>)
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 @Suppress("UNCHECKED_CAST")
                 return HomeViewModel(AppDatabase.getInstance(requireContext())) as T
@@ -64,12 +65,10 @@ class HomeMobileFragment : Fragment() {
 
         initializeHome()
 
-        // Lightweight refresh when provider changes
         viewLifecycleOwner.lifecycleScope.launch {
             com.streamflixreborn.streamflix.utils.ProviderChangeNotifier.providerChangeFlow.flowWithLifecycle(lifecycle, Lifecycle.State.STARTED).collect { viewModel.getHome() }
         }
 
-        // Initial load
         viewModel.getHome()
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -124,7 +123,6 @@ class HomeMobileFragment : Fragment() {
         _binding = null
     }
 
-
     private fun initializeHome() {
         binding.rvHome.apply {
             adapter = appAdapter.apply {
@@ -136,19 +134,24 @@ class HomeMobileFragment : Fragment() {
         }
 
         binding.ivProviderLogo.apply {
+            // --- CARGA DEL LOGO MARCA BLANCA ONLINE ---
+            val panelLogo = UserPreferences.customLogoUrl
+            val fallbackLogo = UserPreferences.currentProvider?.logo?.takeIf { it.isNotEmpty() } ?: R.drawable.ic_provider_default_logo
+
+            // Eliminar fondos y hacerlo totalmente transparente
+            setBackgroundResource(0)
+            setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            (parent as? View)?.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+
             Glide.with(context)
-                .load(UserPreferences.currentProvider?.logo?.takeIf { it.isNotEmpty() }
-                    ?: R.drawable.ic_provider_default_logo)
+                .load(panelLogo.takeIf { it.isNotEmpty() } ?: fallbackLogo)
                 .error(R.drawable.ic_provider_default_logo)
                 .fitCenter()
                 .into(this)
 
-            setOnClickListener {
-                findNavController().navigate(R.id.providers)
-            }
+            setOnClickListener(null) // POPUP DE SERVIDORES BLOQUEADO
         }
-        
-        // Ensure background image is hidden on mobile to show theme color
+
         binding.ivHomeBackground.visibility = View.GONE
     }
 

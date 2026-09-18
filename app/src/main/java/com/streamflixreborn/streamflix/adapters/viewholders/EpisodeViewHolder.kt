@@ -8,6 +8,8 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.viewbinding.ViewBinding
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+import com.streamflixreborn.streamflix.NavMainGraphMobileDirections
+import com.streamflixreborn.streamflix.NavMainGraphTvDirections
 import com.streamflixreborn.streamflix.R
 import com.streamflixreborn.streamflix.databinding.ItemEpisodeContinueWatchingMobileBinding
 import com.streamflixreborn.streamflix.databinding.ItemEpisodeContinueWatchingTvBinding
@@ -16,15 +18,10 @@ import com.streamflixreborn.streamflix.databinding.ItemEpisodeTvBinding
 import com.streamflixreborn.streamflix.fragments.home.HomeMobileFragmentDirections
 import com.streamflixreborn.streamflix.fragments.home.HomeTvFragment
 import com.streamflixreborn.streamflix.fragments.home.HomeTvFragmentDirections
-import com.streamflixreborn.streamflix.fragments.season.SeasonMobileFragmentDirections
-import com.streamflixreborn.streamflix.fragments.season.SeasonTvFragmentDirections
-import com.streamflixreborn.streamflix.fragments.tv_show.TvShowMobileFragmentDirections
-import com.streamflixreborn.streamflix.fragments.tv_show.TvShowTvFragmentDirections
 import com.streamflixreborn.streamflix.models.Episode
 import com.streamflixreborn.streamflix.models.Video
 import com.streamflixreborn.streamflix.ui.ShowOptionsMobileDialog
 import com.streamflixreborn.streamflix.ui.ShowOptionsTvDialog
-import com.streamflixreborn.streamflix.utils.EpisodeManager
 import com.streamflixreborn.streamflix.utils.UserPreferences
 import com.streamflixreborn.streamflix.utils.format
 import com.streamflixreborn.streamflix.utils.getCurrentFragment
@@ -51,12 +48,11 @@ class EpisodeViewHolder(
         }
     }
 
-
     private fun displayMobileItem(binding: ItemEpisodeMobileBinding) {
         binding.root.apply {
             setOnClickListener {
                 findNavController().navigate(
-                    SeasonMobileFragmentDirections.actionSeasonToPlayer(
+                    NavMainGraphMobileDirections.actionGlobalPlayer(
                         id = episode.id,
                         title = episode.tvShow?.title ?: "",
                         subtitle = episode.season?.takeIf { it.number != 0 }?.let { season ->
@@ -96,12 +92,12 @@ class EpisodeViewHolder(
                                 title = episode.season?.title,
                             ),
                         ),
+                        preferredServerName = null
                     )
                 )
             }
             setOnLongClickListener {
-                ShowOptionsMobileDialog(context, episode)
-                    .show()
+                ShowOptionsMobileDialog(context, episode).show()
                 true
             }
         }
@@ -156,7 +152,7 @@ class EpisodeViewHolder(
         binding.root.apply {
             setOnClickListener {
                 findNavController().navigate(
-                    SeasonTvFragmentDirections.actionSeasonToPlayer(
+                    NavMainGraphTvDirections.actionGlobalPlayer(
                         id = episode.id,
                         title = episode.tvShow?.title ?: "",
                         subtitle = episode.season?.takeIf { it.number != 0 }?.let { season ->
@@ -196,12 +192,12 @@ class EpisodeViewHolder(
                                 title = episode.season?.title,
                             ),
                         ),
+                        preferredServerName = null
                     )
                 )
             }
             setOnLongClickListener {
-                ShowOptionsTvDialog(context, episode)
-                    .show()
+                ShowOptionsTvDialog(context, episode).show()
                 true
             }
             setOnFocusChangeListener { _, hasFocus ->
@@ -265,14 +261,7 @@ class EpisodeViewHolder(
         binding.root.apply {
             setOnClickListener {
                 findNavController().navigate(
-                    HomeMobileFragmentDirections.actionHomeToTvShow(
-                        id = episode.tvShow?.id ?: "",
-                        poster = episode.tvShow?.poster,
-                        banner = episode.tvShow?.banner,
-                    )
-                )
-                findNavController().navigate(
-                    TvShowMobileFragmentDirections.actionTvShowToPlayer(
+                    NavMainGraphMobileDirections.actionGlobalPlayer(
                         id = episode.id,
                         title = episode.tvShow?.title ?: "",
                         subtitle = episode.season?.takeIf { it.number != 0 }?.let { season ->
@@ -312,12 +301,12 @@ class EpisodeViewHolder(
                                 title = episode.season?.title,
                             ),
                         ),
+                        preferredServerName = null
                     )
                 )
             }
             setOnLongClickListener {
-                ShowOptionsMobileDialog(context, episode)
-                    .show()
+                ShowOptionsMobileDialog(context, episode).show()
                 true
             }
         }
@@ -366,14 +355,7 @@ class EpisodeViewHolder(
         binding.root.apply {
             setOnClickListener {
                 findNavController().navigate(
-                    HomeTvFragmentDirections.actionHomeToTvShow(
-                        id = episode.tvShow?.id ?: "",
-                        poster = episode.tvShow?.poster,
-                        banner = episode.tvShow?.banner,
-                    )
-                )
-                findNavController().navigate(
-                    TvShowTvFragmentDirections.actionTvShowToPlayer(
+                    NavMainGraphTvDirections.actionGlobalPlayer(
                         id = episode.id,
                         title = episode.tvShow?.title ?: "",
                         subtitle = episode.season?.takeIf { it.number != 0 }?.let { season ->
@@ -413,12 +395,12 @@ class EpisodeViewHolder(
                                 title = episode.season?.title,
                             ),
                         ),
+                        preferredServerName = null
                     )
                 )
             }
             setOnLongClickListener {
-                ShowOptionsTvDialog(context, episode)
-                    .show()
+                ShowOptionsTvDialog(context, episode).show()
                 true
             }
             setOnFocusChangeListener { _, hasFocus ->
