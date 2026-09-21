@@ -71,7 +71,6 @@ class SyncGatewayActivity : AppCompatActivity() {
         val savedLogo = UserPreferences.customLogoUrl.replace("null", "").trim()
         if (savedLogo.isNotEmpty()) {
             logoGateway.visibility = View.VISIBLE
-            // ⚡️ CORRECCIÓN: STRATEGY.ALL PARA GUARDAR FÍSICAMENTE EN DISCO
             Glide.with(this)
                 .load(savedLogo)
                 .diskCacheStrategy(DiskCacheStrategy.ALL)
@@ -89,7 +88,6 @@ class SyncGatewayActivity : AppCompatActivity() {
 
         if (bgToLoad.isNotEmpty()) {
             bgGateway.visibility = View.VISIBLE
-            // ⚡️ CORRECCIÓN: STRATEGY.ALL PARA GUARDAR FÍSICAMENTE EN DISCO
             Glide.with(this)
                 .load(bgToLoad)
                 .diskCacheStrategy(DiskCacheStrategy.ALL)
@@ -308,9 +306,33 @@ class SyncGatewayActivity : AppCompatActivity() {
                                 commit()
                             }
 
+                            // ⚡️ LÓGICA DE AUTO-SELECCIÓN BLINDADA
+                            val previousProvider = UserPreferences.currentProvider
+                            val allAppProviders = Provider.providers.keys.toList()
+
                             if (namesList.isNotEmpty()) {
                                 val assignedProviders = namesList.mapNotNull { name ->
-                                    Provider.providers.keys.find { it.name.equals(name, ignoreCase = true) }
+                                    allAppProviders.find { it.name.equals(name, ignoreCase = true) }
+                                }
+
+                                if (assignedProviders.size == 1) {
+                                    // 1. Solo tiene 1 proveedor asignado: Selección automática obligatoria
+                                    UserPreferences.currentProvider = assignedProviders.first()
+                                } else if (assignedProviders.isEmpty()) {
+                                    // 2. Por error el panel mandó nombres que no existen en la app
+                                    UserPreferences.currentProvider = null
+                                } else {
+                                    // 3. Tiene varios proveedores asignados.
+                                    // Comprobamos si el que usó ayer todavía está en su lista permitida.
+                                    if (previousProvider != null && !assignedProviders.contains(previousProvider)) {
+                                        UserPreferences.currentProvider = null // Ya no tiene acceso, obligar a elegir
+                                    }
+                                    // Si sí tiene acceso, dejamos currentProvider intacto para que no vuelva a elegir.
+                                }
+                            } else {
+                                // 4. El usuario no tiene restricciones en el panel (ej. Es el dueño)
+                                if (allAppProviders.size == 1) {
+                                    UserPreferences.currentProvider = allAppProviders.first()
                                 }
                             }
 
