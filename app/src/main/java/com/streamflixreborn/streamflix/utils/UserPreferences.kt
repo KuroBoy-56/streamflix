@@ -23,7 +23,7 @@ object UserPreferences {
 
     private lateinit var prefs: SharedPreferences
 
-    // --- MARCA BLANCA: LOGO Y APP_ID ---
+    // ⚡️ DEVUELTO A LA MEMORIA PERSISTENTE (Así no desaparecen al salir de la app)
     var customLogoUrl: String
         get() = prefs.getString("custom_logo_url", "") ?: ""
         set(value) { prefs.edit { putString("custom_logo_url", value) } }
@@ -33,9 +33,8 @@ object UserPreferences {
         set(value) { prefs.edit { putInt("saved_app_id", value) } }
     // ---------------------------------
 
-    // Default DoH Provider URL (Cloudflare)
     private const val DEFAULT_DOH_PROVIDER_URL = "https://cloudflare-dns.com/dns-query"
-    const val DOH_DISABLED_VALUE = "" // Value to represent DoH being disabled
+    const val DOH_DISABLED_VALUE = ""
     private const val DEFAULT_SERIENSTREAM_DOMAIN = "s.to"
     private const val DEFAULT_MOFLIX_DOMAIN = "moflix-stream.xyz"
     private const val DEFAULT_STREAMINGCOMMUNITY_DOMAIN = "streamingunity.cc"
@@ -265,7 +264,7 @@ object UserPreferences {
     }
 
     var updateCheckEnabled: Boolean
-        get() = Key.UPDATE_CHECK_ENABLED.getBoolean() ?: true
+        get() = Key.UPDATE_CHECK_ENABLED.getBoolean() ?: false
         set(value) {
             Key.UPDATE_CHECK_ENABLED.setBoolean(value)
         }
@@ -346,6 +345,7 @@ object UserPreferences {
     var subtitleName: String?
         get() = Key.SUBTITLE_NAME.getString()
         set(value) = Key.SUBTITLE_NAME.setString(value)
+
     var streamingcommunityDomain: String
         get() {
             if (!::prefs.isInitialized) {
@@ -550,7 +550,7 @@ object UserPreferences {
         STREAMINGCOMMUNITY_DOMAIN,
         CUEVANA_DOMAIN,
         POSEIDON_DOMAIN,
-        DOH_PROVIDER_URL, // Removed STREAMINGCOMMUNITY_DNS_OVER_HTTPS, added DOH_PROVIDER_URL
+        DOH_PROVIDER_URL,
         AUTOPLAY,
         PROVIDER_CACHE,
         KEEP_SCREEN_ON_WHEN_PAUSED,

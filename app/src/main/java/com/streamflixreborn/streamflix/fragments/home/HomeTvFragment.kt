@@ -125,10 +125,9 @@ class HomeTvFragment : Fragment() {
             }
         }
     }
-    
+
     override fun onStart() {
         super.onStart()
-        // Riavvia il carosello se i dati sono già stati caricati e il fragment è visibile
         appAdapter.items
             .filterIsInstance<Category>()
             .firstOrNull { it.name == Category.FEATURED }
@@ -196,19 +195,17 @@ class HomeTvFragment : Fragment() {
                     ?.selectedIndex
                     ?: 0
                 it.selectedIndex = index
-                
-                // Initialize background with first item from featured category immediately
+
                 val firstItem = it.list.getOrNull(index)
                 val poster = when (firstItem) {
                     is Movie -> firstItem.banner
                     is TvShow -> firstItem.banner
                     else -> null
                 }
-                // Force background update without waiting for focus
                 if (poster != null) {
                     updateBackground(poster, null)
                 }
-                
+
                 resetSwiperSchedule()
             }
 
@@ -225,12 +222,6 @@ class HomeTvFragment : Fragment() {
             }
 
         categories
-            .find { it.name == Category.RECENTLY_WATCHED }
-            ?.also {
-                it.name = getString(R.string.home_recently_watched)
-            }
-
-        categories
             .find { it.name == Category.FAVORITE_MOVIES }
             ?.also { it.name = getString(R.string.home_favorite_movies) }
 
@@ -238,9 +229,16 @@ class HomeTvFragment : Fragment() {
             .find { it.name == Category.FAVORITE_TV_SHOWS }
             ?.also { it.name = getString(R.string.home_favorite_tv_shows) }
 
+        // ⚡️ FILTRO PARA ELIMINAR "Vistos Recientemente", "Soporte", "Ayuda", "Telegram"
+        val blacklisted = listOf("soporte", "ayuda", "support", "help", "telegram", "discord", "whatsapp")
+
         appAdapter.submitList(
             categories
-                .filter { it.list.isNotEmpty() }
+                .filter { category ->
+                    category.list.isNotEmpty() &&
+                            category.name != Category.RECENTLY_WATCHED &&
+                            !blacklisted.any { category.name.contains(it, ignoreCase = true) }
+                }
                 .onEach { category ->
                     if (category.name != getString(R.string.home_continue_watching)) {
                         category.list.forEach { show ->
@@ -274,15 +272,13 @@ class HomeTvFragment : Fragment() {
                     .find { it.name == Category.FEATURED }
                     ?.let { category ->
                         category.selectedIndex = (category.selectedIndex + 1) % category.list.size
-                        
-                        // Update background when swiper rotates automatically
+
                         val currentItem = category.list.getOrNull(category.selectedIndex)
                         val poster = when (currentItem) {
                             is Movie -> currentItem.banner
                             is TvShow -> currentItem.banner
                             else -> null
                         }
-                        // Update background if it's not null
                         if (poster != null) {
                             updateBackground(poster, null)
                         }

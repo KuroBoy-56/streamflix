@@ -20,6 +20,18 @@ import kotlinx.coroutines.launch
 
 class MovieViewModel(id: String, private val database: AppDatabase) : ViewModel() {
 
+    // ⚡️ CONVERSOR A FULL HD
+    private fun String?.toHighRes(): String? {
+        if (this.isNullOrEmpty()) return this
+        return this.replace("/w185/", "/original/")
+            .replace("/w200/", "/original/")
+            .replace("/w300/", "/original/")
+            .replace("/w342/", "/original/")
+            .replace("/w400/", "/original/")
+            .replace("/w500/", "/original/")
+            .replace("/w780/", "/original/")
+    }
+
     private val _state = MutableStateFlow<State>(State.Loading)
     @OptIn(ExperimentalCoroutinesApi::class)
     val state: Flow<State> = combine(
@@ -92,12 +104,25 @@ class MovieViewModel(id: String, private val database: AppDatabase) : ViewModel(
         getMovie(id)
     }
 
-
     fun getMovie(id: String) = viewModelScope.launch(Dispatchers.IO) {
         _state.emit(State.Loading)
 
         try {
             val movie = UserPreferences.currentProvider!!.getMovie(id)
+
+            // ⚡️ FORZAMOS LAS IMÁGENES A MÁXIMA CALIDAD SOLO EN POSTERS Y BANNERS
+            movie.poster = movie.poster.toHighRes()
+            movie.banner = movie.banner.toHighRes()
+
+            movie.recommendations.forEach { rec ->
+                if (rec is Movie) {
+                    rec.poster = rec.poster.toHighRes()
+                    rec.banner = rec.banner.toHighRes()
+                } else if (rec is TvShow) {
+                    rec.poster = rec.poster.toHighRes()
+                    rec.banner = rec.banner.toHighRes()
+                }
+            }
 
             database.movieDao().getById(id)?.let { movieDb ->
                 movie.merge(movieDb)

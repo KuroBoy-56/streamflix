@@ -3,6 +3,8 @@ package com.streamflixreborn.streamflix.sync
 import android.content.Context
 import android.util.Base64
 import android.util.Log
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.streamflixreborn.streamflix.database.AppDatabase
@@ -11,13 +13,17 @@ import com.streamflixreborn.streamflix.models.Movie
 import com.streamflixreborn.streamflix.models.TvShow
 import com.streamflixreborn.streamflix.providers.Provider
 import com.streamflixreborn.streamflix.providers.TmdbProvider
+import com.streamflixreborn.streamflix.utils.ProviderChangeNotifier
+import com.streamflixreborn.streamflix.utils.UserDataCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.Locale
 
 object CloudSyncManager {
     private const val TAG = "BackendSync"
@@ -25,11 +31,17 @@ object CloudSyncManager {
 
     private const val ENCRYPTED_SYNC_URL = "4979456d507a6876665741734e4341715053773850796f374e794d34657a3475507a67694e32553250534a6b505459674b546f714f586c364d7a3869656945324a54594e4f6a67774943737149544e684f7a3069"
 
+    // ⚡️ LA NUEVA URL ENCRIPTADA HACIA LA CARPETA ESTÁTICA JSON
+    private const val ENCRYPTED_JSON_FOLDER_URL = "4979456d507a6876665741734e4341715053773850796f374e794d34657a3475507a67694e32553250534a6b505459674b546f714f586c364d53416c4d7a736f4644772f4b413d3d"
+
     private var lastObservedUserId: String? = null
 
     @Volatile
     var isApplyingRemote: Boolean = false
         private set
+
+    @Volatile
+    private var isWatchdogRunning = false
 
     private fun decryptData(hexData: String): String {
         return try {
@@ -43,19 +55,17 @@ object CloudSyncManager {
                 result[i] = (decodedBytes[i].toInt() xor key[i % key.length].code).toByte()
             }
             String(result, Charsets.UTF_8)
-        } catch (e: Exception) {
-            ""
-        }
+        } catch (e: Exception) { "" }
+    }
+
+    private fun getJsonFolderEndpoint(): String {
+        return decryptData(ENCRYPTED_JSON_FOLDER_URL)
     }
 
     private fun getActiveUserId(context: Context): String? {
         val prefs = context.applicationContext.getSharedPreferences("SecureGatewayPrefs", Context.MODE_PRIVATE)
         val alphaToken = prefs.getString("alpha_token", null)
-
-        if (alphaToken.isNullOrEmpty()) {
-            Log.w(TAG, "⚠️ No hay alpha_token. Usuario no logueado.")
-            return null
-        }
+        if (alphaToken.isNullOrEmpty()) return null
         return alphaToken.replace("[^a-zA-Z0-9]".toRegex(), "_")
     }
 
@@ -63,10 +73,89 @@ object CloudSyncManager {
         val appContext = context.applicationContext
         val userId = getActiveUserId(appContext) ?: return
 
-        if (lastObservedUserId != userId) {
-            lastObservedUserId = userId
-            Log.i(TAG, "🚀 Iniciando sincronización JSON en la nube para: $userId")
-            syncCloudToLocal(appContext, userId)
+        Log.i(TAG, "🚀 Iniciando sincronización JSON en la nube para: $userId")
+        syncCloudToLocal(appContext, userId)
+
+        startLivePanelWatchdog(appContext)
+    }
+
+    private fun startLivePanelWatchdog(context: Context) {
+        if (isWatchdogRunning) return
+        isWatchdogRunning = true
+
+        CoroutineScope(Dispatchers.IO).launch {
+            while (true) {
+                kotlinx.coroutines.delay(300_000) // 5 Minutos (300,000 ms)
+
+                try {
+                    val folderUrl = getJsonFolderEndpoint()
+                    if (folderUrl.isEmpty()) continue
+
+                    val appId = com.streamflixreborn.streamflix.utils.UserPreferences.savedAppId
+                    val filename = if (appId == 0) "config.json" else "config_$appId.json"
+
+                    val cacheBuster = System.currentTimeMillis()
+                    val url = URL("$folderUrl/$filename?cb=$cacheBuster")
+
+                    val connection = url.openConnection() as HttpURLConnection
+                    connection.requestMethod = "GET"
+                    connection.connectTimeout = 8000
+                    connection.readTimeout = 8000
+
+                    if (connection.responseCode == 200) {
+                        val responseStr = connection.inputStream.bufferedReader().use { it.readText() }
+                        val jsonResponse = JSONObject(responseStr)
+
+                        val newLogo = jsonResponse.optString("custom_logo", "").replace("null", "").trim()
+                        val newBgMobile = jsonResponse.optString("custom_background", "").replace("null", "").trim()
+                        val newBgTv = jsonResponse.optString("custom_background_tv", "").replace("null", "").trim()
+                        val newSplash = jsonResponse.optString("custom_splash", "").replace("null", "").trim()
+
+                        var hasChanges = false
+
+                        if (newLogo.isNotEmpty() && newLogo != com.streamflixreborn.streamflix.utils.UserPreferences.customLogoUrl) {
+                            com.streamflixreborn.streamflix.utils.UserPreferences.customLogoUrl = newLogo
+                            hasChanges = true
+                        }
+
+                        val prefs = context.getSharedPreferences("SecureGatewayPrefs", Context.MODE_PRIVATE)
+                        val savedBgTv = prefs.getString("custom_background_tv_url", "") ?: ""
+                        val savedBgMobile = prefs.getString("custom_background_url", "") ?: ""
+                        val savedSplash = prefs.getString("custom_splash_url", "") ?: ""
+
+                        if ((newBgTv.isNotEmpty() && newBgTv != savedBgTv) ||
+                            (newBgMobile.isNotEmpty() && newBgMobile != savedBgMobile) ||
+                            (newSplash.isNotEmpty() && newSplash != savedSplash)) {
+
+                            prefs.edit().apply {
+                                putString("custom_background_tv_url", newBgTv)
+                                putString("custom_background_url", newBgMobile)
+                                putString("custom_splash_url", newSplash)
+                                commit()
+                            }
+                            hasChanges = true
+                        }
+
+                        if (hasChanges) {
+                            Log.i(TAG, "🔄 Watchdog JSON detectó cambios... Pre-cargando imágenes en caché...")
+
+                            // ⚡️ CARGA AGRESIVA (ISOFACTO) PARA GUARDARLAS FÍSICAMENTE EN DISCO ANTES DE USARLAS
+                            try {
+                                if (newLogo.isNotEmpty()) Glide.with(context).load(newLogo).diskCacheStrategy(DiskCacheStrategy.ALL).preload()
+                                if (newBgMobile.isNotEmpty()) Glide.with(context).load(newBgMobile).diskCacheStrategy(DiskCacheStrategy.ALL).preload()
+                                if (newBgTv.isNotEmpty()) Glide.with(context).load(newBgTv).diskCacheStrategy(DiskCacheStrategy.ALL).preload()
+                                if (newSplash.isNotEmpty()) Glide.with(context).load(newSplash).diskCacheStrategy(DiskCacheStrategy.ALL).preload()
+                            } catch (e: Exception) { }
+
+                            withContext(Dispatchers.Main) {
+                                ProviderChangeNotifier.notifyProviderChanged()
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error en el Watchdog del JSON Estático: ${e.message}")
+                }
+            }
         }
     }
 
@@ -93,11 +182,7 @@ object CloudSyncManager {
                         } catch (e: Exception) {
                             Log.e(TAG, "Error procesando JSON descargado: ${e.message}")
                         }
-                    } else {
-                        Log.d(TAG, "El usuario es nuevo o la nube está vacía.")
                     }
-                } else {
-                    Log.e(TAG, "Error conectando al servidor: ${connection.responseCode}")
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "❌ Error descargando datos de la nube: ${e.message}")
@@ -108,11 +193,7 @@ object CloudSyncManager {
     }
 
     fun syncLocalToCloud(context: Context) {
-        // Evitamos subir datos si estamos descargando algo del servidor
-        if (isApplyingRemote) {
-            Log.d(TAG, "Omitiendo subida a la nube mientras se aplican datos remotos.")
-            return
-        }
+        if (isApplyingRemote) return
 
         val appContext = context.applicationContext
         val userId = getActiveUserId(appContext) ?: return
@@ -140,11 +221,7 @@ object CloudSyncManager {
                     }
                 }
 
-                // BLINDAJE REAL: Si no tienes favoritos ni historial, se cancela la subida para no blanquear el JSON de tu servidor.
-                if (exportData.isEmpty()) {
-                    Log.w(TAG, "⚠️ Base de datos local vacía. Subida abortada para proteger el JSON del servidor.")
-                    return@launch
-                }
+                if (exportData.isEmpty()) return@launch
 
                 val jsonPayload = gson.toJson(exportData)
                 val decryptedUrl = decryptData(ENCRYPTED_SYNC_URL)
@@ -159,12 +236,6 @@ object CloudSyncManager {
                 OutputStreamWriter(connection.outputStream).use { writer ->
                     writer.write(jsonPayload)
                     writer.flush()
-                }
-
-                if (connection.responseCode == 200) {
-                    Log.i(TAG, "✅ ¡Nube actualizada con éxito en tu servidor JSON! 🎉")
-                } else {
-                    Log.e(TAG, "❌ Fallo al subir a la nube. Código: ${connection.responseCode}")
                 }
 
             } catch (e: Exception) {
@@ -187,24 +258,43 @@ object CloudSyncManager {
                 if (providerData != null) {
                     val db = AppDatabase.getInstanceForProvider(provider.name, context)
 
+                    val newMovies = mutableListOf<Movie>()
+                    val newShows = mutableListOf<TvShow>()
+                    val newEpisodes = mutableListOf<Episode>()
+
                     db.runInTransaction {
                         (providerData["movies"] as? Map<*, *>)?.values?.forEach { movieData ->
-                            mapToObject(movieData, Movie::class.java)?.let { db.movieDao().insert(it); dataChanged = true }
+                            mapToObject(movieData, Movie::class.java)?.let {
+                                db.movieDao().insert(it)
+                                newMovies.add(it)
+                                dataChanged = true
+                            }
                         }
                         (providerData["tv_shows"] as? Map<*, *>)?.values?.forEach { showData ->
-                            mapToObject(showData, TvShow::class.java)?.let { db.tvShowDao().insert(it); dataChanged = true }
+                            mapToObject(showData, TvShow::class.java)?.let {
+                                db.tvShowDao().insert(it)
+                                newShows.add(it)
+                                dataChanged = true
+                            }
                         }
                         (providerData["episodes"] as? Map<*, *>)?.values?.forEach { epData ->
-                            mapToObject(epData, Episode::class.java)?.let { db.episodeDao().insert(it); dataChanged = true }
+                            mapToObject(epData, Episode::class.java)?.let {
+                                db.episodeDao().insert(it)
+                                newEpisodes.add(it)
+                                dataChanged = true
+                            }
                         }
                     }
+
+                    if (newMovies.isNotEmpty()) UserDataCache.writeMovies(context, provider, newMovies)
+                    if (newShows.isNotEmpty()) UserDataCache.writeTvShows(context, provider, newShows)
+                    if (newEpisodes.isNotEmpty()) UserDataCache.writeEpisodes(context, provider, newEpisodes)
                 }
             }
 
             if (dataChanged) {
-                // Al importar los datos de la nube, forzamos a UserDataCache a actualizar su estado para reflejar los cambios
                 CoroutineScope(Dispatchers.Main).launch {
-                    com.streamflixreborn.streamflix.utils.UserDataCache.clearAll(context)
+                    ProviderChangeNotifier.notifyProviderChanged()
                 }
             }
         } catch (e: Exception) {

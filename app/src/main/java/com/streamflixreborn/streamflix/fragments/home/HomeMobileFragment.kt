@@ -1,5 +1,6 @@
 package com.streamflixreborn.streamflix.fragments.home
 
+import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -11,6 +12,7 @@ import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.streamflixreborn.streamflix.R
 import com.streamflixreborn.streamflix.adapters.AppAdapter
 import com.streamflixreborn.streamflix.database.AppDatabase
@@ -25,7 +27,10 @@ import com.streamflixreborn.streamflix.utils.dp
 import com.streamflixreborn.streamflix.utils.CacheUtils
 import com.streamflixreborn.streamflix.utils.LoggingUtils
 import com.streamflixreborn.streamflix.utils.ProviderChangeNotifier
+import com.streamflixreborn.streamflix.sync.CloudSyncManager
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.RecyclerView
@@ -40,7 +45,6 @@ class HomeMobileFragment : Fragment() {
     private val viewModel: HomeViewModel by lazy {
         val providerKey = UserPreferences.currentProvider?.name ?: "default"
         val factory = object : ViewModelProvider.Factory {
-            // AQUÍ ESTABA EL ERROR DE TIPEO (Class<T) ahora es Class<T>)
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 @Suppress("UNCHECKED_CAST")
                 return HomeViewModel(AppDatabase.getInstance(requireContext())) as T
@@ -65,11 +69,24 @@ class HomeMobileFragment : Fragment() {
 
         initializeHome()
 
-        viewLifecycleOwner.lifecycleScope.launch {
-            com.streamflixreborn.streamflix.utils.ProviderChangeNotifier.providerChangeFlow.flowWithLifecycle(lifecycle, Lifecycle.State.STARTED).collect { viewModel.getHome() }
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            CloudSyncManager.initialize(requireContext())
         }
 
-        viewModel.getHome()
+        viewLifecycleOwner.lifecycleScope.launch {
+            ProviderChangeNotifier.providerChangeFlow.flowWithLifecycle(lifecycle, Lifecycle.State.STARTED).collect { viewModel.getHome() }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            binding.isLoading.root.visibility = View.VISIBLE
+            binding.isLoading.pbIsLoading.visibility = View.VISIBLE
+
+            withContext(Dispatchers.IO) {
+                kotlinx.coroutines.delay(1500)
+            }
+
+            viewModel.getHome()
+        }
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.state.flowWithLifecycle(lifecycle, Lifecycle.State.STARTED).collect { state ->
@@ -88,15 +105,11 @@ class HomeMobileFragment : Fragment() {
                         if (code == 409 && !hasAutoCleared409) {
                             hasAutoCleared409 = true
                             CacheUtils.clearAppCache(requireContext())
-                            android.widget.Toast.makeText(requireContext(), getString(com.streamflixreborn.streamflix.R.string.clear_cache_done_409), android.widget.Toast.LENGTH_SHORT).show()
+                            Toast.makeText(requireContext(), getString(R.string.clear_cache_done_409), Toast.LENGTH_SHORT).show()
                             viewModel.getHome()
                             return@collect
                         }
-                        Toast.makeText(
-                            requireContext(),
-                            state.error.message ?: "",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        Toast.makeText(requireContext(), state.error.message ?: "", Toast.LENGTH_SHORT).show()
                         binding.isLoading.apply {
                             pbIsLoading.visibility = View.GONE
                             gIsLoadingRetry.visibility = View.VISIBLE
@@ -104,7 +117,7 @@ class HomeMobileFragment : Fragment() {
                             btnIsLoadingRetry.setOnClickListener { doRetry() }
                             btnIsLoadingClearCache.setOnClickListener {
                                 CacheUtils.clearAppCache(requireContext())
-                                android.widget.Toast.makeText(requireContext(), getString(com.streamflixreborn.streamflix.R.string.clear_cache_done), android.widget.Toast.LENGTH_SHORT).show()
+                                Toast.makeText(requireContext(), getString(R.string.clear_cache_done), Toast.LENGTH_SHORT).show()
                                 doRetry()
                             }
                             btnIsLoadingErrorDetails.setOnClickListener {
@@ -128,90 +141,88 @@ class HomeMobileFragment : Fragment() {
             adapter = appAdapter.apply {
                 stateRestorationPolicy = RecyclerView.Adapter.StateRestorationPolicy.PREVENT_WHEN_EMPTY
             }
-            addItemDecoration(
-                SpacingItemDecoration(20.dp(requireContext()))
-            )
+            addItemDecoration(SpacingItemDecoration(20.dp(requireContext())))
         }
 
         binding.ivProviderLogo.apply {
-            // --- CARGA DEL LOGO MARCA BLANCA ONLINE ---
-            val panelLogo = UserPreferences.customLogoUrl
+            val panelLogo = UserPreferences.customLogoUrl.replace("null", "").trim()
             val fallbackLogo = UserPreferences.currentProvider?.logo?.takeIf { it.isNotEmpty() } ?: R.drawable.ic_provider_default_logo
 
-            // Eliminar fondos y hacerlo totalmente transparente
             setBackgroundResource(0)
             setBackgroundColor(android.graphics.Color.TRANSPARENT)
             (parent as? View)?.setBackgroundColor(android.graphics.Color.TRANSPARENT)
 
+            // ⚡️ CACHÉ DE RAM EXCLUSIVA PARA EL LOGO MÓVIL
             Glide.with(context)
                 .load(panelLogo.takeIf { it.isNotEmpty() } ?: fallbackLogo)
+                .diskCacheStrategy(DiskCacheStrategy.NONE)
+                .skipMemoryCache(false)
                 .error(R.drawable.ic_provider_default_logo)
                 .fitCenter()
                 .into(this)
 
-            setOnClickListener(null) // POPUP DE SERVIDORES BLOQUEADO
+            val prefs = requireContext().getSharedPreferences("SecureGatewayPrefs", Context.MODE_PRIVATE)
+            val assignedStr = prefs.getString("assigned_servers", "") ?: ""
+            val assignedList = assignedStr.split(",").filter { it.isNotBlank() }
+
+            if (assignedList.size > 1) {
+                setOnClickListener {
+                    findNavController().navigate(R.id.providers)
+                }
+            } else {
+                setOnClickListener(null)
+            }
         }
 
         binding.ivHomeBackground.visibility = View.GONE
     }
 
     private fun displayHome(categories: List<Category>) {
-        categories
-            .find { it.name == Category.FEATURED }
-            ?.also {
-                it.list.forEach { show ->
-                    when (show) {
-                        is Movie -> show.itemType = AppAdapter.Type.MOVIE_SWIPER_MOBILE_ITEM
-                        is TvShow -> show.itemType = AppAdapter.Type.TV_SHOW_SWIPER_MOBILE_ITEM
-                    }
+        categories.find { it.name == Category.FEATURED }?.also {
+            it.list.forEach { show ->
+                when (show) {
+                    is Movie -> show.itemType = AppAdapter.Type.MOVIE_SWIPER_MOBILE_ITEM
+                    is TvShow -> show.itemType = AppAdapter.Type.TV_SHOW_SWIPER_MOBILE_ITEM
                 }
             }
+        }
 
-        categories
-            .find { it.name == Category.CONTINUE_WATCHING }
-            ?.also {
-                it.name = getString(R.string.home_continue_watching)
-                it.list.forEach { show ->
-                    when (show) {
-                        is Episode -> show.itemType = AppAdapter.Type.EPISODE_CONTINUE_WATCHING_MOBILE_ITEM
-                        is Movie -> show.itemType = AppAdapter.Type.MOVIE_CONTINUE_WATCHING_MOBILE_ITEM
-                    }
+        categories.find { it.name == Category.CONTINUE_WATCHING }?.also {
+            it.name = getString(R.string.home_continue_watching)
+            it.list.forEach { show ->
+                when (show) {
+                    is Episode -> show.itemType = AppAdapter.Type.EPISODE_CONTINUE_WATCHING_MOBILE_ITEM
+                    is Movie -> show.itemType = AppAdapter.Type.MOVIE_CONTINUE_WATCHING_MOBILE_ITEM
                 }
             }
+        }
 
-        categories
-            .find { it.name == Category.RECENTLY_WATCHED }
-            ?.also {
-                it.name = getString(R.string.home_recently_watched)
-            }
+        categories.find { it.name == Category.FAVORITE_MOVIES }?.also { it.name = getString(R.string.home_favorite_movies) }
+        categories.find { it.name == Category.FAVORITE_TV_SHOWS }?.also { it.name = getString(R.string.home_favorite_tv_shows) }
 
-        categories
-            .find { it.name == Category.FAVORITE_MOVIES }
-            ?.also { it.name = getString(R.string.home_favorite_movies) }
-
-        categories
-            .find { it.name == Category.FAVORITE_TV_SHOWS }
-            ?.also { it.name = getString(R.string.home_favorite_tv_shows) }
+        val blacklisted = listOf("soporte", "ayuda", "support", "help", "telegram", "discord", "whatsapp")
 
         appAdapter.submitList(
-            categories
-                .filter { it.list.isNotEmpty() }
-                .onEach { category ->
-                    if (category.name != Category.FEATURED && category.name != getString(R.string.home_continue_watching)) {
-                        category.list.onEach { show ->
-                            when (show) {
-                                is Episode -> show.itemType = AppAdapter.Type.EPISODE_MOBILE_ITEM
-                                is Movie -> show.itemType = AppAdapter.Type.MOVIE_MOBILE_ITEM
-                                is TvShow -> show.itemType = AppAdapter.Type.TV_SHOW_MOBILE_ITEM
-                            }
+            categories.filter { category ->
+                category.list.isNotEmpty() &&
+                        category.name != Category.RECENTLY_WATCHED &&
+                        !blacklisted.any { category.name.contains(it, ignoreCase = true) }
+            }.onEach { category ->
+                if (category.name != Category.FEATURED && category.name != getString(R.string.home_continue_watching)) {
+                    category.list.onEach { show ->
+                        when (show) {
+                            is Episode -> show.itemType = AppAdapter.Type.EPISODE_MOBILE_ITEM
+                            is Movie -> show.itemType = AppAdapter.Type.MOVIE_MOBILE_ITEM
+                            is TvShow -> show.itemType = AppAdapter.Type.TV_SHOW_MOBILE_ITEM
                         }
                     }
-                    category.itemSpacing = 10.dp(requireContext())
-                    category.itemType = when (category.name) {
-                        Category.FEATURED -> AppAdapter.Type.CATEGORY_MOBILE_SWIPER
-                        else -> AppAdapter.Type.CATEGORY_MOBILE_ITEM
-                    }
                 }
+                category.itemSpacing = 10.dp(requireContext())
+                category.itemType = when (category.name) {
+                    Category.FEATURED -> AppAdapter.Type.CATEGORY_MOBILE_SWIPER
+                    else -> AppAdapter.Type.CATEGORY_MOBILE_ITEM
+                }
+            }
         )
     }
 }

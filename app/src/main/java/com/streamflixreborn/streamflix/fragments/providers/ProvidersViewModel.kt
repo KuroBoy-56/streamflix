@@ -1,11 +1,12 @@
 package com.streamflixreborn.streamflix.fragments.providers
 
+import android.app.Application
+import android.content.Context
 import android.util.Log
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.streamflixreborn.streamflix.models.Provider as ModelProvider
 import com.streamflixreborn.streamflix.providers.Provider
-import com.streamflixreborn.streamflix.providers.TmdbProvider
 import com.streamflixreborn.streamflix.utils.UserPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -13,7 +14,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import java.util.Locale
 
-class ProvidersViewModel : ViewModel() {
+// ⚡️ Cambiado a AndroidViewModel para poder leer la configuración de tu Gateway
+class ProvidersViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _state = MutableStateFlow<State>(State.Loading)
     val state: Flow<State> = _state
@@ -35,59 +37,44 @@ class ProvidersViewModel : ViewModel() {
             val isFavoritesFilter = language == "favorites"
             val favorites = UserPreferences.favoriteProviders
 
-            val providers = Provider.providers.keys
-                .filter { 
+            // ⚡️ LECTURA ESTRICTA: Solo sacar los servidores autorizados por tu Panel Web
+            val prefs = getApplication<Application>().getSharedPreferences("SecureGatewayPrefs", Context.MODE_PRIVATE)
+            val assignedStr = prefs.getString("assigned_servers", "") ?: ""
+            val assignedList = assignedStr.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+
+            val allProviders = Provider.providers.keys.toList()
+
+            // Si el panel envió servidores, filtramos a la fuerza. Si no, muestra la base.
+            val baseProviders = if (assignedList.isNotEmpty()) {
+                allProviders.filter { assignedList.contains(it.name) }
+            } else {
+                allProviders
+            }
+
+            // ⚡️ SE ELIMINARON LOS TMDb EXTRAS PARA DEJAR UNA LISTA LIMPIA
+            val finalProviders = baseProviders
+                .filter {
                     if (isFavoritesFilter) {
                         favorites.contains(it.name)
                     } else {
-                        language == null || it.language == language 
+                        language == null || it.language == language
                     }
                 }
-                .sortedBy { it.name }
-                .toMutableList()
 
-            if (language == null || isFavoritesFilter) {
-                val availableLanguages = Provider.providers.keys.map { it.language }.distinct()
-                availableLanguages.forEach { lang ->
-                    if (lang != "pl") {
-                        val tmdbName = "TMDb (${getLanguageDisplayName(lang)})"
-                        if (!isFavoritesFilter || favorites.contains(tmdbName)) {
-                            providers.add(TmdbProvider(lang))
-                        }
-                    }
-                }
-            } else {
-                if (language != "pl") {
-                    providers.add(TmdbProvider(language))
-                }
-            }
-
-            val modelProviders = providers.map {
-                val name = if (it is TmdbProvider) {
-                    "TMDb (${getLanguageDisplayName(it.language)})"
-                } else {
-                    it.name
-                }
+            val modelProviders = finalProviders.map {
                 ModelProvider(
-                    name = name,
+                    name = it.name,
                     logo = it.logo,
                     language = it.language,
                     provider = it,
-                    isFavorite = favorites.contains(name)
+                    isFavorite = favorites.contains(it.name)
                 )
-            }.sortedWith(
-                compareBy<ModelProvider> { it.provider is TmdbProvider }
-                    .thenBy { it.name.lowercase(Locale.ROOT) }
-            )
+            }.sortedBy { it.name.lowercase(Locale.ROOT) }
 
             _state.emit(State.SuccessLoading(modelProviders))
         } catch (e: Exception) {
             Log.e("ProvidersViewModel", "getProviders: ", e)
             _state.emit(State.FailedLoading(e))
         }
-    }
-
-    private fun getLanguageDisplayName(languageCode: String): String {
-        return Locale.forLanguageTag(languageCode).displayLanguage
     }
 }

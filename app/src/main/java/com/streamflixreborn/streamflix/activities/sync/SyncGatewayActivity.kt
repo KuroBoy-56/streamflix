@@ -4,9 +4,12 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Base64
+import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.widget.Button
@@ -15,9 +18,10 @@ import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import com.bumptech.glide.Glide
-import com.streamflixreborn.streamflix.BuildConfig
+import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.streamflixreborn.streamflix.R
 import com.streamflixreborn.streamflix.activities.main.MainMobileActivity
 import com.streamflixreborn.streamflix.activities.main.MainTvActivity
@@ -36,6 +40,7 @@ import java.util.Locale
 
 class SyncGatewayActivity : AppCompatActivity() {
 
+    private lateinit var bgGateway: ImageView
     private lateinit var logoGateway: ImageView
     private lateinit var inputAlpha: EditText
     private lateinit var inputBeta: EditText
@@ -49,6 +54,7 @@ class SyncGatewayActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_sync_gateway)
 
+        bgGateway = findViewById(R.id.bgGateway)
         logoGateway = findViewById(R.id.logoGateway)
         inputAlpha = findViewById(R.id.inputAlpha)
         inputBeta = findViewById(R.id.inputBeta)
@@ -56,21 +62,42 @@ class SyncGatewayActivity : AppCompatActivity() {
         progressSync = findViewById(R.id.progressSync)
         txtStatus = findViewById(R.id.txtStatus)
 
-        setupEyeToggle()
+        val isTv = packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
 
-        // --- MAGIA DE LA MARCA BLANCA ONLINE (LOGIN) ---
-        val savedLogo = UserPreferences.customLogoUrl
+        setupEyeToggle()
+        adjustLayoutForTv()
+        setupFocusListeners(isTv)
+
+        val savedLogo = UserPreferences.customLogoUrl.replace("null", "").trim()
         if (savedLogo.isNotEmpty()) {
             logoGateway.visibility = View.VISIBLE
+            // ⚡️ CORRECCIÓN: STRATEGY.ALL PARA GUARDAR FÍSICAMENTE EN DISCO
             Glide.with(this)
                 .load(savedLogo)
-                .error(R.mipmap.ic_launcher) // Si el link falla, pone el icono normal
+                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .skipMemoryCache(false)
+                .error(R.mipmap.ic_launcher)
                 .fitCenter()
                 .into(logoGateway)
         }
-        // ------------------------------------------------
 
         val prefs = getSharedPreferences("SecureGatewayPrefs", Context.MODE_PRIVATE)
+        val savedBgTv = prefs.getString("custom_background_tv_url", "")?.replace("null", "")?.trim() ?: ""
+        val savedBgMobile = prefs.getString("custom_background_url", "")?.replace("null", "")?.trim() ?: ""
+
+        val bgToLoad = if (isTv) savedBgTv.ifEmpty { savedBgMobile } else savedBgMobile.ifEmpty { savedBgTv }
+
+        if (bgToLoad.isNotEmpty()) {
+            bgGateway.visibility = View.VISIBLE
+            // ⚡️ CORRECCIÓN: STRATEGY.ALL PARA GUARDAR FÍSICAMENTE EN DISCO
+            Glide.with(this)
+                .load(bgToLoad)
+                .diskCacheStrategy(DiskCacheStrategy.ALL)
+                .skipMemoryCache(false)
+                .centerCrop()
+                .into(bgGateway)
+        }
+
         val savedAlpha = prefs.getString("alpha_token", null)
         val savedBeta = prefs.getString("beta_token", null)
 
@@ -93,9 +120,65 @@ class SyncGatewayActivity : AppCompatActivity() {
         }
     }
 
+    private fun adjustLayoutForTv() {
+        val isTv = packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
+        val loginScroll = findViewById<View>(R.id.loginScroll)
+        val loginContainer = findViewById<View>(R.id.loginContainer)
+        val params = loginScroll.layoutParams as ConstraintLayout.LayoutParams
+
+        if (isTv) {
+            params.horizontalBias = 0.9f
+            loginScroll.layoutParams = params
+            loginContainer.setBackgroundColor(Color.parseColor("#99000000"))
+        } else {
+            params.horizontalBias = 0.5f
+            loginScroll.layoutParams = params
+            loginContainer.setBackgroundColor(Color.parseColor("#991A1D29"))
+        }
+    }
+
+    private fun setupFocusListeners(isTv: Boolean) {
+        if (!isTv) return
+
+        inputAlpha.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                inputAlpha.setBackgroundColor(Color.parseColor("#33FFFFFF"))
+                inputAlpha.scaleX = 1.02f
+                inputAlpha.scaleY = 1.02f
+            } else {
+                inputAlpha.setBackgroundColor(Color.parseColor("#0F111A"))
+                inputAlpha.scaleX = 1.0f
+                inputAlpha.scaleY = 1.0f
+            }
+        }
+
+        inputBeta.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                inputBeta.setBackgroundColor(Color.parseColor("#33FFFFFF"))
+                inputBeta.scaleX = 1.02f
+                inputBeta.scaleY = 1.02f
+            } else {
+                inputBeta.setBackgroundColor(Color.parseColor("#0F111A"))
+                inputBeta.scaleX = 1.0f
+                inputBeta.scaleY = 1.0f
+            }
+        }
+
+        btnSync.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                btnSync.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#FF5252"))
+                btnSync.scaleX = 1.05f
+                btnSync.scaleY = 1.05f
+            } else {
+                btnSync.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#E50914"))
+                btnSync.scaleX = 1.0f
+                btnSync.scaleY = 1.0f
+            }
+        }
+    }
+
     private fun setupEyeToggle() {
         updateEyeIcon()
-
         inputBeta.setOnTouchListener { _, event ->
             if (event.action == MotionEvent.ACTION_UP) {
                 val drawableRight = 2
@@ -108,9 +191,8 @@ class SyncGatewayActivity : AppCompatActivity() {
             }
             false
         }
-
         inputBeta.setOnKeyListener { _, keyCode, event ->
-            if (event.action == android.view.KeyEvent.ACTION_DOWN && keyCode == android.view.KeyEvent.KEYCODE_DPAD_RIGHT) {
+            if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
                 isPasswordVisible = !isPasswordVisible
                 updateEyeIcon()
                 return@setOnKeyListener true
@@ -138,9 +220,7 @@ class SyncGatewayActivity : AppCompatActivity() {
             val base64Bytes = encryptedHex.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
             val base64Str = String(base64Bytes, Charsets.UTF_8)
             String(Base64.decode(base64Str, Base64.NO_WRAP), Charsets.UTF_8)
-        } catch (e: Exception) {
-            ""
-        }
+        } catch (e: Exception) { "" }
     }
 
     private fun getNormalizedMacAddress(): String {
@@ -149,7 +229,6 @@ class SyncGatewayActivity : AppCompatActivity() {
         return cleanId.substring(0, 16).chunked(2).joinToString(":").uppercase(Locale.getDefault())
     }
 
-    // --- CAMBIO DINÁMICO DE ICONO Y NOMBRE (LAUNCHER) ---
     private fun updateLauncherIcon(appId: Int) {
         try {
             val pm = packageManager
@@ -157,25 +236,19 @@ class SyncGatewayActivity : AppCompatActivity() {
             val master = ComponentName(this, "$baseAlias.Master")
             val admin1 = ComponentName(this, "$baseAlias.Admin12345")
             val admin2 = ComponentName(this, "$baseAlias.Admin98765")
-
             val target = when(appId) {
                 12345 -> admin1
                 98765 -> admin2
                 else -> master
             }
-
             if (pm.getComponentEnabledSetting(target) != PackageManager.COMPONENT_ENABLED_STATE_ENABLED) {
                 pm.setComponentEnabledSetting(master, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
                 pm.setComponentEnabledSetting(admin1, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
                 pm.setComponentEnabledSetting(admin2, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
-
                 pm.setComponentEnabledSetting(target, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        } catch (e: Exception) { e.printStackTrace() }
     }
-    // ----------------------------------------------------
 
     private fun executeGatewayHandshake(alpha: String, beta: String, isAutoLogin: Boolean) {
         setLoadingState(true)
@@ -210,9 +283,11 @@ class SyncGatewayActivity : AppCompatActivity() {
                                 }
                             }
 
-                            // --- ATRAPAR LOGO ONLINE, APP_ID Y TMDB_API_KEY ---
-                            val customLogoUrl = jsonResponse.optString("custom_logo", "")
-                            val tmdbApiKey = jsonResponse.optString("tmdb_api_key", "")
+                            val customLogoUrl = jsonResponse.optString("custom_logo", "").replace("null", "").trim()
+                            val customBgMobileUrl = jsonResponse.optString("custom_background", "").replace("null", "").trim()
+                            val customBgTvUrl = jsonResponse.optString("custom_background_tv", "").replace("null", "").trim()
+                            val customSplashUrl = jsonResponse.optString("custom_splash", "").replace("null", "").trim()
+                            val tmdbApiKey = jsonResponse.optString("tmdb_api_key", "").replace("null", "").trim()
                             val appId = jsonResponse.optInt("app_id", 0)
 
                             UserPreferences.customLogoUrl = customLogoUrl
@@ -220,36 +295,62 @@ class SyncGatewayActivity : AppCompatActivity() {
 
                             if (tmdbApiKey.isNotEmpty()) {
                                 UserPreferences.tmdbApiKey = tmdbApiKey
-                                UserPreferences.enableTmdb = true // Forzamos activar el enriquecimiento
+                                UserPreferences.enableTmdb = true
                             } else {
-                                UserPreferences.enableTmdb = false // Si el admin no puso API, apagamos TMDb
+                                UserPreferences.enableTmdb = false
                             }
 
-                            // Activamos el Alias correspondiente para cambiar icono
-                            updateLauncherIcon(appId)
-                            // ---------------------------------------------------
-
-                            saveSecureCredentials(alpha, beta)
+                            getSharedPreferences("SecureGatewayPrefs", Context.MODE_PRIVATE).edit().apply {
+                                putString("custom_background_url", customBgMobileUrl)
+                                putString("custom_background_tv_url", customBgTvUrl)
+                                putString("custom_splash_url", customSplashUrl)
+                                putString("assigned_servers", namesList.joinToString(","))
+                                commit()
+                            }
 
                             if (namesList.isNotEmpty()) {
-                                val currentProv = UserPreferences.currentProvider
-                                if (currentProv == null || !namesList.contains(currentProv.name)) {
-                                    val providerMatch = Provider.providers.keys.find { it.name.equals(namesList[0], ignoreCase = true) }
-                                    if (providerMatch != null) {
-                                        UserPreferences.currentProvider = providerMatch
-                                    }
+                                val assignedProviders = namesList.mapNotNull { name ->
+                                    Provider.providers.keys.find { it.name.equals(name, ignoreCase = true) }
                                 }
                             }
 
-                            // ⚡️ ¡AQUÍ ESTÁ LA MAGIA! FORZAMOS DESCARGA ANTES DE ENTRAR
-                            // Como ya guardamos las credenciales, initialize() funcionará y poblará la BD local.
+                            try {
+                                val isTv = packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
+                                val liveBgToLoad = if (isTv) customBgTvUrl.ifEmpty { customBgMobileUrl } else customBgMobileUrl.ifEmpty { customBgTvUrl }
+
+                                if (liveBgToLoad.isNotEmpty()) {
+                                    bgGateway.visibility = View.VISIBLE
+                                    Glide.with(this@SyncGatewayActivity)
+                                        .load(liveBgToLoad)
+                                        .diskCacheStrategy(DiskCacheStrategy.ALL)
+                                        .skipMemoryCache(false)
+                                        .centerCrop()
+                                        .into(bgGateway)
+                                }
+                                if (customLogoUrl.isNotEmpty()) {
+                                    logoGateway.visibility = View.VISIBLE
+                                    Glide.with(this@SyncGatewayActivity)
+                                        .load(customLogoUrl)
+                                        .diskCacheStrategy(DiskCacheStrategy.ALL)
+                                        .skipMemoryCache(false)
+                                        .error(R.mipmap.ic_launcher)
+                                        .fitCenter()
+                                        .into(logoGateway)
+                                }
+                            } catch (e: Exception) {}
+
+                            updateLauncherIcon(appId)
+                            saveSecureCredentials(alpha, beta)
+
                             CoroutineScope(Dispatchers.IO).launch {
                                 CloudSyncManager.initialize(this@SyncGatewayActivity)
-
-                                // Esperamos a que la descarga y actualización de base de datos se complete (aprox 1.5 a 2 segundos)
                                 kotlinx.coroutines.delay(1800)
-
                                 withContext(Dispatchers.Main) {
+                                    if (com.streamflixreborn.streamflix.StreamFlixApp.isUpdateRequired) {
+                                        setLoadingState(false)
+                                        showStatus("Actualización obligatoria pendiente...")
+                                        return@withContext
+                                    }
                                     routeToMainInterface()
                                 }
                             }
@@ -291,8 +392,7 @@ class SyncGatewayActivity : AppCompatActivity() {
     }
 
     private fun routeToMainInterface() {
-        val isTv = packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
-        val intent = if (isTv) {
+        val intent = if (packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)) {
             Intent(this, MainTvActivity::class.java)
         } else {
             Intent(this, MainMobileActivity::class.java)

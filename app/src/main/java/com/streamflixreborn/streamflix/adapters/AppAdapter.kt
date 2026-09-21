@@ -82,7 +82,6 @@ class AppAdapter(
         setHasStableIds(true)
     }
 
-    // --- LISTENERS AÑADIDOS AQUÍ ---
     var onMovieClickListener: ((Movie) -> Unit)? = null
     var onTvShowClickListener: ((TvShow) -> Unit)? = null
     var onMovieLongClickListener: ((Movie) -> Unit)? = null
@@ -94,77 +93,26 @@ class AppAdapter(
     var onPeopleClickListener: ((People) -> Unit)? = null
     var onEpisodeClickListener: ((Episode) -> Unit)? = null
     var onSeasonClickListener: ((Season) -> Unit)? = null
+
+    // ⚡️ ELIMINADO notifyDataSetChanged() PARA EVITAR CRASHEO EN ANDROID TV
     var onProviderClickListener: ((Provider) -> Unit)? = null
-    // ---------------------------------
+
     interface Item {
         var itemType: Type
     }
 
     enum class Type {
-        CATEGORY_MOBILE_ITEM,
-        CATEGORY_TV_ITEM,
-
-        CATEGORY_MOBILE_SWIPER,
-        CATEGORY_TV_SWIPER,
-
-        EPISODE_MOBILE_ITEM,
-        EPISODE_TV_ITEM,
-        EPISODE_CONTINUE_WATCHING_MOBILE_ITEM,
-        EPISODE_CONTINUE_WATCHING_TV_ITEM,
-
-        FOOTER,
-
-        FAVORITE_SECTION_HEADER,
-
-        GENRE_GRID_MOBILE_ITEM,
-        GENRE_GRID_TV_ITEM,
-
-        HEADER,
-
-        LOADING_ITEM,
-
-        MOVIE_MOBILE_ITEM,
-        MOVIE_TV_ITEM,
-        MOVIE_CONTINUE_WATCHING_MOBILE_ITEM,
-        MOVIE_CONTINUE_WATCHING_TV_ITEM,
-        MOVIE_GRID_MOBILE_ITEM,
-        MOVIE_GRID_TV_ITEM,
-        MOVIE_SWIPER_MOBILE_ITEM,
-
-        MOVIE_MOBILE,
-        MOVIE_TV,
-        MOVIE_DIRECTORS_MOBILE,
-        MOVIE_DIRECTORS_TV,
-        MOVIE_CAST_MOBILE,
-        MOVIE_CAST_TV,
-        MOVIE_RECOMMENDATIONS_MOBILE,
-        MOVIE_RECOMMENDATIONS_TV,
-
-        PEOPLE_MOBILE_ITEM,
-        PEOPLE_TV_ITEM,
-
-        PROVIDER_MOBILE_ITEM,
-        PROVIDER_TV_ITEM,
-
-        SEASON_MOBILE_ITEM,
-        SEASON_TV_ITEM,
-
-        TV_SHOW_MOBILE_ITEM,
-        TV_SHOW_TV_ITEM,
-        TV_SHOW_GRID_MOBILE_ITEM,
-        TV_SHOW_GRID_TV_ITEM,
-        TV_SHOW_SWIPER_MOBILE_ITEM,
-
-        TV_SHOW_MOBILE,
-        TV_SHOW_TV,
-        TV_SHOW_SEASONS_MOBILE,
-        TV_SHOW_SEASONS_TV,
-        TV_SHOW_DIRECTORS_MOBILE,
-        TV_SHOW_DIRECTORS_TV,
-        TV_SHOW_CAST_MOBILE,
-        TV_SHOW_CAST_TV,
-        TV_SHOW_RECOMMENDATIONS_MOBILE,
-        TV_SHOW_RECOMMENDATIONS_TV,
+        CATEGORY_MOBILE_ITEM, CATEGORY_TV_ITEM, CATEGORY_MOBILE_SWIPER, CATEGORY_TV_SWIPER,
+        EPISODE_MOBILE_ITEM, EPISODE_TV_ITEM, EPISODE_CONTINUE_WATCHING_MOBILE_ITEM, EPISODE_CONTINUE_WATCHING_TV_ITEM,
+        FOOTER, FAVORITE_SECTION_HEADER, GENRE_GRID_MOBILE_ITEM, GENRE_GRID_TV_ITEM,
+        HEADER, LOADING_ITEM,
+        MOVIE_MOBILE_ITEM, MOVIE_TV_ITEM, MOVIE_CONTINUE_WATCHING_MOBILE_ITEM, MOVIE_CONTINUE_WATCHING_TV_ITEM, MOVIE_GRID_MOBILE_ITEM, MOVIE_GRID_TV_ITEM, MOVIE_SWIPER_MOBILE_ITEM,
+        MOVIE_MOBILE, MOVIE_TV, MOVIE_DIRECTORS_MOBILE, MOVIE_DIRECTORS_TV, MOVIE_CAST_MOBILE, MOVIE_CAST_TV, MOVIE_RECOMMENDATIONS_MOBILE, MOVIE_RECOMMENDATIONS_TV,
+        PEOPLE_MOBILE_ITEM, PEOPLE_TV_ITEM,
+        PROVIDER_MOBILE_ITEM, PROVIDER_TV_ITEM,
+        SEASON_MOBILE_ITEM, SEASON_TV_ITEM,
+        TV_SHOW_MOBILE_ITEM, TV_SHOW_TV_ITEM, TV_SHOW_GRID_MOBILE_ITEM, TV_SHOW_GRID_TV_ITEM, TV_SHOW_SWIPER_MOBILE_ITEM,
+        TV_SHOW_MOBILE, TV_SHOW_TV, TV_SHOW_SEASONS_MOBILE, TV_SHOW_SEASONS_TV, TV_SHOW_DIRECTORS_MOBILE, TV_SHOW_DIRECTORS_TV, TV_SHOW_CAST_MOBILE, TV_SHOW_CAST_TV, TV_SHOW_RECOMMENDATIONS_MOBILE, TV_SHOW_RECOMMENDATIONS_TV,
     }
 
     private val states = mutableMapOf<Int, Parcelable?>()
@@ -179,349 +127,54 @@ class AppAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder =
         when (Type.entries[viewType]) {
-            Type.CATEGORY_MOBILE_ITEM -> CategoryViewHolder(
-                ItemCategoryMobileBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-            Type.CATEGORY_TV_ITEM -> CategoryViewHolder(
-                ItemCategoryTvBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-
-            Type.CATEGORY_MOBILE_SWIPER -> CategoryViewHolder(
-                ContentCategorySwiperMobileBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-            Type.CATEGORY_TV_SWIPER -> CategoryViewHolder(
-                ContentCategorySwiperTvBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-
-            Type.EPISODE_MOBILE_ITEM -> EpisodeViewHolder(
-                ItemEpisodeMobileBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-            Type.EPISODE_TV_ITEM -> EpisodeViewHolder(
-                ItemEpisodeTvBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-            Type.EPISODE_CONTINUE_WATCHING_MOBILE_ITEM -> EpisodeViewHolder(
-                ItemEpisodeContinueWatchingMobileBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-            Type.EPISODE_CONTINUE_WATCHING_TV_ITEM -> EpisodeViewHolder(
-                ItemEpisodeContinueWatchingTvBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-
-            Type.FOOTER -> FooterViewHolder(
-                footer!!.binding(parent)
-            )
-            Type.FAVORITE_SECTION_HEADER -> FavoriteSectionHeaderViewHolder(
-                ItemFavoriteSectionHeaderBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-
-            Type.GENRE_GRID_MOBILE_ITEM -> GenreViewHolder(
-                ItemGenreGridMobileBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-            Type.GENRE_GRID_TV_ITEM -> GenreViewHolder(
-                ItemGenreGridTvBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-
-            Type.HEADER -> HeaderViewHolder(
-                header!!.binding(parent)
-            )
-
-            Type.LOADING_ITEM -> LoadingViewHolder(
-                ItemLoadingBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-
-            Type.MOVIE_CONTINUE_WATCHING_MOBILE_ITEM,
-            Type.MOVIE_MOBILE_ITEM -> MovieViewHolder(
-                ItemMovieMobileBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-            Type.MOVIE_CONTINUE_WATCHING_TV_ITEM,
-            Type.MOVIE_TV_ITEM -> MovieViewHolder(
-                ItemMovieTvBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-            Type.MOVIE_GRID_MOBILE_ITEM -> MovieViewHolder(
-                ItemMovieGridMobileBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-            Type.MOVIE_GRID_TV_ITEM -> MovieViewHolder(
-                ItemMovieGridTvBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-            Type.MOVIE_SWIPER_MOBILE_ITEM -> MovieViewHolder(
-                ItemCategorySwiperMobileBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-
-            Type.MOVIE_MOBILE -> MovieViewHolder(
-                ContentMovieMobileBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-            Type.MOVIE_TV -> MovieViewHolder(
-                ContentMovieTvBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-            Type.MOVIE_DIRECTORS_MOBILE -> MovieViewHolder(
-                ContentMovieDirectorsMobileBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-            Type.MOVIE_DIRECTORS_TV -> MovieViewHolder(
-                ContentMovieDirectorsTvBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-            Type.MOVIE_CAST_MOBILE -> MovieViewHolder(
-                ContentMovieCastMobileBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-            Type.MOVIE_CAST_TV -> MovieViewHolder(
-                ContentMovieCastTvBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-            Type.MOVIE_RECOMMENDATIONS_MOBILE -> MovieViewHolder(
-                ContentMovieRecommendationsMobileBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-            Type.MOVIE_RECOMMENDATIONS_TV -> MovieViewHolder(
-                ContentMovieRecommendationsTvBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-
-            Type.PEOPLE_MOBILE_ITEM -> PeopleViewHolder(
-                ItemPeopleMobileBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-            Type.PEOPLE_TV_ITEM -> PeopleViewHolder(
-                ItemPeopleTvBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-
-            Type.PROVIDER_MOBILE_ITEM -> ProviderViewHolder(
-                ItemProviderMobileBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-            Type.PROVIDER_TV_ITEM -> ProviderViewHolder(
-                ItemProviderTvBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-
-            Type.SEASON_MOBILE_ITEM -> SeasonViewHolder(
-                ItemSeasonMobileBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-            Type.SEASON_TV_ITEM -> SeasonViewHolder(
-                ItemSeasonTvBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-
-            Type.TV_SHOW_MOBILE_ITEM -> TvShowViewHolder(
-                ItemTvShowMobileBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false
-                )
-            )
-            Type.TV_SHOW_TV_ITEM -> TvShowViewHolder(
-                ItemTvShowTvBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false
-                )
-            )
-            Type.TV_SHOW_GRID_MOBILE_ITEM -> TvShowViewHolder(
-                ItemTvShowGridMobileBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false
-                )
-            )
-            Type.TV_SHOW_GRID_TV_ITEM -> TvShowViewHolder(
-                ItemTvShowGridBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false
-                )
-            )
-            Type.TV_SHOW_SWIPER_MOBILE_ITEM -> TvShowViewHolder(
-                ItemCategorySwiperMobileBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-
-            Type.TV_SHOW_MOBILE -> TvShowViewHolder(
-                ContentTvShowMobileBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-            Type.TV_SHOW_TV -> TvShowViewHolder(
-                ContentTvShowTvBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-            Type.TV_SHOW_SEASONS_MOBILE -> TvShowViewHolder(
-                ContentTvShowSeasonsMobileBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-            Type.TV_SHOW_SEASONS_TV -> TvShowViewHolder(
-                ContentTvShowSeasonsTvBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-            Type.TV_SHOW_DIRECTORS_MOBILE -> TvShowViewHolder(
-                ContentTvShowDirectorsMobileBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-            Type.TV_SHOW_DIRECTORS_TV -> TvShowViewHolder(
-                ContentTvShowDirectorsTvBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-            Type.TV_SHOW_CAST_MOBILE -> TvShowViewHolder(
-                ContentTvShowCastMobileBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-            Type.TV_SHOW_CAST_TV -> TvShowViewHolder(
-                ContentTvShowCastTvBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-            Type.TV_SHOW_RECOMMENDATIONS_MOBILE -> TvShowViewHolder(
-                ContentTvShowRecommendationsMobileBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
-            Type.TV_SHOW_RECOMMENDATIONS_TV -> TvShowViewHolder(
-                ContentTvShowRecommendationsTvBinding.inflate(
-                    LayoutInflater.from(parent.context),
-                    parent,
-                    false,
-                )
-            )
+            Type.CATEGORY_MOBILE_ITEM -> CategoryViewHolder(ItemCategoryMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.CATEGORY_TV_ITEM -> CategoryViewHolder(ItemCategoryTvBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.CATEGORY_MOBILE_SWIPER -> CategoryViewHolder(ContentCategorySwiperMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.CATEGORY_TV_SWIPER -> CategoryViewHolder(ContentCategorySwiperTvBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.EPISODE_MOBILE_ITEM -> EpisodeViewHolder(ItemEpisodeMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.EPISODE_TV_ITEM -> EpisodeViewHolder(ItemEpisodeTvBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.EPISODE_CONTINUE_WATCHING_MOBILE_ITEM -> EpisodeViewHolder(ItemEpisodeContinueWatchingMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.EPISODE_CONTINUE_WATCHING_TV_ITEM -> EpisodeViewHolder(ItemEpisodeContinueWatchingTvBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.FOOTER -> FooterViewHolder(footer!!.binding(parent))
+            Type.FAVORITE_SECTION_HEADER -> FavoriteSectionHeaderViewHolder(ItemFavoriteSectionHeaderBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.GENRE_GRID_MOBILE_ITEM -> GenreViewHolder(ItemGenreGridMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.GENRE_GRID_TV_ITEM -> GenreViewHolder(ItemGenreGridTvBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.HEADER -> HeaderViewHolder(header!!.binding(parent))
+            Type.LOADING_ITEM -> LoadingViewHolder(ItemLoadingBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.MOVIE_CONTINUE_WATCHING_MOBILE_ITEM, Type.MOVIE_MOBILE_ITEM -> MovieViewHolder(ItemMovieMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.MOVIE_CONTINUE_WATCHING_TV_ITEM, Type.MOVIE_TV_ITEM -> MovieViewHolder(ItemMovieTvBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.MOVIE_GRID_MOBILE_ITEM -> MovieViewHolder(ItemMovieGridMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.MOVIE_GRID_TV_ITEM -> MovieViewHolder(ItemMovieGridTvBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.MOVIE_SWIPER_MOBILE_ITEM -> MovieViewHolder(ItemCategorySwiperMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.MOVIE_MOBILE -> MovieViewHolder(ContentMovieMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.MOVIE_TV -> MovieViewHolder(ContentMovieTvBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.MOVIE_DIRECTORS_MOBILE -> MovieViewHolder(ContentMovieDirectorsMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.MOVIE_DIRECTORS_TV -> MovieViewHolder(ContentMovieDirectorsTvBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.MOVIE_CAST_MOBILE -> MovieViewHolder(ContentMovieCastMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.MOVIE_CAST_TV -> MovieViewHolder(ContentMovieCastTvBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.MOVIE_RECOMMENDATIONS_MOBILE -> MovieViewHolder(ContentMovieRecommendationsMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.MOVIE_RECOMMENDATIONS_TV -> MovieViewHolder(ContentMovieRecommendationsTvBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.PEOPLE_MOBILE_ITEM -> PeopleViewHolder(ItemPeopleMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.PEOPLE_TV_ITEM -> PeopleViewHolder(ItemPeopleTvBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.PROVIDER_MOBILE_ITEM -> ProviderViewHolder(ItemProviderMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.PROVIDER_TV_ITEM -> ProviderViewHolder(ItemProviderTvBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.SEASON_MOBILE_ITEM -> SeasonViewHolder(ItemSeasonMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.SEASON_TV_ITEM -> SeasonViewHolder(ItemSeasonTvBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.TV_SHOW_MOBILE_ITEM -> TvShowViewHolder(ItemTvShowMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.TV_SHOW_TV_ITEM -> TvShowViewHolder(ItemTvShowTvBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.TV_SHOW_GRID_MOBILE_ITEM -> TvShowViewHolder(ItemTvShowGridMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.TV_SHOW_GRID_TV_ITEM -> TvShowViewHolder(ItemTvShowGridBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.TV_SHOW_SWIPER_MOBILE_ITEM -> TvShowViewHolder(ItemCategorySwiperMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.TV_SHOW_MOBILE -> TvShowViewHolder(ContentTvShowMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.TV_SHOW_TV -> TvShowViewHolder(ContentTvShowTvBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.TV_SHOW_SEASONS_MOBILE -> TvShowViewHolder(ContentTvShowSeasonsMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.TV_SHOW_SEASONS_TV -> TvShowViewHolder(ContentTvShowSeasonsTvBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.TV_SHOW_DIRECTORS_MOBILE -> TvShowViewHolder(ContentTvShowDirectorsMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.TV_SHOW_DIRECTORS_TV -> TvShowViewHolder(ContentTvShowDirectorsTvBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.TV_SHOW_CAST_MOBILE -> TvShowViewHolder(ContentTvShowCastMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.TV_SHOW_CAST_TV -> TvShowViewHolder(ContentTvShowCastTvBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.TV_SHOW_RECOMMENDATIONS_MOBILE -> TvShowViewHolder(ContentTvShowRecommendationsMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.TV_SHOW_RECOMMENDATIONS_TV -> TvShowViewHolder(ContentTvShowRecommendationsTvBinding.inflate(LayoutInflater.from(parent.context), parent, false))
         }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
@@ -532,47 +185,64 @@ class AppAdapter(
 
         val adjustedPosition = header?.let { position - 1 } ?: position
         when (holder) {
-            is CategoryViewHolder -> holder.bind(
-                items[adjustedPosition] as Category,
-                onMovieClickListener,
-                onTvShowClickListener,
-                onMovieLongClickListener,
-                onTvShowLongClickListener,
-            )
-            is EpisodeViewHolder -> holder.bind(
-                items[adjustedPosition] as Episode
-            ) // Tu original no pasaba listener, lo respeto
+            is CategoryViewHolder -> holder.bind(items[adjustedPosition] as Category, onMovieClickListener, onTvShowClickListener, onMovieLongClickListener, onTvShowLongClickListener)
+            is EpisodeViewHolder -> holder.bind(items[adjustedPosition] as Episode)
             is FooterViewHolder -> footer?.bind?.invoke(holder.binding)
-            is FavoriteSectionHeaderViewHolder -> holder.bind(
-                items[adjustedPosition] as FavoriteSectionHeader
-            )
-            is GenreViewHolder -> holder.bind(
-                items[adjustedPosition] as Genre
-            ) // Tu original no pasaba listener, lo respeto
+            is FavoriteSectionHeaderViewHolder -> holder.bind(items[adjustedPosition] as FavoriteSectionHeader)
+            is GenreViewHolder -> holder.bind(items[adjustedPosition] as Genre)
             is HeaderViewHolder -> header?.bind?.invoke(holder.binding)
-            is MovieViewHolder -> holder.bind(
-                items[adjustedPosition] as Movie,
-                onMovieClickListener,
-                onMovieLongClickListener,
-                onMovieKeyListener,
-                isItemSelectedListener?.invoke(items[adjustedPosition]) == true,
-            ) // Los listeners se manejan dentro del ViewHolder
-            is PeopleViewHolder -> holder.bind(
-                items[adjustedPosition] as People
-            ) // Tu original no pasaba listener, lo respeto
-            is ProviderViewHolder -> holder.bind(
-                items[adjustedPosition] as Provider
-            ) // Tu original no pasaba listener, lo respeto
-            is SeasonViewHolder -> holder.bind(
-                items[adjustedPosition] as Season
-            ) // Tu original no pasaba listener, lo respeto
-            is TvShowViewHolder -> holder.bind(
-                items[adjustedPosition] as TvShow,
-                onTvShowClickListener,
-                onTvShowLongClickListener,
-                onTvShowKeyListener,
-                isItemSelectedListener?.invoke(items[adjustedPosition]) == true,
-            ) // Los listeners se manejan dentro del ViewHolder
+            is MovieViewHolder -> holder.bind(items[adjustedPosition] as Movie, onMovieClickListener, onMovieLongClickListener, onMovieKeyListener, isItemSelectedListener?.invoke(items[adjustedPosition]) == true)
+            is PeopleViewHolder -> holder.bind(items[adjustedPosition] as People)
+
+            // ⚡️ LA SOLUCIÓN SEGURA Y DEFINITIVA
+            is ProviderViewHolder -> holder.bind(items[adjustedPosition] as Provider).also {
+                holder.itemView.setOnClickListener {
+                    val selectedProvider = (items[adjustedPosition] as Provider).provider
+                    com.streamflixreborn.streamflix.utils.UserPreferences.currentProvider = selectedProvider
+                    onProviderClickListener?.invoke(items[adjustedPosition] as Provider)
+
+                    val context = holder.itemView.context
+                    val isTv = context.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK)
+
+                    if (isTv) {
+                        // ⚡️ TV: DIÁLOGO DE REINICIO SEGURO
+                        try {
+                            android.app.AlertDialog.Builder(context)
+                                .setTitle("Servidor Cambiado")
+                                .setMessage("El servidor ha cambiado a ${selectedProvider.name}.\nLa aplicación se reiniciará para cargar todo correctamente.")
+                                .setCancelable(false)
+                                .setPositiveButton("Aceptar") { _, _ ->
+                                    val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+                                    intent?.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                                    context.startActivity(intent)
+                                    Runtime.getRuntime().exit(0)
+                                }
+                                .show()
+                        } catch (e: Exception) {
+                            // Fallback si falla el diálogo: forzar reinicio directo sin avisar
+                            val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+                            intent?.addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                            context.startActivity(intent)
+                            Runtime.getRuntime().exit(0)
+                        }
+                    } else {
+                        // ⚡️ CELULAR: TRANSICIÓN SUAVE CON JETPACK NAVIGATION
+                        try {
+                            val navController = androidx.navigation.Navigation.findNavController(holder.itemView)
+                            val navOptions = androidx.navigation.NavOptions.Builder()
+                                .setLaunchSingleTop(true)
+                                .setPopUpTo(com.streamflixreborn.streamflix.R.id.home, true)
+                                .build()
+                            navController.navigate(com.streamflixreborn.streamflix.R.id.home, null, navOptions)
+                        } catch (e: Exception) {
+                            // Fallback silencioso
+                        }
+                    }
+                }
+            }
+
+            is SeasonViewHolder -> holder.bind(items[adjustedPosition] as Season)
+            is TvShowViewHolder -> holder.bind(items[adjustedPosition] as TvShow, onTvShowClickListener, onTvShowLongClickListener, onTvShowKeyListener, isItemSelectedListener?.invoke(items[adjustedPosition]) == true)
         }
 
         val state = states[holder.layoutPosition]
@@ -585,16 +255,10 @@ class AppAdapter(
         }
     }
 
-    override fun onBindViewHolder(
-        holder: RecyclerView.ViewHolder,
-        position: Int,
-        payloads: MutableList<Any>,
-    ) {
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int, payloads: MutableList<Any>) {
         if (PAYLOAD_SELECTION in payloads) {
             val adjustedPosition = header?.let { position - 1 } ?: position
-            val selected = items.getOrNull(adjustedPosition)
-                ?.let { isItemSelectedListener?.invoke(it) }
-                ?: false
+            val selected = items.getOrNull(adjustedPosition)?.let { isItemSelectedListener?.invoke(it) } ?: false
             when (holder) {
                 is MovieViewHolder -> holder.setItemSelected(selected)
                 is TvShowViewHolder -> holder.setItemSelected(selected)
@@ -609,114 +273,65 @@ class AppAdapter(
         if (position in items.indices) notifyItemChanged(position, PAYLOAD_SELECTION)
     }
 
-    override fun getItemCount(): Int = items.size +
-            (header?.let { 1 } ?: 0) +
-            (onLoadMoreListener?.let { 1 } ?: 0) +
-            (footer?.let { 1 } ?: 0)
+    override fun getItemCount(): Int = items.size + (header?.let { 1 } ?: 0) + (onLoadMoreListener?.let { 1 } ?: 0) + (footer?.let { 1 } ?: 0)
 
     override fun getItemId(position: Int): Long {
         if (header != null && position == 0) return Long.MIN_VALUE
-
         val adjustedPosition = header?.let { position - 1 } ?: position
-        if (adjustedPosition in itemStableIds.indices) {
-            return itemStableIds[adjustedPosition]
-        }
-
+        if (adjustedPosition in itemStableIds.indices) return itemStableIds[adjustedPosition]
         val loadMorePosition = itemCount - 1 - (if (footer != null) 1 else 0)
-        if (onLoadMoreListener != null && position == loadMorePosition) {
-            return Long.MIN_VALUE + 1
-        }
-
-        if (footer != null && position == itemCount - 1) {
-            return Long.MIN_VALUE + 2
-        }
-
+        if (onLoadMoreListener != null && position == loadMorePosition) return Long.MIN_VALUE + 1
+        if (footer != null && position == itemCount - 1) return Long.MIN_VALUE + 2
         return RecyclerView.NO_ID
     }
 
     override fun getItemViewType(position: Int): Int {
-        if (header != null && position == 0) {
-            return Type.HEADER.ordinal
-        }
-
+        if (header != null && position == 0) return Type.HEADER.ordinal
         val adjustedPosition = header?.let { position - 1 } ?: position
-        if (adjustedPosition in items.indices) {
-            return items[adjustedPosition].itemType.ordinal
-        }
-
+        if (adjustedPosition in items.indices) return items[adjustedPosition].itemType.ordinal
         val loadMorePosition = itemCount - 1 - (if (footer != null) 1 else 0)
-        if (onLoadMoreListener != null && position == loadMorePosition) {
-            return Type.LOADING_ITEM.ordinal
-        }
-
-        if (footer != null && position == itemCount - 1) {
-            return Type.FOOTER.ordinal
-        }
-
+        if (onLoadMoreListener != null && position == loadMorePosition) return Type.LOADING_ITEM.ordinal
+        if (footer != null && position == itemCount - 1) return Type.FOOTER.ordinal
         return Type.LOADING_ITEM.ordinal
     }
 
     override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
         super.onViewRecycled(holder)
-
         val state = when (holder) {
             is CategoryViewHolder -> holder.childRecyclerView?.layoutManager?.onSaveInstanceState()
             is MovieViewHolder -> holder.childRecyclerView?.layoutManager?.onSaveInstanceState()
             is TvShowViewHolder -> holder.childRecyclerView?.layoutManager?.onSaveInstanceState()
             else -> null
         }
-
-        if (state != null) {
-            states[holder.layoutPosition] = state
-        } else {
-            states.remove(holder.layoutPosition)
-        }
+        if (state != null) states[holder.layoutPosition] = state else states.remove(holder.layoutPosition)
     }
 
     fun onSaveInstanceState(recyclerView: RecyclerView) {
         for (position in items.indices) {
             val holder = recyclerView.findViewHolderForAdapterPosition(position) ?: continue
-
             val state = when (holder) {
                 is CategoryViewHolder -> holder.childRecyclerView?.layoutManager?.onSaveInstanceState()
                 is MovieViewHolder -> holder.childRecyclerView?.layoutManager?.onSaveInstanceState()
                 is TvShowViewHolder -> holder.childRecyclerView?.layoutManager?.onSaveInstanceState()
                 else -> null
             }
-
-            if (state != null) {
-                states[position] = state
-            } else {
-                states.remove(position)
-            }
+            if (state != null) states[position] = state else states.remove(position)
         }
     }
-
 
     fun submitList(list: List<Item>) {
         val oldItems = items.toList()
         val newItemCount = list.size
 
-        if (oldItems.isNotEmpty() &&
-            oldItems.size <= newItemCount &&
-            oldItems == list.subList(0, oldItems.size)
-        ) {
+        if (oldItems.isNotEmpty() && oldItems.size <= newItemCount && oldItems == list.subList(0, oldItems.size)) {
             val appendedItems = list.subList(oldItems.size, newItemCount)
-            if (appendedItems.isEmpty()) {
-                return
-            }
-
+            if (appendedItems.isEmpty()) return
             val appendedIdentityState = appendedItems.buildIdentityState(itemIdentityCounts)
-
             items.addAll(appendedItems)
             itemIdentities = itemIdentities + appendedIdentityState.identities
             itemIdentityCounts = appendedIdentityState.counts
             itemStableIds = itemStableIds + appendedIdentityState.stableIds
-
-            notifyItemRangeInserted(
-                oldItems.size + (header?.let { 1 } ?: 0),
-                appendedItems.size
-            )
+            notifyItemRangeInserted(oldItems.size + (header?.let { 1 } ?: 0), appendedItems.size)
             return
         }
 
@@ -726,36 +341,20 @@ class AppAdapter(
 
         val result = DiffUtil.calculateDiff(object : DiffUtil.Callback() {
             override fun getOldListSize() = items.size
-
             override fun getNewListSize() = list.size
-
-            override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-                val oldItem = oldItems[oldItemPosition]
-                val newItem = list[newItemPosition]
-                return oldIdentities.getOrNull(oldItemPosition) == newIdentities.getOrNull(newItemPosition) &&
-                        oldItem::class == newItem::class
-            }
-
-            override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-                val oldItem = oldItems[oldItemPosition]
-                val newItem = list[newItemPosition]
-                return oldItem == newItem
-            }
+            override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int) = oldIdentities.getOrNull(oldItemPosition) == newIdentities.getOrNull(newItemPosition) && oldItems[oldItemPosition]::class == list[newItemPosition]::class
+            override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int) = oldItems[oldItemPosition] == list[newItemPosition]
         })
 
         val newStates = mutableMapOf<Int, Parcelable?>()
         if (items.size < list.size) {
             for (newItemPosition in list.indices.reversed()) {
-                val oldItemPosition = result.convertNewPositionToOld(newItemPosition)
-                    .takeIf { it != -1 } ?: continue
-
+                val oldItemPosition = result.convertNewPositionToOld(newItemPosition).takeIf { it != -1 } ?: continue
                 states[oldItemPosition]?.let { newStates[newItemPosition] = it }
             }
         } else if (items.size > list.size) {
             for (oldItemPosition in items.indices) {
-                val newItemPosition = result.convertOldPositionToNew(oldItemPosition)
-                    .takeIf { it != -1 } ?: continue
-
+                val newItemPosition = result.convertOldPositionToNew(oldItemPosition).takeIf { it != -1 } ?: continue
                 states[oldItemPosition]?.let { newStates[newItemPosition] = it }
             }
         } else {
@@ -766,7 +365,6 @@ class AppAdapter(
 
         states.clear()
         states.putAll(newStates)
-
         items.clear()
         items.addAll(list)
         itemIdentities = newIdentities
@@ -777,21 +375,15 @@ class AppAdapter(
 
     fun moveItem(fromPosition: Int, toPosition: Int) {
         if (fromPosition !in items.indices || toPosition !in items.indices || fromPosition == toPosition) return
-
         java.util.Collections.swap(items, fromPosition, toPosition)
-
-        itemIdentities = itemIdentities.toMutableList().also {
-            java.util.Collections.swap(it, fromPosition, toPosition)
-        }
+        itemIdentities = itemIdentities.toMutableList().also { java.util.Collections.swap(it, fromPosition, toPosition) }
         val stableId = itemStableIds[fromPosition]
         itemStableIds[fromPosition] = itemStableIds[toPosition]
         itemStableIds[toPosition] = stableId
-
         val fromState = states.remove(fromPosition)
         val toState = states.remove(toPosition)
         if (fromState != null) states[toPosition] = fromState
         if (toState != null) states[fromPosition] = toState
-
         notifyItemMoved(fromPosition, toPosition)
     }
 
@@ -800,27 +392,14 @@ class AppAdapter(
         newItems.forEachIndexed { targetIndex, desiredItem ->
             var currentIndex = items.indexOfFirst { it === desiredItem }
             if (currentIndex < 0) return
-            while (currentIndex > targetIndex) {
-                moveItem(currentIndex, currentIndex - 1)
-                currentIndex--
-            }
-            while (currentIndex < targetIndex) {
-                moveItem(currentIndex, currentIndex + 1)
-                currentIndex++
-            }
+            while (currentIndex > targetIndex) { moveItem(currentIndex, currentIndex - 1); currentIndex-- }
+            while (currentIndex < targetIndex) { moveItem(currentIndex, currentIndex + 1); currentIndex++ }
         }
     }
 
-
-    fun <T : ViewBinding> setHeader(
-        binding: (parent: ViewGroup) -> T,
-        bind: ((binding: T) -> Unit)? = null,
-    ) {
+    fun <T : ViewBinding> setHeader(binding: (parent: ViewGroup) -> T, bind: ((binding: T) -> Unit)? = null) {
         @Suppress("UNCHECKED_CAST")
-        this.header = Header(
-            binding = binding,
-            bind = bind as ((ViewBinding) -> Unit)?,
-        )
+        this.header = Header(binding = binding, bind = bind as ((ViewBinding) -> Unit)?)
     }
 
     fun setOnLoadMoreListener(onLoadMoreListener: (() -> Unit)?) {
@@ -832,63 +411,22 @@ class AppAdapter(
         }
     }
 
-    fun <T : ViewBinding> setFooter(
-        binding: (parent: ViewGroup) -> T,
-        bind: ((binding: T) -> Unit)? = null,
-    ) {
+    fun <T : ViewBinding> setFooter(binding: (parent: ViewGroup) -> T, bind: ((binding: T) -> Unit)? = null) {
         @Suppress("UNCHECKED_CAST")
-        this.footer = Footer(
-            binding = binding,
-            bind = bind as ((ViewBinding) -> Unit)?,
-        )
+        this.footer = Footer(binding = binding, bind = bind as ((ViewBinding) -> Unit)?)
     }
 
-
-    private class HeaderViewHolder(
-        val binding: ViewBinding
-    ) : RecyclerView.ViewHolder(
-        binding.root
-    )
-
-    private class FavoriteSectionHeaderViewHolder(
-        private val binding: ItemFavoriteSectionHeaderBinding,
-    ) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(header: FavoriteSectionHeader) {
-            binding.tvFavoriteSectionTitle.text = header.title
-        }
+    private class HeaderViewHolder(val binding: ViewBinding) : RecyclerView.ViewHolder(binding.root)
+    private class FavoriteSectionHeaderViewHolder(private val binding: ItemFavoriteSectionHeaderBinding) : RecyclerView.ViewHolder(binding.root) {
+        fun bind(header: FavoriteSectionHeader) { binding.tvFavoriteSectionTitle.text = header.title }
     }
+    private data class Header<T : ViewBinding>(val binding: (parent: ViewGroup) -> T, val bind: ((binding: T) -> Unit)? = null)
+    private class LoadingViewHolder(binding: ViewBinding) : RecyclerView.ViewHolder(binding.root)
+    private class FooterViewHolder(val binding: ViewBinding) : RecyclerView.ViewHolder(binding.root)
+    private data class Footer<T : ViewBinding>(val binding: (parent: ViewGroup) -> T, val bind: ((binding: T) -> Unit)? = null)
+    private data class IdentityState(val identities: List<String>, val counts: MutableMap<String, Int>, val stableIds: LongArray)
 
-    private data class Header<T : ViewBinding>(
-        val binding: (parent: ViewGroup) -> T,
-        val bind: ((binding: T) -> Unit)? = null,
-    )
-
-    private class LoadingViewHolder(
-        binding: ViewBinding
-    ) : RecyclerView.ViewHolder(
-        binding.root
-    )
-
-    private class FooterViewHolder(
-        val binding: ViewBinding
-    ) : RecyclerView.ViewHolder(
-        binding.root
-    )
-
-    private data class Footer<T : ViewBinding>(
-        val binding: (parent: ViewGroup) -> T,
-        val bind: ((binding: T) -> Unit)? = null,
-    )
-
-    private data class IdentityState(
-        val identities: List<String>,
-        val counts: MutableMap<String, Int>,
-        val stableIds: LongArray,
-    )
-
-    private fun List<Item>.buildIdentityState(
-        startingCounts: Map<String, Int> = emptyMap()
-    ): IdentityState {
+    private fun List<Item>.buildIdentityState(startingCounts: Map<String, Int> = emptyMap()): IdentityState {
         val occurrenceCounts = startingCounts.toMutableMap()
         val identities = ArrayList<String>(size)
         val stableIds = LongArray(size)
@@ -901,16 +439,9 @@ class AppAdapter(
 
             val identity = "$key:$occurrenceIndex"
             identities.add(identity)
-            stableIds[index] = identity.fold(1125899906842597L) { acc, char ->
-                31L * acc + char.code
-            }
+            stableIds[index] = identity.fold(1125899906842597L) { acc, char -> 31L * acc + char.code }
         }
-
-        return IdentityState(
-            identities = identities,
-            counts = occurrenceCounts,
-            stableIds = stableIds,
-        )
+        return IdentityState(identities = identities, counts = occurrenceCounts, stableIds = stableIds)
     }
 
     private fun Item.baseIdentityKey(): String = when (this) {

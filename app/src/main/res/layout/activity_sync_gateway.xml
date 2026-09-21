@@ -1,80 +1,111 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0F111A"
-    android:fillViewport="true">
+    android:background="#050505">
 
-    <LinearLayout
+    <ImageView
+        android:id="@+id/bgGateway"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:padding="32dp">
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:visibility="gone"
+        android:alpha="0.6"
+        android:importantForAccessibility="no"
+        android:contentDescription="@null" />
 
-        <!-- LOGO DINÁMICO (Oculto en el primer inicio) -->
-        <ImageView
-            android:id="@+id/logoGateway"
-            android:layout_width="220dp"
-            android:layout_height="120dp"
-            android:layout_marginBottom="40dp"
-            android:visibility="gone"
-            android:adjustViewBounds="true"
-            android:contentDescription="Gateway Icon" />
+    <!-- ⚡️ EL SCROLLVIEW EVITA QUE SE CORTE POR LA MITAD EN TV -->
+    <ScrollView
+        android:id="@+id/loginScroll"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintWidth_max="400dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        android:scrollbars="none">
 
         <LinearLayout
+            android:id="@+id/loginContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:maxWidth="400dp"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="32dp"
+            android:background="#1A1D29">
+
+            <ImageView
+                android:id="@+id/logoGateway"
+                android:layout_width="match_parent"
+                android:layout_height="100dp"
+                android:layout_marginBottom="30dp"
+                android:visibility="gone"
+                android:scaleType="fitCenter"
+                android:adjustViewBounds="true"
+                android:importantForAccessibility="no"
+                android:contentDescription="@null" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Usuario"
+                android:textColor="#AAAAAA"
+                android:textSize="14sp"
+                android:layout_marginBottom="4dp"
+                android:textStyle="bold" />
 
             <EditText
                 android:id="@+id/inputAlpha"
                 android:layout_width="match_parent"
                 android:layout_height="55dp"
-                android:background="#1A1D29"
-                android:hint="Account ID"
-                android:textColorHint="#888888"
+                android:background="#0F111A"
                 android:textColor="#FFFFFF"
                 android:padding="16dp"
                 android:inputType="textNoSuggestions"
                 android:layout_marginBottom="16dp"
                 android:focusable="true"
-                android:focusableInTouchMode="true"
-                android:nextFocusDown="@+id/inputBeta" />
+                android:hint="Ingresar usuario"
+                android:textColorHint="#444444" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Contraseña"
+                android:textColor="#AAAAAA"
+                android:textSize="14sp"
+                android:layout_marginBottom="4dp"
+                android:textStyle="bold" />
 
             <EditText
                 android:id="@+id/inputBeta"
                 android:layout_width="match_parent"
                 android:layout_height="55dp"
-                android:background="#1A1D29"
-                android:hint="Secure Key"
-                android:textColorHint="#888888"
+                android:background="#0F111A"
                 android:textColor="#FFFFFF"
                 android:padding="16dp"
                 android:inputType="textPassword"
                 android:layout_marginBottom="24dp"
                 android:focusable="true"
-                android:focusableInTouchMode="true"
-                android:nextFocusUp="@+id/inputAlpha"
-                android:nextFocusDown="@+id/btnSync" />
+                android:hint="Ingresar contraseña"
+                android:textColorHint="#444444" />
 
             <Button
                 android:id="@+id/btnSync"
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
-                android:text="CONNECT SYSTEM"
+                android:text="ENTRAR"
                 android:textColor="#FFFFFF"
                 android:backgroundTint="#E50914"
                 android:textStyle="bold"
-                android:focusable="true"
-                android:nextFocusUp="@+id/inputBeta" />
+                android:focusable="true" />
 
             <ProgressBar
                 android:id="@+id/progressSync"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center"
                 android:layout_marginTop="20dp"
                 android:visibility="gone"
                 android:indeterminateTint="#E50914"/>
@@ -88,7 +119,6 @@
                 android:textColor="#FF5252"
                 android:textStyle="bold"
                 android:visibility="gone"/>
-
         </LinearLayout>
-    </LinearLayout>
-</ScrollView>
+    </ScrollView>
+</androidx.constraintlayout.widget.ConstraintLayout>

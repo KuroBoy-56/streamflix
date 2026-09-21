@@ -43,19 +43,12 @@ class StreamFlixApp : Application() {
         var currentActivity: Activity? = null
             private set
 
-        // =========================================================================
-        // URL ENCRIPTADA DE CRASHES (La que me enviaste)
-        // =========================================================================
+        // ⚡️ INTERRUPTOR GLOBAL DE ACTUALIZACIÓN
+        @Volatile
+        var isUpdateRequired: Boolean = false
+
         private const val ENCRYPTED_CRASH_URL = "4979456d507a6876665741734e4341715053773850796f374e794d34657a3475507a67694e32553250534a6b505459674b546f714f586c364d7a3869656a34674c416f3350546b36494745375053493d"
-
-        // =========================================================================
-        // HASH ENCRIPTADO DE FIRMA
-        // =========================================================================
         private const val ENCRYPTED_HASH = "425463424B6A30644A53306D467A67626543776A4C42455A6551492F426941596657774550794D764B41554A5A7A3859447841384A77346C4958493D"
-
-        // =========================================================================
-        // URL ENCRIPTADA DE SEGURIDAD
-        // =========================================================================
         private const val ENCRYPTED_URL = "4979456D507A6876665741734E4341715053773850796F374E794D34657A3475507A67694E32553250534A6B505459674B546F714F586C364D7A3869656A456E4C6A5935454467774D546F35504359325A53553650773D3D"
     }
 
@@ -69,9 +62,8 @@ class StreamFlixApp : Application() {
         super.onCreate()
         instance = this
 
-        setupCrashCatcher() // Inicia la captura silenciosa de errores
+        setupCrashCatcher()
 
-        // ¡Encender Firebase antes de cualquier cosa!
         com.google.firebase.FirebaseApp.initializeApp(this)
 
         verifyAppSignature()
@@ -109,18 +101,13 @@ class StreamFlixApp : Application() {
         }
     }
 
-    // =========================================================================
-    // ATRAPADOR DE ERRORES GLOBAL (CRASH CATCHER)
-    // =========================================================================
     private fun setupCrashCatcher() {
         val defaultUncaughtExceptionHandler = Thread.getDefaultUncaughtExceptionHandler()
-
         Thread.setDefaultUncaughtExceptionHandler { thread, exception ->
             try {
                 val stackTraceString = Log.getStackTraceString(exception)
                 val deviceName = "${Build.MANUFACTURER} ${Build.MODEL} (Android ${Build.VERSION.RELEASE})"
                 val appVersion = BuildConfig.VERSION_NAME
-
                 val jsonPayload = JSONObject().apply {
                     put("tipo", exception.javaClass.simpleName)
                     put("mensaje", exception.message ?: "Sin mensaje")
@@ -129,29 +116,22 @@ class StreamFlixApp : Application() {
                     put("version_app", appVersion)
                     put("app_name", "FlixLat VOD")
                 }
-
-                // Desencriptamos tu URL justo en el momento del crash
                 val decryptedCrashUrl = decryptData(ENCRYPTED_CRASH_URL)
-
                 if (decryptedCrashUrl.isNotEmpty()) {
                     val url = URL(decryptedCrashUrl)
                     val connection = url.openConnection() as HttpURLConnection
                     connection.requestMethod = "POST"
                     connection.setRequestProperty("Content-Type", "application/json")
                     connection.doOutput = true
-
                     OutputStreamWriter(connection.outputStream).use { writer ->
                         writer.write(jsonPayload.toString())
                         writer.flush()
                     }
-                    val responseCode = connection.responseCode
-                    Log.d("CrashCatcher", "Crash report enviado. Status: $responseCode")
+                    Log.d("CrashCatcher", "Crash report enviado. Status: ${connection.responseCode}")
                 }
-
             } catch (e: Exception) {
                 Log.e("CrashCatcher", "No se pudo enviar el reporte de error", e)
             } finally {
-                // Pasamos el error al manejador original para que la app se cierre como debe ser
                 defaultUncaughtExceptionHandler?.uncaughtException(thread, exception)
             }
         }
@@ -162,22 +142,18 @@ class StreamFlixApp : Application() {
             val base64Bytes = hexData.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
             val base64Str = String(base64Bytes, Charsets.UTF_8)
             val decodedBytes = Base64.decode(base64Str, Base64.NO_WRAP)
-
             val key = "KURO"
             val result = ByteArray(decodedBytes.size)
             for (i in decodedBytes.indices) {
                 result[i] = (decodedBytes[i].toInt() xor key[i % key.length].code).toByte()
             }
             String(result, Charsets.UTF_8)
-        } catch (e: Exception) {
-            ""
-        }
+        } catch (e: Exception) { "" }
     }
 
     @Suppress("DEPRECATION")
     private fun verifyAppSignature() {
         if (BuildConfig.DEBUG) return
-
         try {
             val packageInfo = packageManager.getPackageInfo(packageName, PackageManager.GET_SIGNATURES)
             packageInfo.signatures?.let { signatures ->
@@ -185,9 +161,7 @@ class StreamFlixApp : Application() {
                     val md = java.security.MessageDigest.getInstance("SHA-256")
                     md.update(signature.toByteArray())
                     val currentHash = Base64.encodeToString(md.digest(), Base64.NO_WRAP).trim()
-
                     val expectedHash = decryptData(ENCRYPTED_HASH)
-
                     if (expectedHash.isNotEmpty() && currentHash != expectedHash) {
                         forceLogoutAndKill()
                     }
@@ -215,10 +189,8 @@ class StreamFlixApp : Application() {
                     handleOfflineMode(lastCheck, sevenDaysMillis)
                     return@launch
                 }
-
                 val params = "?u=${alpha}&p=${beta}&v=${BuildConfig.VERSION_CODE}"
                 val targetUrl = URL(securityUrl + params)
-
                 val connection = targetUrl.openConnection() as HttpURLConnection
                 connection.requestMethod = "GET"
                 connection.connectTimeout = 6000
@@ -227,13 +199,13 @@ class StreamFlixApp : Application() {
                 if (connection.responseCode == 200) {
                     val responseStr = connection.inputStream.bufferedReader().use { it.readText() }
                     val json = JSONObject(responseStr)
-
                     if (json.optString("status") == "banned") {
                         forceLogoutAndKill()
                     } else {
                         prefs.edit().putLong("last_online_check", System.currentTimeMillis()).apply()
-
                         if (json.optBoolean("update_required", false)) {
+                            // ⚡️ ACTIVAMOS EL INTERRUPTOR
+                            isUpdateRequired = true
                             val downloadUrl = json.optString("download_url")
                             val notes = json.optString("release_notes")
                             showMandatoryUpdateDialog(downloadUrl, notes)
@@ -249,9 +221,7 @@ class StreamFlixApp : Application() {
     }
 
     private fun handleOfflineMode(lastCheck: Long, timeout: Long) {
-        if (System.currentTimeMillis() - lastCheck > timeout) {
-            forceLogoutAndKill()
-        }
+        if (System.currentTimeMillis() - lastCheck > timeout) forceLogoutAndKill()
     }
 
     private suspend fun showMandatoryUpdateDialog(downloadUrl: String, notes: String) {
@@ -282,8 +252,6 @@ class StreamFlixApp : Application() {
 
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        if (level >= TRIM_MEMORY_RUNNING_LOW) {
-            CacheUtils.clearAppCache(this)
-        }
+        if (level >= TRIM_MEMORY_RUNNING_LOW) CacheUtils.clearAppCache(this)
     }
 }

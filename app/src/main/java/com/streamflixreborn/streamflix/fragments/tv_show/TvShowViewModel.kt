@@ -28,6 +28,18 @@ class TvShowViewModel(
     private val fallbackBanner: String? = null,
 ) : ViewModel() {
 
+    // ⚡️ CONVERSOR A FULL HD
+    private fun String?.toHighRes(): String? {
+        if (this.isNullOrEmpty()) return this
+        return this.replace("/w185/", "/original/")
+            .replace("/w200/", "/original/")
+            .replace("/w300/", "/original/")
+            .replace("/w342/", "/original/")
+            .replace("/w400/", "/original/")
+            .replace("/w500/", "/original/")
+            .replace("/w780/", "/original/")
+    }
+
     private fun episodeSeasonKey(episode: Episode): String? {
         return episode.id.substringBeforeLast("/", "")
             .takeIf { it.isNotBlank() }
@@ -39,12 +51,12 @@ class TvShowViewModel(
                 val episodeSeason = episode.season
                 val seasonKey = episodeSeasonKey(episode)
                 seasonKey == season.id ||
-                    episodeSeason?.id == season.id ||
-                    (
-                        episodeSeason?.number != null &&
-                            episodeSeason.number != 0 &&
-                            episodeSeason.number == season.number
-                        )
+                        episodeSeason?.id == season.id ||
+                        (
+                                episodeSeason?.number != null &&
+                                        episodeSeason.number != 0 &&
+                                        episodeSeason.number == season.number
+                                )
             }
             .sortedBy { it.number }
             .onEach { episode ->
@@ -222,12 +234,27 @@ class TvShowViewModel(
         val partNumber: Int,
     )
 
-
     fun getTvShow(id: String) = viewModelScope.launch(Dispatchers.IO) {
         _state.emit(State.Loading)
 
         try {
             val tvShow = UserPreferences.currentProvider!!.getTvShow(id)
+
+            // ⚡️ FORZAMOS LAS IMÁGENES A MÁXIMA CALIDAD PARA SERIES, TEMPORADAS Y RECOMENDACIONES
+            tvShow.poster = tvShow.poster.toHighRes()
+            tvShow.banner = tvShow.banner.toHighRes()
+            tvShow.seasons.forEach { season ->
+                season.poster = season.poster.toHighRes()
+            }
+            tvShow.recommendations.forEach { rec ->
+                if (rec is Movie) {
+                    rec.poster = rec.poster.toHighRes()
+                    rec.banner = rec.banner.toHighRes()
+                } else if (rec is TvShow) {
+                    rec.poster = rec.poster.toHighRes()
+                    rec.banner = rec.banner.toHighRes()
+                }
+            }
 
             if (!ArtworkRepair.isRemoteArtworkUrl(tvShow.poster) && ArtworkRepair.isRemoteArtworkUrl(fallbackPoster)) {
                 tvShow.poster = fallbackPoster
@@ -265,6 +292,12 @@ class TvShowViewModel(
 
         try {
             val episodes = UserPreferences.currentProvider!!.getEpisodesBySeason(season.id)
+
+            // ⚡️ HD PARA LOS POSTERS DE LOS CAPÍTULOS
+            episodes.forEach { ep ->
+                ep.poster = ep.poster.toHighRes()
+            }
+
             val ids = episodes.map { it.id }
             val episodeMap = episodes.associateBy { it.id }
 
