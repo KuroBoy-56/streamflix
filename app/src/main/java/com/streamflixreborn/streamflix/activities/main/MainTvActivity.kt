@@ -9,17 +9,17 @@ import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import android.util.Base64
+import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
-import android.webkit.SslErrorHandler
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
@@ -36,7 +36,6 @@ import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.tanasi.navigation.widget.setupWithNavController
 import com.streamflixreborn.streamflix.BuildConfig
 import com.streamflixreborn.streamflix.R
-import com.streamflixreborn.streamflix.database.AppDatabase
 import com.streamflixreborn.streamflix.databinding.ActivityMainTvBinding
 import com.streamflixreborn.streamflix.databinding.ContentHeaderMenuMainTvBinding
 import com.streamflixreborn.streamflix.fragments.player.PlayerTvFragment
@@ -62,7 +61,6 @@ class MainTvActivity : FragmentActivity() {
     private val binding get() = _binding!!
 
     private val viewModel by viewModels<MainViewModel>()
-
     private lateinit var updateAppDialog: UpdateAppTvDialog
     private var isNavMenuExpanded = true
 
@@ -79,14 +77,13 @@ class MainTvActivity : FragmentActivity() {
             finish()
             overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
             startActivity(intent)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             super.recreate()
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(ThemeManager.tvThemeRes(UserPreferences.selectedTheme))
-
         super.onCreate(savedInstanceState)
 
         AnimeOnlineNinjaProvider.init(this)
@@ -98,6 +95,10 @@ class MainTvActivity : FragmentActivity() {
         _binding = ActivityMainTvBinding.inflate(layoutInflater)
         setContentView(binding.root)
         applyThemeNavigationChrome()
+
+        // ⚡️ Desactivar recorte de bordes en el menú lateral
+        binding.navMain.clipChildren = false
+        binding.navMain.clipToPadding = false
 
         val prefs = getSharedPreferences("SecureGatewayPrefs", Context.MODE_PRIVATE)
         val customSplash = prefs.getString("custom_splash_url", "")?.replace("null", "")?.trim() ?: ""
@@ -122,10 +123,8 @@ class MainTvActivity : FragmentActivity() {
             setupExpirationWarningWebView()
         }
 
-        val navHostFragment = this.supportFragmentManager
-            .findFragmentById(binding.navMainFragment.id) as NavHostFragment
+        val navHostFragment = supportFragmentManager.findFragmentById(binding.navMainFragment.id) as NavHostFragment
         val navController = navHostFragment.navController
-
         adjustLayoutDelta(null, null)
 
         if (BuildConfig.APP_LAYOUT == "mobile" || (BuildConfig.APP_LAYOUT != "tv" && !packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK))) {
@@ -150,7 +149,6 @@ class MainTvActivity : FragmentActivity() {
         navController.addOnDestinationChangedListener { _, destination, _ ->
             binding.navMain.headerView?.apply {
                 val header = ContentHeaderMenuMainTvBinding.bind(this)
-
                 val panelLogo = UserPreferences.customLogoUrl.replace("null", "").trim()
                 val providerLogo = UserPreferences.currentProvider?.logo ?: ""
                 val targetUrl = if (panelLogo.isNotEmpty()) panelLogo else providerLogo
@@ -174,21 +172,10 @@ class MainTvActivity : FragmentActivity() {
                     }
                 }
 
-                if (binding.navMain.hasFocus()) {
-                    header.ivNavigationHeaderIcon.layoutParams.width = 150.dp(this@MainTvActivity)
-                    header.ivNavigationHeaderIcon.layoutParams.height = 60.dp(this@MainTvActivity)
-                    header.ivNavigationHeaderIcon.translationX = 0f
-                } else {
-                    // ⚡️ TAMAÑO EXACTO 24dp PARA NO CORTAR EL LOGO EN LA TV
-                    header.ivNavigationHeaderIcon.layoutParams.width = 24.dp(this@MainTvActivity)
-                    header.ivNavigationHeaderIcon.layoutParams.height = 24.dp(this@MainTvActivity)
-                    header.ivNavigationHeaderIcon.translationX = 0f
-                }
-                header.ivNavigationHeaderIcon.requestLayout()
+                applyHeaderLogoLayout(header, binding.navMain.hasFocus())
 
                 header.tvNavigationHeaderTitle.visibility = View.GONE
                 header.tvNavigationHeaderSubtitle.visibility = View.GONE
-
                 setBackgroundColor(Color.TRANSPARENT)
 
                 val assignedStr = prefs.getString("assigned_servers", "") ?: ""
@@ -197,9 +184,7 @@ class MainTvActivity : FragmentActivity() {
                 if (assignedList.size > 1) {
                     isFocusable = true
                     isClickable = true
-                    setOnClickListener {
-                        navController.navigate(R.id.providers)
-                    }
+                    setOnClickListener { navController.navigate(R.id.providers) }
                 } else {
                     isFocusable = false
                     isClickable = false
@@ -221,39 +206,24 @@ class MainTvActivity : FragmentActivity() {
             if (hasFocus != isNavMenuExpanded) {
                 isNavMenuExpanded = hasFocus
                 val currentWidth = binding.navMain.width
-
                 val targetWidth = if (hasFocus) 210.dp(this) else 65.dp(this)
 
                 if (currentWidth > 0) {
-                    val anim = ValueAnimator.ofInt(currentWidth, targetWidth)
-                    anim.addUpdateListener { valueAnimator ->
-                        val value = valueAnimator.animatedValue as Int
-                        val layoutParams = binding.navMain.layoutParams
-                        layoutParams.width = value
-                        binding.navMain.layoutParams = layoutParams
+                    ValueAnimator.ofInt(currentWidth, targetWidth).apply {
+                        addUpdateListener { animator ->
+                            val value = animator.animatedValue as Int
+                            val params = binding.navMain.layoutParams
+                            params.width = value
+                            binding.navMain.layoutParams = params
+                        }
+                        duration = 200
+                        start()
                     }
-                    anim.duration = 200
-                    anim.start()
                 }
 
-                binding.navMain.headerView?.apply {
-                    val header = ContentHeaderMenuMainTvBinding.bind(this)
-
-                    if (hasFocus) {
-                        header.ivNavigationHeaderIcon.layoutParams.width = 150.dp(this@MainTvActivity)
-                        header.ivNavigationHeaderIcon.layoutParams.height = 60.dp(this@MainTvActivity)
-                        header.ivNavigationHeaderIcon.translationX = 0f
-                        header.tvNavigationHeaderTitle.visibility = View.VISIBLE
-                        header.tvNavigationHeaderSubtitle.visibility = View.VISIBLE
-                    } else {
-                        // ⚡️ TAMAÑO 24dp PARA EL MENÚ COLAPSADO
-                        header.ivNavigationHeaderIcon.layoutParams.width = 24.dp(this@MainTvActivity)
-                        header.ivNavigationHeaderIcon.layoutParams.height = 24.dp(this@MainTvActivity)
-                        header.ivNavigationHeaderIcon.translationX = 0f
-                        header.tvNavigationHeaderTitle.visibility = View.GONE
-                        header.tvNavigationHeaderSubtitle.visibility = View.GONE
-                    }
-                    header.ivNavigationHeaderIcon.requestLayout()
+                binding.navMain.headerView?.let { headerView ->
+                    val header = ContentHeaderMenuMainTvBinding.bind(headerView)
+                    applyHeaderLogoLayout(header, hasFocus)
                 }
             }
         }
@@ -263,14 +233,9 @@ class MainTvActivity : FragmentActivity() {
                 isNavMenuExpanded = false
                 binding.navMain.layoutParams.width = 65.dp(this)
                 binding.navMain.requestLayout()
-                binding.navMain.headerView?.apply {
-                    val header = ContentHeaderMenuMainTvBinding.bind(this)
-                    header.ivNavigationHeaderIcon.layoutParams.width = 24.dp(this@MainTvActivity)
-                    header.ivNavigationHeaderIcon.layoutParams.height = 24.dp(this@MainTvActivity)
-                    header.ivNavigationHeaderIcon.translationX = 0f
-                    header.tvNavigationHeaderTitle.visibility = View.GONE
-                    header.tvNavigationHeaderSubtitle.visibility = View.GONE
-                    header.ivNavigationHeaderIcon.requestLayout()
+                binding.navMain.headerView?.let { headerView ->
+                    val header = ContentHeaderMenuMainTvBinding.bind(headerView)
+                    applyHeaderLogoLayout(header, false)
                 }
             }
         }
@@ -331,6 +296,43 @@ class MainTvActivity : FragmentActivity() {
         })
     }
 
+    // ⚡️ Función de alineación milimétrica del logo
+    private fun applyHeaderLogoLayout(header: ContentHeaderMenuMainTvBinding, expanded: Boolean) {
+        val root = header.root
+        if (expanded) {
+            root.setPadding(16.dp(this), 12.dp(this), 16.dp(this), 12.dp(this))
+            header.ivNavigationHeaderIcon.apply {
+                layoutParams = (layoutParams as? ViewGroup.MarginLayoutParams ?: ViewGroup.MarginLayoutParams(150.dp(this@MainTvActivity), 55.dp(this@MainTvActivity))).apply {
+                    width = 150.dp(this@MainTvActivity)
+                    height = 55.dp(this@MainTvActivity)
+                    if (this is LinearLayout.LayoutParams) gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                    if (this is FrameLayout.LayoutParams) gravity = Gravity.START or Gravity.CENTER_VERTICAL
+                    setMargins(0, 0, 0, 0)
+                }
+                translationX = 0f
+            }
+            header.tvNavigationHeaderTitle.visibility = View.VISIBLE
+            header.tvNavigationHeaderSubtitle.visibility = View.VISIBLE
+        } else {
+            // ⚡️ Colapsado: centrado total, mismo tamaño que los iconos (26dp)
+            root.setPadding(0, 12.dp(this), 0, 12.dp(this))
+            header.ivNavigationHeaderIcon.apply {
+                layoutParams = (layoutParams as? ViewGroup.MarginLayoutParams ?: ViewGroup.MarginLayoutParams(26.dp(this@MainTvActivity), 26.dp(this@MainTvActivity))).apply {
+                    width = 26.dp(this@MainTvActivity)
+                    height = 26.dp(this@MainTvActivity)
+                    if (this is LinearLayout.LayoutParams) gravity = Gravity.CENTER
+                    if (this is FrameLayout.LayoutParams) gravity = Gravity.CENTER
+                    setMargins(0, 0, 0, 0)
+                }
+                translationX = 0f
+            }
+            header.tvNavigationHeaderTitle.visibility = View.GONE
+            header.tvNavigationHeaderSubtitle.visibility = View.GONE
+        }
+        header.ivNavigationHeaderIcon.requestLayout()
+        root.requestLayout()
+    }
+
     private fun decryptData(hexData: String): String {
         return try {
             val base64Bytes = hexData.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
@@ -342,7 +344,7 @@ class MainTvActivity : FragmentActivity() {
                 result[i] = (decodedBytes[i].toInt() xor key[i % key.length].code).toByte()
             }
             String(result, Charsets.UTF_8)
-        } catch (e: Exception) { "" }
+        } catch (_: Exception) { "" }
     }
 
     private fun getNormalizedMacAddress(): String {
@@ -357,7 +359,6 @@ class MainTvActivity : FragmentActivity() {
         if (decryptedUrl.isEmpty()) return
 
         isModalClosed = false
-
         expirationWebView = WebView(this).apply {
             layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
             setBackgroundColor(Color.TRANSPARENT)
@@ -395,7 +396,7 @@ class MainTvActivity : FragmentActivity() {
                         (binding.root as? ViewGroup)?.removeView(expirationWebView)
                         expirationWebView?.destroy()
                         expirationWebView = null
-                    } catch (e: Exception) {}
+                    } catch (_: Exception) {}
 
                     binding.navMainFragment.requestFocus()
                     binding.navMain.requestFocus()
@@ -412,13 +413,14 @@ class MainTvActivity : FragmentActivity() {
                     expirationWebView?.requestFocus()
                 }
             }
-
             override fun onReceivedSslError(view: WebView?, handler: android.webkit.SslErrorHandler?, error: android.net.http.SslError?) {
                 handler?.proceed()
             }
         }
 
         val mac = getNormalizedMacAddress()
+
+        // ⚡️ CORRECCIÓN: SE RECUPERA LA VARIABLE PREFS AQUÍ
         val prefs = getSharedPreferences("SecureGatewayPrefs", Context.MODE_PRIVATE)
         val username = prefs.getString("alpha_token", "") ?: ""
 
@@ -436,7 +438,7 @@ class MainTvActivity : FragmentActivity() {
                 (it.parent as? ViewGroup)?.removeView(it)
                 it.destroy()
             }
-        } catch (e: Exception) {}
+        } catch (_: Exception) {}
         _binding = null
         super.onDestroy()
     }
@@ -450,7 +452,6 @@ class MainTvActivity : FragmentActivity() {
         val palette = ThemeManager.palette(UserPreferences.selectedTheme)
         window.statusBarColor = palette.systemBar
         window.navigationBarColor = palette.systemBar
-
         binding.navMain.setBackgroundColor(Color.parseColor("#80000000"))
         binding.navMain.headerView?.let { headerView ->
             headerView.setBackgroundColor(Color.TRANSPARENT)
@@ -483,9 +484,7 @@ class MainTvActivity : FragmentActivity() {
                 null,
                 navOptions {
                     launchSingleTop = true
-                    popUpTo(R.id.providers) {
-                        inclusive = true
-                    }
+                    popUpTo(R.id.providers) { inclusive = true }
                 }
             )
         }
