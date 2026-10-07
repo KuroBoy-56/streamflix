@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- CONTENIDO (TMDb) -->
+    <PreferenceScreen
+        android:key="screen_content"
+        android:title="@string/settings_section_content_title"
+        android:widgetLayout="@layout/preference_widget_chevron">
+
+        <PreferenceCategory
+            android:key="pc_tmdb_settings"
+            android:title="@string/settings_category_tmdb">
+
+            <SwitchPreferenceCompat
+                android:key="ENABLE_TMDB"
+                android:title="@string/settings_enable_tmdb_title"
+                android:defaultValue="true" />
+        </PreferenceCategory>
+    </PreferenceScreen>
+
+    <!-- REPRODUCTOR -->
+    <PreferenceScreen
+        android:key="screen_playback"
+        android:title="@string/player_settings"
+        android:widgetLayout="@layout/preference_widget_chevron">
+
+        <PreferenceCategory android:title="@string/autoplay_settings">
+
+            <SwitchPreference
+                android:key="AUTOPLAY"
+                android:title="@string/settings_autoplay"
+                android:defaultValue="true"
+                android:summaryOn="@string/settings_autoplay_on"
+                android:summaryOff="@string/settings_autoplay_off" />
+
+            <EditTextPreference
+                android:key="p_settings_autoplay_buffer"
+                android:title="@string/settings_autoplay_buffer_title"
+                android:defaultValue="3"
+                android:inputType="number" />
+        </PreferenceCategory>
+    </PreferenceScreen>
+
+    <!-- APARIENCIA -->
+    <PreferenceScreen
+        android:key="screen_appearance"
+        android:title="@string/settings_category_appearance"
+        android:widgetLayout="@layout/preference_widget_chevron">
+
+        <PreferenceCategory
+            android:title="@string/settings_category_appearance">
+
+            <ListPreference
+                android:key="APP_LANGUAGE"
+                android:title="@string/settings_app_language_title"
+                android:defaultValue="system" />
+
+            <ListPreference
+                android:key="theme_preference"
+                android:title="@string/settings_theme_title"
+                android:entries="@array/theme_names"
+                android:entryValues="@array/theme_values"
+                android:defaultValue="default" />
+        </PreferenceCategory>
+
+        <!-- AJUSTE DE PANTALLA TV (Scale X/Y) -->
+        <PreferenceCategory
+            android:title="@string/screen_scale_category_title">
+
+            <SeekBarPreference
+                android:key="scale_x"
+                android:title="@string/screen_scale_x_title"
+                android:defaultValue="0"
+                android:min="-250"
+                android:max="250" />
+
+            <SeekBarPreference
+                android:key="scale_y"
+                android:title="@string/screen_scale_y_title"
+                android:defaultValue="0"
+                android:min="-250"
+                android:max="250" />
+        </PreferenceCategory>
+    </PreferenceScreen>
+
+    <!-- PROVEEDORES -->
+    <PreferenceScreen
+        android:key="screen_provider"
+        android:title="@string/settings_category_provider_title"
+        android:widgetLayout="@layout/preference_widget_chevron">
+
+        <PreferenceCategory
+            android:key="pc_cuevana_settings"
+            android:title="@string/settings_category_cuevana">
+            <EditTextPreference
+                android:key="provider_cuevana_domain"
+                android:title="@string/settings_category_cuevana_domain"
+                android:inputType="text" />
+        </PreferenceCategory>
+    </PreferenceScreen>
+
+    <!-- INFORMACIÓN DE LA APP -->
+    <PreferenceCategory
+        android:title="Aplicación">
+
+        <Preference
+            android:icon="@drawable/ic_settings_about"
+            android:key="p_settings_about"
+            android:title="@string/settings_about" />
+    </PreferenceCategory>
+
+</androidx.preference.PreferenceScreen>
