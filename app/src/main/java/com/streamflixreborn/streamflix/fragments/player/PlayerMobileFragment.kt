@@ -862,7 +862,7 @@ class PlayerMobileFragment : Fragment() {
                                 UserDataCache.addEpisodeToContinueWatching(requireContext(), provider, it)
                             }
 
-                            // Firebase Sync for TV Show
+                            // Sincronización JSON (nube) de la serie
                             it.tvShow?.let { currentTvShow ->
                                 database.tvShowDao().getById(currentTvShow.id)?.let { dbTvShow ->
                                     val isStillWatching = database.episodeDao().hasAnyWatchHistoryForTvShow(dbTvShow.id)
@@ -1135,7 +1135,7 @@ class PlayerMobileFragment : Fragment() {
                                     UserDataCache.syncEpisodeToCache(requireContext(), provider, it)
                                 }
 
-                                // Firebase Sync for TV Show
+                                // Sincronización JSON (nube) de la serie
                                 it.tvShow?.let { currentTvShow ->
                                     database.tvShowDao().getById(currentTvShow.id)?.let { dbTvShow ->
                                         val isStillWatching = database.episodeDao().hasAnyWatchHistoryForTvShow(dbTvShow.id)

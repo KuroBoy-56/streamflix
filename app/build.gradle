@@ -29,7 +29,7 @@ android {
     properties.load(project.rootProject.file('local.properties').newDataInputStream())
 
     defaultConfig {
-        // AQUÍ CAMBIAS EL NOMBRE DEL PAQUETE (El que pusiste en Firebase)
+        // AQUÍ CAMBIAS EL NOMBRE DEL PAQUETE
         applicationId "com.streamlat.garevynvod"
         minSdk 21
         targetSdk 35
@@ -147,12 +147,10 @@ dependencies {
     implementation("org.mozilla:rhino:1.8.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
 
-    // --- LIBRERÍAS DE FIREBASE (Añadidas para Realtime Database) ---
-    implementation platform('com.google.firebase:firebase-bom:32.7.0')
-    implementation 'com.google.firebase:firebase-database-ktx'
+    // La sincronización de favoritos/historial usa el servidor JSON del panel (sync_userdata.php).
     // ---------------------------------------------------------------
 
-    // Quitamos las de Supabase porque migraremos a Firebase
+    // Supabase ya no se usa (la nube es el servidor JSON del panel)
     // implementation platform("io.github.jan-tennert.supabase:bom:3.2.2")
     // implementation "io.github.jan-tennert.supabase:auth-kt"
     // implementation "io.github.jan-tennert.supabase:postgrest-kt"

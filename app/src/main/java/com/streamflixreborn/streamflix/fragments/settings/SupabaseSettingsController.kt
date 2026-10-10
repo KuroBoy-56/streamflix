@@ -18,7 +18,7 @@ object SupabaseSettingsController {
         findPreference("supabase_url")?.isVisible = false
         findPreference("supabase_public_key")?.isVisible = false
 
-        // Vinculamos la gestión al nuevo controlador de cuentas por Firebase / Gateway
+        // Vinculamos la gestión al controlador de cuentas del Gateway (sincronización JSON)
         CloudAccountSettingsController.bind(fragment, scope, findPreference)
     }
 }

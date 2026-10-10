@@ -305,7 +305,7 @@ object CloudSyncManager {
 
                 val connection = URL("$decryptedUrl?u=$userId").openConnection() as HttpURLConnection
                 connection.requestMethod = "POST"
-                connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+                connection.setRequestProperty("Content-Type", "application/json")
                 connection.connectTimeout = 10000
                 connection.readTimeout = 10000
                 connection.doOutput = true

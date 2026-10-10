@@ -70,8 +70,6 @@ class StreamFlixApp : Application() {
 
         setupCrashCatcher()
 
-        com.google.firebase.FirebaseApp.initializeApp(this)
-
         verifyAppSignature()
 
         registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {

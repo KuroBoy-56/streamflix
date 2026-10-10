@@ -5,6 +5,6 @@ import android.content.Context
 object SupabaseProvider {
     val isConfigured: Boolean = false
     fun initialize(context: Context) {
-        // Reemplazado por Firebase
+        // Sin uso: la sincronización va al servidor JSON (CloudSyncManager)
     }
 }

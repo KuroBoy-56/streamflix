@@ -4,6 +4,6 @@ import android.content.Context
 
 object CloudSyncScheduler {
     fun enqueue(context: Context) {
-        // No requerido con Firebase Realtime Database
+        // No requerido: CloudSyncManager sube al servidor JSON
     }
 }
