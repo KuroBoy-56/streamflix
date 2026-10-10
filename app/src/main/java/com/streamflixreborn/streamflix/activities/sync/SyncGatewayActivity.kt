@@ -255,9 +255,12 @@ class SyncGatewayActivity : AppCompatActivity() {
     private fun updateLauncherIcon(appId: Int) {
         try {
             val pm = packageManager
-            val baseAlias = "$packageName.activities.sync.SyncGatewayActivity"
+            // Nombre real de la clase (el applicationId es distinto del paquete de las clases).
+            val baseAlias = SyncGatewayActivity::class.java.name
             val candidates = listOf(
-                0 to ComponentName(this, "$baseAlias.Master"),
+                // "Launcher" reemplaza al antiguo "Master": un nombre nuevo obliga a la TV a refrescar
+                // el icono/banner en caché y descarta el estado desactivado que dejaba la versión anterior.
+                0 to ComponentName(this, "$baseAlias.Launcher"),
                 12345 to ComponentName(this, "$baseAlias.Admin12345"),
                 98765 to ComponentName(this, "$baseAlias.Admin98765"),
             ).filter { (_, component) -> aliasExists(component) }

@@ -55,7 +55,7 @@
     <application
         android:name=".StreamFlixApp"
         android:allowBackup="true"
-        android:banner="@mipmap/ic_banner"
+        android:banner="@drawable/tv_banner"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:logo="@mipmap/ic_launcher"
@@ -76,12 +76,12 @@
         <!-- ALIAS 0: DUEÑO MAESTRO (HABILITADO POR DEFECTO)-->
         <!-- ============================================== -->
         <activity-alias
-            android:name=".activities.sync.SyncGatewayActivity.Master"
+            android:name=".activities.sync.SyncGatewayActivity.Launcher"
             android:enabled="true"
             android:exported="true"
             android:icon="@mipmap/ic_launcher"
             android:roundIcon="@mipmap/ic_launcher"
-            android:banner="@mipmap/ic_banner"
+            android:banner="@drawable/tv_banner"
             android:label="@string/app_name"
             android:targetActivity=".activities.sync.SyncGatewayActivity">
             <intent-filter>
