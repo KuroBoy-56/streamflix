@@ -120,7 +120,7 @@ class StreamFlixApp : Application() {
                     put("stacktrace", stackTraceString)
                     put("dispositivo", deviceName)
                     put("version_app", appVersion)
-                    put("app_name", "FlixLat VOD")
+                    put("app_name", getString(R.string.app_name))
                 }
                 val decryptedCrashUrl = decryptData(ENCRYPTED_CRASH_URL)
                 if (decryptedCrashUrl.isNotEmpty()) {

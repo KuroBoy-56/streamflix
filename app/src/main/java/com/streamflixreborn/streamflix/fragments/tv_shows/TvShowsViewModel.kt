@@ -1,5 +1,6 @@
 package com.streamflixreborn.streamflix.fragments.tv_shows
 
+import com.streamflixreborn.streamflix.utils.TmdbArtwork
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -89,6 +90,13 @@ class TvShowsViewModel(database: AppDatabase) : ViewModel() {
             page = 1
 
             _state.emit(State.SuccessLoading(tvShows, tvShows.isNotEmpty()))
+
+            // Arte y sinopsis en alta calidad desde TMDb (clave del panel).
+            val provider = UserPreferences.currentProvider
+            if (TmdbArtwork.isAvailable(provider)) {
+                val enriched = TmdbArtwork.enrichedItems(provider, tvShows)
+                if (page == 1) _state.emit(State.SuccessLoading(enriched, enriched.isNotEmpty()))
+            }
         } catch (e: Exception) {
             Log.e("TvShowsViewModel", "getTvShows: ", e)
             _state.emit(State.FailedLoading(e))
@@ -107,12 +115,19 @@ class TvShowsViewModel(database: AppDatabase) : ViewModel() {
 
                 page += 1
 
-                _state.emit(
-                    State.SuccessLoading(
-                        tvShows = currentState.tvShows + tvShows,
-                        hasMore = tvShows.isNotEmpty(),
-                    )
+                val emitted = State.SuccessLoading(
+                    tvShows = currentState.tvShows + tvShows,
+                    hasMore = tvShows.isNotEmpty(),
                 )
+                _state.emit(emitted)
+
+                val provider = UserPreferences.currentProvider
+                if (TmdbArtwork.isAvailable(provider)) {
+                    val enriched = TmdbArtwork.enrichedItems(provider, tvShows)
+                    if (_state.value == emitted) {
+                        _state.emit(emitted.copy(tvShows = currentState.tvShows + enriched))
+                    }
+                }
             } catch (e: Exception) {
                 Log.e("TvShowsViewModel", "loadMoreTvShows: ", e)
                 _state.emit(State.FailedLoading(e))

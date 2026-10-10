@@ -1,5 +1,6 @@
 package com.streamflixreborn.streamflix.fragments.tv_show
 
+import com.streamflixreborn.streamflix.utils.TmdbArtwork
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -254,6 +255,13 @@ class TvShowViewModel(
                     rec.poster = rec.poster.toHighRes()
                     rec.banner = rec.banner.toHighRes()
                 }
+            }
+
+            // Arte y sinopsis en alta calidad desde TMDb (clave del panel).
+            val provider = UserPreferences.currentProvider
+            if (TmdbArtwork.isAvailable(provider)) {
+                TmdbArtwork.enrich(tvShow, TmdbArtwork.languageFor(provider))
+                TmdbArtwork.enrichInPlace(provider, tvShow.recommendations.filterIsInstance<com.streamflixreborn.streamflix.adapters.AppAdapter.Item>())
             }
 
             if (!ArtworkRepair.isRemoteArtworkUrl(tvShow.poster) && ArtworkRepair.isRemoteArtworkUrl(fallbackPoster)) {

@@ -247,25 +247,41 @@ class SyncGatewayActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Activa el icono/nombre del distribuidor (alias del manifiesto) según el app_id del panel.
+     * Solo usa alias que existan en el manifiesto: antes se desactivaba el alias visible y luego
+     * fallaba al activar uno inexistente, y el icono desaparecía del launcher.
+     */
     private fun updateLauncherIcon(appId: Int) {
         try {
             val pm = packageManager
             val baseAlias = "$packageName.activities.sync.SyncGatewayActivity"
-            val master = ComponentName(this, "$baseAlias.Master")
-            val admin1 = ComponentName(this, "$baseAlias.Admin12345")
-            val admin2 = ComponentName(this, "$baseAlias.Admin98765")
-            val target = when(appId) {
-                12345 -> admin1
-                98765 -> admin2
-                else -> master
-            }
-            if (pm.getComponentEnabledSetting(target) != PackageManager.COMPONENT_ENABLED_STATE_ENABLED) {
-                pm.setComponentEnabledSetting(master, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
-                pm.setComponentEnabledSetting(admin1, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
-                pm.setComponentEnabledSetting(admin2, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
-                pm.setComponentEnabledSetting(target, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
+            val candidates = listOf(
+                0 to ComponentName(this, "$baseAlias.Master"),
+                12345 to ComponentName(this, "$baseAlias.Admin12345"),
+                98765 to ComponentName(this, "$baseAlias.Admin98765"),
+            ).filter { (_, component) -> aliasExists(component) }
+
+            val master = candidates.firstOrNull { it.first == 0 }?.second ?: return
+            val target = candidates.firstOrNull { it.first == appId }?.second ?: master
+
+            if (pm.getComponentEnabledSetting(target) == PackageManager.COMPONENT_ENABLED_STATE_ENABLED) return
+
+            // Primero se activa el nuevo y después se desactivan los demás: nunca queda sin icono.
+            pm.setComponentEnabledSetting(target, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
+            candidates.map { it.second }.filter { it != target }.forEach { component ->
+                pm.setComponentEnabledSetting(component, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
             }
         } catch (e: Exception) { e.printStackTrace() }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun aliasExists(component: ComponentName): Boolean = try {
+        // GET_DISABLED_COMPONENTS == MATCH_DISABLED_COMPONENTS (este último solo existe desde API 24).
+        packageManager.getActivityInfo(component, PackageManager.GET_DISABLED_COMPONENTS)
+        true
+    } catch (_: PackageManager.NameNotFoundException) {
+        false
     }
 
     private fun executeGatewayHandshake(alpha: String, beta: String, isAutoLogin: Boolean) {
@@ -418,7 +434,12 @@ class SyncGatewayActivity : AppCompatActivity() {
     }
 
     private fun routeToMainInterface() {
-        val intent = if (packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)) {
+        val useTv = when (com.streamflixreborn.streamflix.BuildConfig.APP_LAYOUT) {
+            "tv" -> true
+            "mobile" -> false
+            else -> packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
+        }
+        val intent = if (useTv) {
             Intent(this, MainTvActivity::class.java)
         } else {
             Intent(this, MainMobileActivity::class.java)

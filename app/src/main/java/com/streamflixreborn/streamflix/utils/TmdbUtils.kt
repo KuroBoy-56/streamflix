@@ -100,6 +100,31 @@ object TmdbUtils {
         } catch (_: Exception) { null }
     }
 
+    /** Arte y sinopsis de TMDb (solo búsqueda, sin detalles) para enriquecer listados. */
+    data class Artwork(
+        val tmdbId: Int,
+        val posterPath: String?,
+        val backdropPath: String?,
+        val overview: String?,
+        val rating: Double?,
+    )
+
+    suspend fun findMovieArtwork(title: String, year: Int? = null, language: String? = null): Artwork? {
+        if (!UserPreferences.enableTmdb) return null
+        return try {
+            val movie = findBestMovieMatch(title, year ?: extractYear(title), language, strict = true) ?: return null
+            Artwork(movie.id, movie.posterPath, movie.backdropPath, movie.overview, movie.voteAverage.toDouble())
+        } catch (_: Exception) { null }
+    }
+
+    suspend fun findTvShowArtwork(title: String, year: Int? = null, language: String? = null): Artwork? {
+        if (!UserPreferences.enableTmdb) return null
+        return try {
+            val tv = findBestTvMatch(title, year ?: extractYear(title), language, strict = true) ?: return null
+            Artwork(tv.id, tv.posterPath, tv.backdropPath, tv.overview, tv.voteAverage.toDouble())
+        } catch (_: Exception) { null }
+    }
+
     suspend fun getEpisodesBySeason(tvShowId: String, seasonNumber: Int, language: String? = null): List<Episode> {
         if (!UserPreferences.enableTmdb) return listOf()
         return try {
@@ -273,6 +298,7 @@ object TmdbUtils {
         rawTitle: String,
         year: Int?,
         language: String?,
+        strict: Boolean = false,
     ): TMDb3.Movie? {
         val results = searchMovieCandidates(rawTitle, language)
         val scoredResults = results.map { movie ->
@@ -299,6 +325,8 @@ object TmdbUtils {
                 .take(MAX_LOCALIZED_DETAIL_CANDIDATES),
         )
         if (localizedFallback != null) return localizedFallback
+        // En modo estricto (enriquecer arte) no se aceptan coincidencias débiles.
+        if (strict) return null
 
         return bestSearchMatch
             ?.takeIf { it.second > 0 }
@@ -309,6 +337,7 @@ object TmdbUtils {
         rawTitle: String,
         year: Int?,
         language: String?,
+        strict: Boolean = false,
     ): TMDb3.Tv? {
         val results = searchTvCandidates(rawTitle, language)
         val scoredResults = results.map { tv ->
@@ -335,6 +364,8 @@ object TmdbUtils {
                 .take(MAX_LOCALIZED_DETAIL_CANDIDATES),
         )
         if (localizedFallback != null) return localizedFallback
+        // En modo estricto (enriquecer arte) no se aceptan coincidencias débiles.
+        if (strict) return null
 
         return bestSearchMatch
             ?.takeIf { it.second > 0 }

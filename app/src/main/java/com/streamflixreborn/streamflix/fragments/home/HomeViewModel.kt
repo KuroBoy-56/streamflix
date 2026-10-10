@@ -1,5 +1,6 @@
 package com.streamflixreborn.streamflix.fragments.home
 
+import com.streamflixreborn.streamflix.utils.TmdbArtwork
 import android.util.Log
 import com.streamflixreborn.streamflix.StreamFlixApp
 import androidx.lifecycle.ViewModel
@@ -424,6 +425,15 @@ class HomeViewModel(database: AppDatabase) : ViewModel() {
             val categories = provider.getHome()
             HomeCacheStore.write(appContext, provider, categories)
             _state.emit(State.SuccessLoading(categories))
+
+            // Arte y sinopsis en alta calidad desde TMDb (clave del panel); se muestra al llegar.
+            if (TmdbArtwork.isAvailable(provider)) {
+                val enriched = TmdbArtwork.enrichedCategories(provider, categories)
+                if (currentProvider === provider && UserPreferences.currentProvider === provider) {
+                    HomeCacheStore.write(appContext, provider, enriched)
+                    _state.emit(State.SuccessLoading(enriched))
+                }
+            }
         } catch (e: Exception) {
             Log.e("HomeViewModel", "getHome: ", e)
             if (cachedCategories.isNullOrEmpty()) {

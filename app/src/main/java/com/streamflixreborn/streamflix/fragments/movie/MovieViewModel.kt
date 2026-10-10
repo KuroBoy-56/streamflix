@@ -1,5 +1,6 @@
 package com.streamflixreborn.streamflix.fragments.movie
 
+import com.streamflixreborn.streamflix.utils.TmdbArtwork
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -122,6 +123,14 @@ class MovieViewModel(id: String, private val database: AppDatabase) : ViewModel(
                     rec.poster = rec.poster.toHighRes()
                     rec.banner = rec.banner.toHighRes()
                 }
+            }
+
+            // Arte y sinopsis en alta calidad desde TMDb (clave del panel).
+            val provider = UserPreferences.currentProvider
+            if (TmdbArtwork.isAvailable(provider)) {
+                val language = TmdbArtwork.languageFor(provider)
+                TmdbArtwork.enrich(movie, language)
+                TmdbArtwork.enrichInPlace(provider, movie.recommendations.filterIsInstance<com.streamflixreborn.streamflix.adapters.AppAdapter.Item>())
             }
 
             database.movieDao().getById(id)?.let { movieDb ->

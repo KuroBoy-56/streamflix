@@ -1,5 +1,6 @@
 package com.streamflixreborn.streamflix.fragments.movies
 
+import com.streamflixreborn.streamflix.utils.TmdbArtwork
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -88,6 +89,13 @@ class MoviesViewModel(database: AppDatabase) : ViewModel() {
             page = 1
 
             _state.emit(State.SuccessLoading(movies, movies.isNotEmpty()))
+
+            // Arte y sinopsis en alta calidad desde TMDb (clave del panel).
+            val provider = UserPreferences.currentProvider
+            if (TmdbArtwork.isAvailable(provider)) {
+                val enriched = TmdbArtwork.enrichedItems(provider, movies)
+                if (page == 1) _state.emit(State.SuccessLoading(enriched, enriched.isNotEmpty()))
+            }
         } catch (e: Exception) {
             Log.e("MoviesViewModel", "getMovies: ", e)
             _state.emit(State.FailedLoading(e))
@@ -106,12 +114,19 @@ class MoviesViewModel(database: AppDatabase) : ViewModel() {
 
                 page += 1
 
-                _state.emit(
-                    State.SuccessLoading(
-                        movies = currentState.movies + movies,
-                        hasMore = movies.isNotEmpty(),
-                    )
+                val emitted = State.SuccessLoading(
+                    movies = currentState.movies + movies,
+                    hasMore = movies.isNotEmpty(),
                 )
+                _state.emit(emitted)
+
+                val provider = UserPreferences.currentProvider
+                if (TmdbArtwork.isAvailable(provider)) {
+                    val enriched = TmdbArtwork.enrichedItems(provider, movies)
+                    if (_state.value == emitted) {
+                        _state.emit(emitted.copy(movies = currentState.movies + enriched))
+                    }
+                }
             } catch (e: Exception) {
                 Log.e("MoviesViewModel", "loadMoreMovies: ", e)
                 _state.emit(State.FailedLoading(e))

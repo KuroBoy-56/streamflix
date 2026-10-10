@@ -94,6 +94,14 @@ class MainTvActivity : FragmentActivity() {
         setTheme(ThemeManager.tvThemeRes(UserPreferences.selectedTheme))
         super.onCreate(savedInstanceState)
 
+        // Sin sesión del distribuidor no se muestra la app: se vuelve al login (logo, fondo y panel).
+        val gatewayPrefs = getSharedPreferences("SecureGatewayPrefs", Context.MODE_PRIVATE)
+        if (gatewayPrefs.getString("alpha_token", null).isNullOrEmpty()) {
+            startActivity(Intent(this, com.streamflixreborn.streamflix.activities.sync.SyncGatewayActivity::class.java))
+            finish()
+            return
+        }
+
         AnimeOnlineNinjaProvider.init(this)
         Cine24hProvider.init(this)
         FilmyOnlineCcProvider.init(this)

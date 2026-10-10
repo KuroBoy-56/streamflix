@@ -123,6 +123,11 @@ class CategoryViewHolder(
     }
 
 
+    // Estado del carrusel móvil: se reutiliza entre refrescos para no acumular callbacks/temporizadores.
+    private val swiperHandler = Handler(Looper.getMainLooper())
+    private var swiperPageCallback: ViewPager2.OnPageChangeCallback? = null
+    private var swiperItemCount = 0
+
     private fun displayMobileSwiper(
         binding: ContentCategorySwiperMobileBinding,
         onMovieClick: ((Movie) -> Unit)?,
@@ -131,72 +136,80 @@ class CategoryViewHolder(
         onTvShowLongClick: ((TvShow) -> Unit)?,
     ) {
         binding.tvCategoryTitle.text = category.name
-        val handler = Handler(Looper.getMainLooper())
-        handler.postDelayed(8_000) {
-            binding.vpCategorySwiper.currentItem += 1
-        }
+        binding.tvCategoryTitle.visibility = if (category.name.isBlank()) View.GONE else View.VISIBLE
 
-        val items = listOf(
+        // Lista circular: [último, ...lista..., primero]
+        val items = if (category.list.size > 1) listOf(
             listOfNotNull(category.list.lastOrNull()),
             category.list,
             listOfNotNull(category.list.firstOrNull()),
-        ).flatten()
-        binding.vpCategorySwiper.apply {
-            adapter = AppAdapter().apply {
-                this.onMovieClickListener = onMovieClick
-                this.onTvShowClickListener = onTvShowClick
-                this.onMovieLongClickListener = onMovieLongClick
-                this.onTvShowLongClickListener = onTvShowLongClick
-                submitList(category.list)
-                post { (adapter as AppAdapter).submitList(items) }
-            }
-        }
+        ).flatten() else category.list
+
+        val pager = binding.vpCategorySwiper
+        val swiperAdapter = (pager.adapter as? AppAdapter) ?: AppAdapter().also { pager.adapter = it }
+        swiperAdapter.onMovieClickListener = onMovieClick
+        swiperAdapter.onTvShowClickListener = onTvShowClick
+        swiperAdapter.onMovieLongClickListener = onMovieLongClick
+        swiperAdapter.onTvShowLongClickListener = onTvShowLongClick
+        val isFirstBind = swiperItemCount != items.size
+        swiperAdapter.submitList(items)
+        swiperItemCount = items.size
+        if (isFirstBind && items.size > 1) pager.setCurrentItem(1, false)
 
         binding.llDotsIndicator.apply {
-            removeAllViews()
-            repeat(category.list.size) {
-                val view = View(context).apply {
-                    layoutParams = LinearLayout.LayoutParams(15, 15).apply {
-                        setMargins(10, 0, 10, 0)
-                    }
-                    setBackgroundResource(R.drawable.bg_dot_indicator)
+            if (childCount != category.list.size) {
+                removeAllViews()
+                repeat(category.list.size) {
+                    addView(View(context).apply {
+                        layoutParams = LinearLayout.LayoutParams(15, 15).apply {
+                            setMargins(10, 0, 10, 0)
+                        }
+                        setBackgroundResource(R.drawable.bg_dot_indicator)
+                    })
                 }
-                addView(view)
+            }
+            visibility = if (category.list.size > 1) View.VISIBLE else View.GONE
+        }
+
+        fun scheduleNext() {
+            swiperHandler.removeCallbacksAndMessages(null)
+            if (items.size > 1) {
+                swiperHandler.postDelayed(8_000) {
+                    if (pager.isAttachedToWindow) pager.currentItem += 1
+                }
             }
         }
 
-        binding.vpCategorySwiper.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
-            override fun onPageSelected(position: Int) {
-                val indicatorPosition = when (position) {
-                    0 -> category.list.lastIndex
-                    items.lastIndex -> 0
-                    else -> position - 1
-                }
-                binding.llDotsIndicator.children.forEachIndexed { index, view ->
-                    view.isSelected = (indicatorPosition == index)
-                }
+        fun indicatorPosition(position: Int) = when {
+            items.size <= 1 -> 0
+            position == 0 -> category.list.lastIndex
+            position == items.lastIndex -> 0
+            else -> position - 1
+        }
 
-                handler.removeCallbacksAndMessages(null)
-                handler.postDelayed(8_000) {
-                    binding.vpCategorySwiper.currentItem += 1
+        swiperPageCallback?.let { pager.unregisterOnPageChangeCallback(it) }
+        swiperPageCallback = object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                binding.llDotsIndicator.children.forEachIndexed { index, view ->
+                    view.isSelected = (indicatorPosition(position) == index)
                 }
+                scheduleNext()
             }
 
             override fun onPageScrollStateChanged(state: Int) {
-                if (state == ViewPager2.SCROLL_STATE_IDLE) {
-                    when (binding.vpCategorySwiper.currentItem) {
-                        0 -> binding.vpCategorySwiper.setCurrentItem(
-                            items.lastIndex - 1,
-                            false
-                        )
-                        items.lastIndex -> binding.vpCategorySwiper.setCurrentItem(
-                            1,
-                            false
-                        )
+                if (state == ViewPager2.SCROLL_STATE_IDLE && items.size > 1) {
+                    when (pager.currentItem) {
+                        0 -> pager.setCurrentItem(items.lastIndex - 1, false)
+                        items.lastIndex -> pager.setCurrentItem(1, false)
                     }
                 }
             }
-        })
+        }.also { pager.registerOnPageChangeCallback(it) }
+
+        binding.llDotsIndicator.children.forEachIndexed { index, view ->
+            view.isSelected = (indicatorPosition(pager.currentItem) == index)
+        }
+        scheduleNext()
     }
 
     private fun displayTvSwiper(binding: ContentCategorySwiperTvBinding) {

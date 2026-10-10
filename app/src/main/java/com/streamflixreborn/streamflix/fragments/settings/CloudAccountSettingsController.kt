@@ -44,8 +44,12 @@ object CloudAccountSettingsController {
         syncNow?.setOnPreferenceClickListener {
             scope.launch {
                 try {
-                    CloudSyncManager.syncLocalToCloud(fragment.requireContext())
-                    Toast.makeText(fragment.requireContext(), "Sincronización con Firebase exitosa", Toast.LENGTH_LONG).show()
+                    val ok = CloudSyncManager.syncNow(fragment.requireContext())
+                    Toast.makeText(
+                        fragment.requireContext(),
+                        if (ok) "Favoritos e historial guardados en la nube" else "No se pudo sincronizar con la nube. Revisa tu conexión.",
+                        Toast.LENGTH_LONG
+                    ).show()
                 } catch (e: Exception) {
                     Toast.makeText(fragment.requireContext(), "Error al sincronizar: ${e.message}", Toast.LENGTH_LONG).show()
                 }

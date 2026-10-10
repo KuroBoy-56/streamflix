@@ -18,7 +18,11 @@ import com.streamflixreborn.streamflix.utils.UserDataCache
 import com.streamflixreborn.streamflix.utils.UserPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -39,6 +43,21 @@ object CloudSyncManager {
 
     @Volatile
     private var isWatchdogRunning = false
+
+    private const val UPLOAD_DEBOUNCE_MS = 2_500L
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val syncMutex = Mutex()
+    private var initJob: Job? = null
+    private var uploadJob: Job? = null
+
+    /** Ya se leyó la nube para [syncedUserId]; recién entonces se permite subir. */
+    @Volatile
+    private var initialSyncDone = false
+    @Volatile
+    private var syncedUserId: String? = null
+    /** Último documento conocido de la nube (clave de proveedor -> datos). */
+    @Volatile
+    private var remoteSnapshot: Map<String, Any?> = emptyMap()
 
     private fun decryptData(hexData: String): String {
         return try {
@@ -68,8 +87,15 @@ object CloudSyncManager {
         val appContext = context.applicationContext
         val userId = getActiveUserId(appContext) ?: return
 
-        Log.i(TAG, "🚀 Iniciando sincronización de nube para usuario: $userId")
-        syncCloudToLocal(appContext, userId)
+        // Se llama desde el arranque y el login: solo descarga una vez por usuario y sesión.
+        if (syncedUserId != userId) {
+            initialSyncDone = false
+            remoteSnapshot = emptyMap()
+        }
+        if (!initialSyncDone && initJob?.isActive != true) {
+            Log.i(TAG, "🚀 Iniciando sincronización de nube para usuario: $userId")
+            initJob = scope.launch { downloadAndApply(appContext, userId) }
+        }
         startLivePanelWatchdog(appContext)
     }
 
@@ -146,166 +172,269 @@ object CloudSyncManager {
         }
     }
 
-    private fun syncCloudToLocal(context: Context, userId: String) {
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                isApplyingRemote = true
-                val decryptedUrl = decryptData(ENCRYPTED_SYNC_URL)
-                if (decryptedUrl.isEmpty()) return@launch
+    // ------------------------------------------------------------------------------------
+    // Descarga (nube -> local)
+    // ------------------------------------------------------------------------------------
 
-                val url = URL("$decryptedUrl?u=$userId")
-                val connection = url.openConnection() as HttpURLConnection
-                connection.requestMethod = "GET"
-                connection.connectTimeout = 8000
-                connection.readTimeout = 8000
+    /**
+     * Descarga el documento del usuario y lo fusiona con lo local (gana el registro más reciente).
+     * Devuelve true si la nube respondió (con datos o vacía), false si no se pudo leer.
+     */
+    private suspend fun downloadAndApply(context: Context, userId: String): Boolean = syncMutex.withLock {
+        if (initialSyncDone && syncedUserId == userId) return@withLock true
+        try {
+            isApplyingRemote = true
+            val decryptedUrl = decryptData(ENCRYPTED_SYNC_URL)
+            if (decryptedUrl.isEmpty()) return@withLock false
 
-                if (connection.responseCode == 200) {
-                    val responseStr = connection.inputStream.bufferedReader().use { it.readText() }
-                    if (responseStr.isNotBlank() && !responseStr.contains("\"status\":\"empty\"")) {
-                        applyRemoteToLocal(context, responseStr)
-                        Log.i(TAG, "✅ Datos de la nube descargados y aplicados localmente.")
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "❌ Error descargando datos de nube: ${e.message}")
-            } finally {
-                isApplyingRemote = false
+            val connection = URL("$decryptedUrl?u=$userId").openConnection() as HttpURLConnection
+            connection.requestMethod = "GET"
+            connection.connectTimeout = 8000
+            connection.readTimeout = 8000
+
+            if (connection.responseCode != 200) {
+                Log.e(TAG, "❌ Descarga de nube: HTTP ${connection.responseCode}")
+                return@withLock false
             }
+
+            val responseStr = connection.inputStream.bufferedReader().use { it.readText() }
+            val cloudData = parseCloudDocument(responseStr)
+            if (cloudData == null) {
+                Log.e(TAG, "❌ Respuesta de nube no válida")
+                return@withLock false
+            }
+
+            if (cloudData.isNotEmpty()) {
+                applyRemoteToLocal(context, cloudData)
+                Log.i(TAG, "✅ Datos de la nube descargados y fusionados (${cloudData.size} proveedores).")
+            } else {
+                Log.i(TAG, "☁️ Nube vacía para este usuario.")
+            }
+            remoteSnapshot = cloudData
+            syncedUserId = userId
+            initialSyncDone = true
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error descargando datos de nube: ${e.message}")
+            false
+        } finally {
+            isApplyingRemote = false
         }
     }
 
+    /** null = respuesta inválida; vacío = el usuario aún no tiene datos en la nube. */
+    internal fun parseCloudDocument(responseStr: String): Map<String, Any?>? {
+        val trimmed = responseStr.trim()
+        if (trimmed.isEmpty()) return emptyMap()
+        return try {
+            val root = com.google.gson.JsonParser.parseString(trimmed)
+            if (!root.isJsonObject) return null
+            val obj = root.asJsonObject
+            if (obj.get("status")?.takeIf { it.isJsonPrimitive }?.asString == "empty") return emptyMap()
+            val type = object : TypeToken<Map<String, Any?>>() {}.type
+            gson.fromJson<Map<String, Any?>>(obj, type)
+                .filterValues { it is Map<*, *> }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    // ------------------------------------------------------------------------------------
+    // Subida (local -> nube)
+    // ------------------------------------------------------------------------------------
+
+    /** Programa una subida agrupando cambios seguidos (p. ej. el progreso de reproducción). */
     fun syncLocalToCloud(context: Context) {
-        if (isApplyingRemote) {
-            Log.d(TAG, "Omitiendo subida: se están aplicando datos remotos.")
-            return
+        // Si se está aplicando la nube, la subida espera al mutex y sube el estado ya fusionado.
+        val appContext = context.applicationContext
+        getActiveUserId(appContext) ?: return
+
+        uploadJob?.cancel()
+        uploadJob = scope.launch {
+            delay(UPLOAD_DEBOUNCE_MS)
+            uploadNow(appContext)
+        }
+    }
+
+    /** Sincronización manual (Ajustes): sube ya y devuelve si funcionó. */
+    suspend fun syncNow(context: Context): Boolean = withContext(Dispatchers.IO) {
+        uploadJob?.cancel()
+        uploadNow(context.applicationContext)
+    }
+
+    private suspend fun uploadNow(context: Context): Boolean {
+        val userId = getActiveUserId(context) ?: return false
+
+        // Nunca subir antes de haber leído la nube: en un dispositivo nuevo borraría datos de otros.
+        if (!(initialSyncDone && syncedUserId == userId) && !downloadAndApply(context, userId)) {
+            Log.w(TAG, "⚠️ Subida pospuesta: no se pudo leer la nube todavía.")
+            return false
         }
 
-        val appContext = context.applicationContext
-        val userId = getActiveUserId(appContext) ?: return
-
-        CoroutineScope(Dispatchers.IO).launch {
-            delay(1000) // Dar tiempo a Room para confirmar transacciones
-
+        return syncMutex.withLock {
             try {
-                val providers = existingProviders(appContext)
-                val exportData = mutableMapOf<String, Any>()
+                // Se parte del último documento de la nube para conservar proveedores
+                // que no existen en este dispositivo.
+                val exportData = remoteSnapshot.toMutableMap()
 
-                providers.forEach { provider ->
-                    val db = AppDatabase.getInstanceForProvider(provider.name, appContext)
+                existingProviders(context).forEach { provider ->
+                    withDatabase(context, provider) { db ->
+                        val movies = db.movieDao().getAll().filter { it.hasUserData() }
+                        val shows = db.tvShowDao().getAllForBackup().filter { it.hasUserData() }
+                        val episodes = db.episodeDao().getAllForBackup().filter { it.hasUserData() }
 
-                    val movies = db.movieDao().getAll().filter { it.isFavorite || it.isWatched || it.watchHistory != null }
-                    val shows = db.tvShowDao().getAllForBackup().filter { it.isFavorite || !it.isWatching }
-                    val episodes = db.episodeDao().getAllForBackup().filter { it.isWatched || it.watchHistory != null }
-
-                    if (movies.isNotEmpty() || shows.isNotEmpty() || episodes.isNotEmpty()) {
                         val providerData = mutableMapOf<String, Any>()
-
                         if (movies.isNotEmpty()) providerData["movies"] = movies.associate { it.id to objectToMap(it) }
                         if (shows.isNotEmpty()) providerData["tv_shows"] = shows.associate { it.id to objectToMap(it) }
                         if (episodes.isNotEmpty()) providerData["episodes"] = episodes.associate { it.id to objectToMap(it) }
 
-                        exportData[provider.name.replace("[^a-zA-Z0-9]".toRegex(), "_")] = providerData
+                        // Un proveedor sin datos se envía vacío para reflejar lo que se quitó.
+                        exportData[safeName(provider.name)] = providerData
                     }
                 }
 
-                if (exportData.isEmpty()) {
-                    Log.w(TAG, "⚠️ Base de datos local sin favoritos o historial válidos. Subida cancelada.")
-                    return@launch
+                val hasAnyData = exportData.values.any { (it as? Map<*, *>)?.isNotEmpty() == true }
+                if (!hasAnyData && remoteSnapshot.isEmpty()) {
+                    Log.d(TAG, "Nada que subir.")
+                    return@withLock true
                 }
 
                 val jsonPayload = gson.toJson(exportData)
                 val decryptedUrl = decryptData(ENCRYPTED_SYNC_URL)
-                if (decryptedUrl.isEmpty()) return@launch
+                if (decryptedUrl.isEmpty()) return@withLock false
 
-                val url = URL("$decryptedUrl?u=$userId")
-                val connection = url.openConnection() as HttpURLConnection
+                val connection = URL("$decryptedUrl?u=$userId").openConnection() as HttpURLConnection
                 connection.requestMethod = "POST"
-                connection.setRequestProperty("Content-Type", "application/json")
+                connection.setRequestProperty("Content-Type", "application/json; charset=utf-8")
                 connection.connectTimeout = 10000
                 connection.readTimeout = 10000
                 connection.doOutput = true
 
-                OutputStreamWriter(connection.outputStream).use { writer ->
+                OutputStreamWriter(connection.outputStream, Charsets.UTF_8).use { writer ->
                     writer.write(jsonPayload)
                     writer.flush()
                 }
 
-                if (connection.responseCode == 200) {
+                val ok = connection.responseCode == 200
+                if (ok) {
+                    remoteSnapshot = exportData
                     Log.i(TAG, "✅ Favoritos e historial sincronizados a la nube.")
                 } else {
                     Log.e(TAG, "❌ Error al subir. Código: ${connection.responseCode}")
                 }
+                ok
             } catch (e: Exception) {
                 Log.e(TAG, "❌ Error empaquetando/subiendo datos: ${e.message}")
+                false
             }
         }
     }
 
-    private fun applyRemoteToLocal(context: Context, jsonString: String) {
-        try {
-            val type = object : TypeToken<Map<String, Map<String, Map<String, Any>>>>() {}.type
-            val cloudData: Map<String, Map<String, Map<String, Any>>> = gson.fromJson(jsonString, type)
-            val providers = existingProviders(context)
-            var dataChanged = false
+    // ------------------------------------------------------------------------------------
+    // Fusión
+    // ------------------------------------------------------------------------------------
 
-            providers.forEach { provider ->
-                val safeProviderName = provider.name.replace("[^a-zA-Z0-9]".toRegex(), "_")
-                val providerData = cloudData[safeProviderName]
+    private fun applyRemoteToLocal(context: Context, cloudData: Map<String, Any?>) {
+        var dataChanged = false
+        val providersByKey = allProviders().distinctBy { it.name }.associateBy { safeName(it.name) }
 
-                if (providerData != null) {
-                    val db = AppDatabase.getInstanceForProvider(provider.name, context)
+        cloudData.forEach { (key, value) ->
+            // Se aplican todos los proveedores de la nube, existan o no en este dispositivo.
+            val provider = providersByKey[key] ?: return@forEach
+            val providerData = value as? Map<*, *> ?: return@forEach
 
-                    val newMovies = mutableListOf<Movie>()
-                    val newShows = mutableListOf<TvShow>()
-                    val newEpisodes = mutableListOf<Episode>()
+            val newMovies = mutableListOf<Movie>()
+            val newShows = mutableListOf<TvShow>()
+            val newEpisodes = mutableListOf<Episode>()
 
+            try {
+                withDatabase(context, provider) { db ->
                     db.runInTransaction {
-                        (providerData["movies"] as? Map<*, *>)?.values?.forEach { movieData ->
-                            mapToObject(movieData, Movie::class.java)?.let {
-                                db.movieDao().insert(it)
-                                newMovies.add(it)
-                                dataChanged = true
+                        (providerData["movies"] as? Map<*, *>)?.values?.forEach { data ->
+                            val remote = mapToObject(data, Movie::class.java) ?: return@forEach
+                            if (shouldApply(remote.updatedAt(), remote.hasUserData(), db.movieDao().getById(remote.id)?.let { it.updatedAt() to it.hasUserData() })) {
+                                db.movieDao().insert(remote)
+                                newMovies.add(remote)
                             }
                         }
-                        (providerData["tv_shows"] as? Map<*, *>)?.values?.forEach { showData ->
-                            mapToObject(showData, TvShow::class.java)?.let {
-                                db.tvShowDao().insert(it)
-                                newShows.add(it)
-                                dataChanged = true
+                        (providerData["tv_shows"] as? Map<*, *>)?.values?.forEach { data ->
+                            val remote = mapToObject(data, TvShow::class.java) ?: return@forEach
+                            if (shouldApply(remote.updatedAt(), remote.hasUserData(), db.tvShowDao().getById(remote.id)?.let { it.updatedAt() to it.hasUserData() })) {
+                                db.tvShowDao().insert(remote)
+                                newShows.add(remote)
                             }
                         }
-                        (providerData["episodes"] as? Map<*, *>)?.values?.forEach { epData ->
-                            mapToObject(epData, Episode::class.java)?.let {
-                                db.episodeDao().insert(it)
-                                newEpisodes.add(it)
-                                dataChanged = true
+                        (providerData["episodes"] as? Map<*, *>)?.values?.forEach { data ->
+                            val remote = mapToObject(data, Episode::class.java) ?: return@forEach
+                            if (shouldApply(remote.updatedAt(), remote.hasUserData(), db.episodeDao().getById(remote.id)?.let { it.updatedAt() to it.hasUserData() })) {
+                                db.episodeDao().insert(remote)
+                                newEpisodes.add(remote)
                             }
                         }
                     }
-
-                    if (newMovies.isNotEmpty()) UserDataCache.writeMovies(context, provider, newMovies)
-                    if (newShows.isNotEmpty()) UserDataCache.writeTvShows(context, provider, newShows)
-                    if (newEpisodes.isNotEmpty()) UserDataCache.writeEpisodes(context, provider, newEpisodes)
                 }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error aplicando datos de nube para ${provider.name}: ${e.message}")
             }
 
-            if (dataChanged) {
-                CoroutineScope(Dispatchers.Main).launch {
-                    ProviderChangeNotifier.notifyProviderChanged()
-                }
+            if (newMovies.isNotEmpty()) UserDataCache.writeMovies(context, provider, newMovies)
+            if (newShows.isNotEmpty()) UserDataCache.writeTvShows(context, provider, newShows)
+            if (newEpisodes.isNotEmpty()) UserDataCache.writeEpisodes(context, provider, newEpisodes)
+            if (newMovies.isNotEmpty() || newShows.isNotEmpty() || newEpisodes.isNotEmpty()) dataChanged = true
+        }
+
+        if (dataChanged) {
+            CoroutineScope(Dispatchers.Main).launch {
+                ProviderChangeNotifier.notifyProviderChanged()
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error aplicando datos de nube: ${e.message}")
         }
     }
 
-    private fun objectToMap(obj: Any): Map<String, Any?> {
+    /** Gana el más reciente; si empatan, el que tenga datos del usuario. */
+    private fun shouldApply(remoteUpdatedAt: Long, remoteHasData: Boolean, local: Pair<Long, Boolean>?): Boolean {
+        if (local == null) return true
+        val (localUpdatedAt, localHasData) = local
+        return remoteUpdatedAt > localUpdatedAt || (remoteUpdatedAt == localUpdatedAt && remoteHasData && !localHasData)
+    }
+
+    private fun Movie.updatedAt(): Long = maxOf(
+        watchHistory?.lastEngagementTimeUtcMillis ?: 0L,
+        favoritedAtMillis ?: 0L,
+        lastPlayedAtMillis ?: 0L,
+        watchedDate?.timeInMillis ?: 0L,
+    )
+
+    private fun TvShow.updatedAt(): Long = maxOf(favoritedAtMillis ?: 0L, lastPlayedAtMillis ?: 0L)
+
+    private fun Episode.updatedAt(): Long = maxOf(
+        watchHistory?.lastEngagementTimeUtcMillis ?: 0L,
+        watchedDate?.timeInMillis ?: 0L,
+    )
+
+    private fun Movie.hasUserData() = isFavorite || isWatched || watchHistory != null || lastPlayedAtMillis != null
+    private fun TvShow.hasUserData() = isFavorite || !isWatching || lastPlayedAtMillis != null
+    private fun Episode.hasUserData() = isWatched || watchHistory != null
+
+    /** Usa la base activa si es la del proveedor actual (refresca la UI); si no, abre y cierra otra. */
+    private inline fun <T> withDatabase(context: Context, provider: Provider, block: (AppDatabase) -> T): T {
+        val isCurrent = UserPreferences.currentProvider?.name == provider.name
+        val db = if (isCurrent) AppDatabase.getInstance(context) else AppDatabase.getInstanceForProvider(provider.name, context)
+        return try {
+            block(db)
+        } finally {
+            if (!isCurrent) runCatching { db.close() }
+        }
+    }
+
+    private fun safeName(name: String) = name.replace("[^a-zA-Z0-9]".toRegex(), "_")
+
+    internal fun objectToMap(obj: Any): Map<String, Any?> {
         val json = gson.toJson(obj)
         val type = object : TypeToken<Map<String, Any?>>() {}.type
         return gson.fromJson(json, type)
     }
 
-    private fun <T> mapToObject(data: Any?, clazz: Class<T>): T? {
+    internal fun <T> mapToObject(data: Any?, clazz: Class<T>): T? {
         return try {
             val json = gson.toJson(data)
             gson.fromJson(json, clazz)

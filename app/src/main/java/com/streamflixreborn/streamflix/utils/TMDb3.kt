@@ -934,6 +934,16 @@ object TMDb3 {
             true -> "https://image.tmdb.org/t/p/w500/$this"
             else -> this
         }
+    val String.w780: String
+        get() = when (this.startsWith("/")) {
+            true -> "https://image.tmdb.org/t/p/w780$this"
+            else -> this
+        }
+    val String.w1280: String
+        get() = when (this.startsWith("/")) {
+            true -> "https://image.tmdb.org/t/p/w1280$this"
+            else -> this
+        }
     val String.original: String
         get() = when (this.startsWith("/")) {
             true -> "https://image.tmdb.org/t/p/original/$this"
@@ -945,17 +955,24 @@ object TMDb3 {
 
         companion object {
             fun build(): ApiService {
-                val apiKey = UserPreferences.tmdbApiKey.ifEmpty { BuildConfig.TMDB_API_KEY }
+                val apiKey = UserPreferences.tmdbApiKey.trim()
+                    .ifEmpty { BuildConfig.TMDB_API_KEY.takeUnless { it.isBlank() || it == "null" }.orEmpty() }
+                // El panel puede enviar la clave v3 (api_key) o el token de lectura v4 (JWT "eyJ...").
+                val isBearerToken = apiKey.startsWith("eyJ")
 
                 val client = OkHttpClient.Builder().addInterceptor { chain ->
                     val original = chain.request()
 
                     val requestBuilder = original.newBuilder()
-                        .url(
+                    if (isBearerToken) {
+                        requestBuilder.header("Authorization", "Bearer $apiKey")
+                    } else if (apiKey.isNotEmpty()) {
+                        requestBuilder.url(
                             original.url.newBuilder()
                                 .addQueryParameter("api_key", apiKey)
                                 .build()
                         )
+                    }
 
                     chain.proceed(requestBuilder.build())
                 }.build()

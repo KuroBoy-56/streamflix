@@ -70,24 +70,11 @@ class HomeMobileFragment : Fragment() {
 
         initializeHome()
 
-        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
-            CloudSyncManager.initialize(requireContext())
-        }
-
         viewLifecycleOwner.lifecycleScope.launch {
             ProviderChangeNotifier.providerChangeFlow.flowWithLifecycle(lifecycle, Lifecycle.State.STARTED).collect { viewModel.getHome() }
         }
 
-        viewLifecycleOwner.lifecycleScope.launch {
-            binding.isLoading.root.visibility = View.VISIBLE
-            binding.isLoading.pbIsLoading.visibility = View.VISIBLE
-
-            withContext(Dispatchers.IO) {
-                kotlinx.coroutines.delay(1500)
-            }
-
-            viewModel.getHome()
-        }
+        // El ViewModel ya carga el inicio al crearse (y usa la caché si existe); no hace falta esperar.
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.state.flowWithLifecycle(lifecycle, Lifecycle.State.STARTED).collect { state ->
@@ -174,7 +161,9 @@ class HomeMobileFragment : Fragment() {
         binding.ivHomeBackground.visibility = View.GONE
     }
 
-    private fun displayHome(categories: List<Category>) {
+    private fun displayHome(sourceCategories: List<Category>) {
+        val categories = withFeaturedBanner(sourceCategories)
+
         categories.find { it.name == Category.FEATURED }?.also {
             it.list.forEach { show ->
                 when (show) {
@@ -221,5 +210,46 @@ class HomeMobileFragment : Fragment() {
                 }
             }
         )
+    }
+
+    /**
+     * El inicio móvil siempre muestra un banner grande arriba y las secciones debajo al hacer scroll.
+     * Si el proveedor no envía "Destacados", se arma con los primeros títulos con imagen.
+     */
+    private fun withFeaturedBanner(categories: List<Category>): List<Category> {
+        if (categories.any { it.name == Category.FEATURED && it.list.isNotEmpty() }) return categories
+
+        val excluded = setOf(
+            Category.CONTINUE_WATCHING, Category.RECENTLY_WATCHED,
+            Category.FAVORITE_MOVIES, Category.FAVORITE_TV_SHOWS,
+            getString(R.string.home_continue_watching),
+            getString(R.string.home_favorite_movies),
+            getString(R.string.home_favorite_tv_shows),
+        )
+        val blacklisted = listOf("soporte", "ayuda", "support", "help", "telegram", "discord", "whatsapp")
+        val featured = categories
+            .filter { it.name !in excluded && blacklisted.none { b -> it.name.contains(b, ignoreCase = true) } }
+            .flatMap { it.list }
+            .filter { item ->
+                when (item) {
+                    is Movie -> !item.banner.isNullOrBlank() || !item.poster.isNullOrBlank()
+                    is TvShow -> !item.banner.isNullOrBlank() || !item.poster.isNullOrBlank()
+                    else -> false
+                }
+            }
+            .distinctBy { item -> (item as? Movie)?.id?.let { "m:$it" } ?: "t:${(item as TvShow).id}" }
+            .take(8)
+            .map { item ->
+                // Copia para no cambiar el tipo de vista del mismo objeto en su fila original.
+                when (item) {
+                    is Movie -> item.copy().merge(item)
+                    is TvShow -> item.copy().merge(item)
+                    else -> item
+                }
+            }
+
+        if (featured.isEmpty()) return categories
+        return listOf(Category(name = Category.FEATURED, list = featured)) +
+                categories.filter { it.name != Category.FEATURED }
     }
 }
