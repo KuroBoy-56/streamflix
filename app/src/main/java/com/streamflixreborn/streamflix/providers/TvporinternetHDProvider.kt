@@ -8,6 +8,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.*
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
@@ -19,8 +20,8 @@ import java.net.URLDecoder
 
 object TvporinternetHDProvider : IptvProvider {
     override val name = "TvPorInternet2"
-    override val baseUrl = "https://www.tvporinternet2.com"
-    override val logo = "https://www.tvporinternet2.com/imge/favicon.png"
+    override val baseUrl = "https://www.tvporinternet.org"
+    override val logo = "https://www.tvporinternet.org/imge/favicon.png"
     override val language = "es"
 
     private const val TAG = "TvPorInternet2Spy"
@@ -117,9 +118,12 @@ object TvporinternetHDProvider : IptvProvider {
         val channels = mutableListOf<TvShow>()
         val seenIds = mutableSetOf<String>()
 
-        // 1. Extraer canales del div#channels (Deportes iniciales)
-        doc.select("div#channels a.channel-card").forEach { element ->
-            val title = element.selectFirst("p")?.text()?.trim() ?: ""
+        // 1. Extraer canales de la grilla (diseño nuevo: section#channelGrid a.channel; antiguo: div#channels a.channel-card)
+        doc.select("section#channelGrid a.channel, div#channels a.channel-card").forEach { element ->
+            val title = (element.selectFirst(".channel-name") ?: element.selectFirst("p"))?.text()?.trim()
+                ?.ifEmpty { null }
+                ?: element.selectFirst("img")?.attr("alt")?.trim()
+                ?: ""
             val href = element.attr("href")
             val link = if (href.startsWith("http")) href else if (href.isNotEmpty()) "$baseUrl/$href" else ""
 
@@ -153,7 +157,7 @@ object TvporinternetHDProvider : IptvProvider {
             val data = script.data()
             if (data.contains("showChannels")) {
                 // Buscar todos los bloques HTML dentro del template string
-                val channelPattern = Regex("""<a href="(https://www\.tvporinternet2\.com/[^"]+\.php)"[^>]*>\s*<div class="live">.*?</div>\s*<img src="([^"]+)"[^>]*>\s*<p>([^<]+)</p>\s*</a>""", RegexOption.DOT_MATCHES_ALL)
+                val channelPattern = Regex("""<a href="(https://www\.tvporinternet2?\.(?:com|org)/[^"]+\.php)"[^>]*>\s*<div class="live">.*?</div>\s*<img src="([^"]+)"[^>]*>\s*<p>([^<]+)</p>\s*</a>""", RegexOption.DOT_MATCHES_ALL)
 
                 channelPattern.findAll(data).forEach { match ->
                     val link = match.groupValues[1]
@@ -394,9 +398,9 @@ object TvporinternetHDProvider : IptvProvider {
             val doc = fetchDocument(id) ?: throw Exception("No se pudo cargar")
             val servers = mutableListOf<Video.Server>()
 
-            doc.select("div.options-left a.option").forEach { element ->
+            doc.select("div.options-left .option").forEach { element ->
                 val name = element.text().trim()
-                val url = element.attr("href")
+                val url = element.attr("href").ifEmpty { element.attr("data-src") }
 
                 if (url.isNotEmpty()) {
                     val absoluteUrl = if (url.startsWith("http")) url else "$baseUrl/$url"
@@ -417,7 +421,7 @@ object TvporinternetHDProvider : IptvProvider {
             stopLocalServer()
 
             val coreDoc = fetchDocument(server.id) ?: return@withContext Video("")
-            val playerFrameUrl = coreDoc.selectFirst("iframe#player-frame")?.attr("src") ?: ""
+            val playerFrameUrl = (coreDoc.selectFirst("iframe#player-frame") ?: coreDoc.selectFirst("iframe[src]"))?.attr("src") ?: ""
 
             if (playerFrameUrl.isEmpty()) {
                 Log.e(TAG, "Servidor offline (sin iframe)")
@@ -426,6 +430,23 @@ object TvporinternetHDProvider : IptvProvider {
 
             val iframeDoc = fetchDocument(playerFrameUrl, server.id) ?: return@withContext Video("")
             val iframeHtml = iframeDoc.html()
+
+            // Formato nuevo: var src = "https:\/\/host\/playlist\/14\/index.m3u8?token=..."
+            val directM3u8 = """["'](https:(?:\\/|/)[^"']+?\.m3u8[^"']*)["']""".toRegex()
+                .find(iframeHtml)
+                ?.groupValues?.get(1)
+                ?.replace("\\/", "/")
+            if (directM3u8 != null) {
+                val iframeOrigin = playerFrameUrl.toHttpUrlOrNull()?.let { "${it.scheme}://${it.host}" } ?: ""
+                return@withContext Video(
+                    source = directM3u8,
+                    headers = mapOf(
+                        "User-Agent" to USER_AGENT,
+                        "Referer" to playerFrameUrl,
+                        "Origin" to iframeOrigin,
+                    )
+                )
+            }
 
             val playlistRegex = """["'](https:[^"']+playlist\.php[^"']+)["']""".toRegex()
             val playlistMatch = playlistRegex.find(iframeHtml)

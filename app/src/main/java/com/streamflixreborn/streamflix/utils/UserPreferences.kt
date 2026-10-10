@@ -70,7 +70,28 @@ object UserPreferences {
         }
     }
 
+    /**
+     * Proveedor temporal (en memoria) usado mientras el usuario navega la sección "En Vivo".
+     * No modifica el proveedor guardado del inicio ni dispara recargas del inicio.
+     */
+    @Volatile
+    var sessionProviderOverride: Provider? = null
+
+    /** Proveedor en vivo elegido por última vez en la sección "En Vivo". */
+    var liveProviderName: String?
+        get() = Key.LIVE_PROVIDER.getString()
+        set(value) = Key.LIVE_PROVIDER.setString(value)
+
+    /** Proveedor activo: el de la sesión "En Vivo" si existe, si no el guardado del inicio. */
     var currentProvider: Provider?
+        get() = sessionProviderOverride ?: storedProvider
+        set(value) {
+            sessionProviderOverride = null
+            storedProvider = value
+        }
+
+    /** Proveedor del inicio persistido (ignora la sesión "En Vivo"). */
+    var storedProvider: Provider?
         get() {
             val providerName = Key.CURRENT_PROVIDER.getString()
             if (providerName?.startsWith("TMDb (") == true && providerName.endsWith(")")) {
@@ -532,6 +553,7 @@ object UserPreferences {
         APP_LAYOUT,
         CURRENT_LANGUAGE,
         CURRENT_PROVIDER,
+        LIVE_PROVIDER,
         PLAYER_RESIZE,
         PLAYER_RESIZE_NAME,
         CAPTION_TEXT_SIZE,

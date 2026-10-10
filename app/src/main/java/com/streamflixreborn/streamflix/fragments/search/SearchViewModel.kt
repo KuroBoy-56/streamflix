@@ -8,6 +8,7 @@ import com.streamflixreborn.streamflix.database.AppDatabase
 import com.streamflixreborn.streamflix.models.Movie
 import com.streamflixreborn.streamflix.models.TvShow
 import com.streamflixreborn.streamflix.providers.IptvProvider
+import com.streamflixreborn.streamflix.utils.AssignedProviders
 import com.streamflixreborn.streamflix.providers.Provider
 import com.streamflixreborn.streamflix.utils.ParentalControlUtils
 import com.streamflixreborn.streamflix.utils.UserPreferences
@@ -157,9 +158,14 @@ class SearchViewModel(database: AppDatabase) : ViewModel() {
         _state.emit(State.GlobalSearching)
 
         val isCurrentProviderIptv = UserPreferences.currentProvider is IptvProvider
-        val targetProviders = Provider.providers.keys
-            .filter { it.language == currentLanguage && (it is IptvProvider) == isCurrentProviderIptv }
-            .toList()
+        // Si el panel asignó proveedores, la búsqueda global se limita a ellos (mismo tipo: VOD o en vivo).
+        val targetProviders = if (AssignedProviders.hasPanelAssignment()) {
+            AssignedProviders.all().filter { (it is IptvProvider) == isCurrentProviderIptv }
+        } else {
+            Provider.providers.keys
+                .filter { it.language == currentLanguage && (it is IptvProvider) == isCurrentProviderIptv }
+                .toList()
+        }
 
         if (targetProviders.isEmpty()) {
             _state.emit(State.SuccessGlobalSearching(emptyList()))

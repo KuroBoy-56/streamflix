@@ -30,7 +30,8 @@ class PlayerSettingsTvView @JvmOverloads constructor(
         true
     )
 
-    private val settingsAdapter = SettingsAdapter(this, Settings.listTv)
+    // Se recrea en cada visualización para reflejar las secciones disponibles (p. ej. Proveedores)
+    private val settingsAdapter get() = SettingsAdapter(this, Settings.listTv)
     private val qualityAdapter = SettingsAdapter(this, Settings.Quality.list)
     private val audioAdapter = SettingsAdapter(this, Settings.Audio.list)
     private val subtitlesAdapter = SettingsAdapter(this, Settings.Subtitle.list)
@@ -50,6 +51,7 @@ class PlayerSettingsTvView @JvmOverloads constructor(
     private val extraBufferingAdapter = SettingsAdapter(this, Settings.ExtraBuffering.list)
     private val softwareDecoderAdapter = SettingsAdapter(this, Settings.SoftwareDecoder.list)
     private val serversAdapter = SettingsAdapter(this, Settings.Server.list)
+    private val providersAdapter = SettingsAdapter(this, Settings.ProviderOption.list)
     private val marginAdapter = SettingsAdapter(this, Settings.Subtitle.Style.Margin.list)
 
     override var onSubtitlesClicked: (() -> Unit)? = null
@@ -69,6 +71,7 @@ class PlayerSettingsTvView @JvmOverloads constructor(
             Setting.EXTRA_BUFFERING,
             Setting.SOFTWARE_DECODER,
             Setting.SERVERS,
+            Setting.PROVIDERS,
             Setting.GESTURES,
             Setting.KEEP_SCREEN_ON,
             Setting.MANUAL_ZOOM -> displaySettings(Setting.MAIN)
@@ -132,6 +135,7 @@ class PlayerSettingsTvView @JvmOverloads constructor(
                 Setting.EXTRA_BUFFERING -> context.getString(R.string.player_settings_extra_buffer_title)
                 Setting.SOFTWARE_DECODER -> context.getString(R.string.player_settings_software_decoder_title)
                 Setting.SERVERS -> context.getString(R.string.player_settings_servers_title)
+                Setting.PROVIDERS -> context.getString(R.string.player_settings_providers_title)
                 Setting.CAPTION_STYLE_MARGIN -> context.getString(R.string.player_settings_caption_style_margin_title)
                 Setting.GESTURES -> context.getString(R.string.player_settings_gestures_title)
                 Setting.KEEP_SCREEN_ON -> context.getString(R.string.player_settings_keep_screen_on_title)
@@ -160,6 +164,7 @@ class PlayerSettingsTvView @JvmOverloads constructor(
             Setting.EXTRA_BUFFERING -> extraBufferingAdapter
             Setting.SOFTWARE_DECODER -> softwareDecoderAdapter
             Setting.SERVERS -> serversAdapter
+            Setting.PROVIDERS -> providersAdapter
             Setting.CAPTION_STYLE_MARGIN -> marginAdapter
             else -> settingsAdapter
         }
@@ -244,6 +249,7 @@ class PlayerSettingsTvView @JvmOverloads constructor(
                                 Settings.ExtraBuffering -> settingsView.displaySettings(Setting.EXTRA_BUFFERING)
                                 Settings.SoftwareDecoder -> settingsView.displaySettings(Setting.SOFTWARE_DECODER)
                                 Settings.Server -> settingsView.displaySettings(Setting.SERVERS)
+                                Settings.ProviderOption -> settingsView.displaySettings(Setting.PROVIDERS)
                                 Settings.ManualZoom -> {
                                     settingsView.onManualZoomClicked?.invoke()
                                     settingsView.hide()
@@ -411,6 +417,11 @@ class PlayerSettingsTvView @JvmOverloads constructor(
                             settingsView.onServerSelected?.invoke(item)
                             settingsView.hide()
                         }
+
+                        is Settings.ProviderOption -> {
+                            if (!item.isSelected) settingsView.onProviderSelected?.invoke(item)
+                            settingsView.hide()
+                        }
                         else -> {}
                     }
                 }
@@ -462,6 +473,9 @@ class PlayerSettingsTvView @JvmOverloads constructor(
                                     R.drawable.ic_player_settings_servers
                                 )
                             )
+                            Settings.ProviderOption -> setImageDrawable(
+                                ContextCompat.getDrawable(context, R.drawable.ic_menu_tv)
+                            )
                             Settings.ManualZoom -> setImageDrawable(
                                 ContextCompat.getDrawable(
                                     context,
@@ -512,6 +526,7 @@ class PlayerSettingsTvView @JvmOverloads constructor(
                         Settings.ExtraBuffering -> context.getString(R.string.player_settings_extra_buffer_server_label)
                         Settings.SoftwareDecoder -> context.getString(R.string.player_settings_software_decoder_label)
                         Settings.Server -> context.getString(R.string.player_settings_servers_label)
+                        Settings.ProviderOption -> context.getString(R.string.player_settings_providers_label)
                         Settings.ManualZoom -> context.getString(R.string.player_settings_manual_zoom_label)
                         else -> ""
                     }
@@ -595,6 +610,8 @@ class PlayerSettingsTvView @JvmOverloads constructor(
 
                     is Settings.Server -> item.name
 
+                    is Settings.ProviderOption -> item.name
+
                     else -> ""
                 }
             }
@@ -623,6 +640,7 @@ class PlayerSettingsTvView @JvmOverloads constructor(
                         Settings.Speed -> context.getString(Settings.Speed.selected.stringId)
                         Settings.ExtraBuffering -> context.getString(Settings.ExtraBuffering.selected.stringId)
                         Settings.Server -> Settings.Server.selected?.name ?: ""
+                        Settings.ProviderOption -> Settings.ProviderOption.selected?.name ?: ""
                         Settings.ManualZoom -> ""
                         else -> ""
                     }
@@ -756,6 +774,11 @@ class PlayerSettingsTvView @JvmOverloads constructor(
                         else -> View.GONE
                     }
 
+                    is Settings.ProviderOption -> when {
+                        item.isSelected -> View.VISIBLE
+                        else -> View.GONE
+                    }
+
                     else -> View.GONE
                 }
             }
@@ -770,7 +793,8 @@ class PlayerSettingsTvView @JvmOverloads constructor(
                             Settings.Speed,
                             Settings.ExtraBuffering,
                             Settings.SoftwareDecoder,
-                            Settings.Server -> View.VISIBLE
+                            Settings.Server,
+                            Settings.ProviderOption -> View.VISIBLE
                             else -> View.GONE
                         }
                     }

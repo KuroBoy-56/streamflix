@@ -105,6 +105,7 @@ abstract class PlayerSettingsView @JvmOverloads constructor(
         EXTRA_BUFFERING,
         SOFTWARE_DECODER,
         SERVERS,
+        PROVIDERS,
         GESTURES,
         KEEP_SCREEN_ON,
         MANUAL_ZOOM,
@@ -389,34 +390,41 @@ abstract class PlayerSettingsView @JvmOverloads constructor(
         this.onServerSelected = onServerSelected
     }
 
+    protected var onProviderSelected: ((Settings.ProviderOption) -> Unit)? = null
+    fun setOnProviderSelectedListener(onProviderSelected: (provider: Settings.ProviderOption) -> Unit) {
+        this.onProviderSelected = onProviderSelected
+    }
+
 
     interface Item
 
     sealed class Settings : Item {
 
         companion object {
-            val listMobile = listOf(
+            val listMobile get() = listOf(
                 Quality,
                 Audio,
                 Subtitle,
                 Speed,
                 Server,
+                ProviderOption,
                 ExtraBuffering,
                 SoftwareDecoder,
                 Gestures,
                 KeepScreenOn,
                 ManualZoom,
-            )
-            val listTv = listOf(
+            ).filter { it != ProviderOption || ProviderOption.list.size > 1 }
+            val listTv get() = listOf(
                 Quality,
                 Audio,
                 Subtitle,
                 Speed,
                 Server,
+                ProviderOption,
                 ExtraBuffering,
                 SoftwareDecoder,
                 ManualZoom,
-            )
+            ).filter { it != ProviderOption || ProviderOption.list.size > 1 }
         }
 
         data object ManualZoom : Settings()
@@ -1276,6 +1284,34 @@ abstract class PlayerSettingsView @JvmOverloads constructor(
                     list.forEach {
                         it.isSelected = (it.id == player.mediaMetadata.mediaServerId)
                     }
+                }
+            }
+        }
+
+        /**
+         * Proveedores asignados desde el panel. Al elegir uno se busca el mismo
+         * contenido en ese proveedor y se cargan sus servidores.
+         */
+        class ProviderOption(
+            val name: String,
+            val logo: String,
+        ) : Item {
+            var isSelected: Boolean = false
+
+            companion object : Settings() {
+                val list = mutableListOf<ProviderOption>()
+
+                val selected: ProviderOption?
+                    get() = list.find { it.isSelected }
+
+                fun init(providers: List<com.streamflixreborn.streamflix.providers.Provider>, activeName: String?) {
+                    list.clear()
+                    list.addAll(providers.map { ProviderOption(name = it.name, logo = it.logo) })
+                    select(activeName)
+                }
+
+                fun select(name: String?) {
+                    list.forEach { it.isSelected = it.name == name }
                 }
             }
         }

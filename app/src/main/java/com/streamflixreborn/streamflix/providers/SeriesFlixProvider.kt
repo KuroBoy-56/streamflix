@@ -30,8 +30,8 @@ import java.util.concurrent.TimeUnit
 object SeriesFlixProvider : Provider {
 
     override val name = "SeriesFlix"
-    override val baseUrl = "https://seriesflixhd.lol"
-    override val logo = "https://s.seriesflixhd.lol/series/imgs/favicon-192.png"
+    override val baseUrl = "https://seriesflixhd.casa"
+    override val logo = "https://s.seriesflixhd.casa/series/imgs/favicon-192.png"
     override val language = "es"
 
     private const val USER_AGENT =

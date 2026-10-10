@@ -46,6 +46,8 @@ import com.streamflixreborn.streamflix.providers.Cine24hProvider
 import com.streamflixreborn.streamflix.providers.FilmyOnlineCcProvider
 import com.streamflixreborn.streamflix.providers.GuardaSerieProvider
 import com.streamflixreborn.streamflix.providers.IptvProvider
+import com.streamflixreborn.streamflix.fragments.live.LiveSession
+import com.streamflixreborn.streamflix.utils.AssignedProviders
 import com.streamflixreborn.streamflix.providers.Provider
 import com.streamflixreborn.streamflix.providers.ZaluknijProvider
 import com.streamflixreborn.streamflix.ui.UpdateAppMobileDialog
@@ -185,6 +187,9 @@ class MainMobileActivity : FragmentActivity() {
             return
         }
 
+        // Corrige el proveedor del inicio según lo asignado en el panel (los de canales en vivo van a "En Vivo").
+        AssignedProviders.normalizeCurrentProvider(this)
+
         if (savedInstanceState == null) {
             UserPreferences.currentProvider?.let {
                 navController.navigate(R.id.home, null, navOptions { launchSingleTop = true; popUpTo(R.id.providers) { inclusive = true } })
@@ -192,6 +197,7 @@ class MainMobileActivity : FragmentActivity() {
         }
 
         viewModel.checkUpdate()
+        setupLiveBottomNavigationItem()
         binding.bnvMain.setupWithNavController(navController)
         binding.btnMainSearch.setOnClickListener {
             if (navController.currentDestination?.id != R.id.search) navController.navigate(R.id.search)
@@ -200,6 +206,11 @@ class MainMobileActivity : FragmentActivity() {
         updateBottomNavigationVisibility(navController.currentDestination?.id)
 
         navController.addOnDestinationChangedListener { _, destination, _ ->
+            // La sesión "En Vivo" solo dura mientras se navega por esa sección.
+            when (destination.id) {
+                R.id.live -> LiveSession.enter(this)
+                R.id.search, R.id.home, R.id.movies, R.id.tv_shows, R.id.favorites, R.id.settings, R.id.providers -> LiveSession.exit()
+            }
             updateNavigationVisibility(destination.id)
             updateBottomNavigationVisibility(destination.id)
             binding.mainContent.post { binding.mainContent.requestApplyInsets() }
@@ -364,6 +375,39 @@ class MainMobileActivity : FragmentActivity() {
 
     private fun dismissUpdateDialog() { updateAppDialog?.takeIf { it.isShowing }?.dismiss(); updateAppDialog = null }
 
+    /**
+     * La barra inferior admite como máximo 5 pestañas: si el panel asignó canales en vivo,
+     * "En Vivo" ocupa el lugar de una pestaña no soportada por el proveedor o, si no hay,
+     * el de Favoritos (que siguen visibles como filas en el inicio).
+     */
+    private fun setupLiveBottomNavigationItem() {
+        val menu = binding.bnvMain.menu
+        if (!AssignedProviders.hasLiveSection(this) || menu.findItem(R.id.live) != null) return
+
+        val provider = UserPreferences.storedProvider
+        val removable = when {
+            provider != null && !Provider.supportsMovies(provider) -> R.id.movies
+            provider != null && !Provider.supportsTvShows(provider) -> R.id.tv_shows
+            else -> R.id.favorites
+        }
+
+        data class Entry(val id: Int, val title: CharSequence, val icon: android.graphics.drawable.Drawable?)
+        val entries = (0 until menu.size()).map { menu.getItem(it) }
+            .filter { it.itemId != removable }
+            .map { Entry(it.itemId, it.title ?: "", it.icon) }
+            .toMutableList()
+        val homeIndex = entries.indexOfFirst { it.id == R.id.home }
+        entries.add(
+            homeIndex + 1,
+            Entry(R.id.live, getString(R.string.main_menu_live), androidx.core.content.ContextCompat.getDrawable(this, R.drawable.ic_menu_live))
+        )
+
+        menu.clear()
+        entries.forEachIndexed { index, entry ->
+            menu.add(android.view.Menu.NONE, entry.id, index, entry.title).icon = entry.icon
+        }
+    }
+
     private fun updateBottomNavigationVisibility(destinationId: Int?) {
         val showBottomNav = UserPreferences.currentProvider != null && isTopLevelProviderDestination(destinationId)
         binding.bnvMain.visibility = if (showBottomNav) View.VISIBLE else View.GONE
@@ -371,7 +415,8 @@ class MainMobileActivity : FragmentActivity() {
     }
 
     private fun updateNavigationVisibility(currentDestinationId: Int? = null) {
-        val provider = UserPreferences.currentProvider ?: return
+        // El menú refleja el proveedor del inicio aunque haya una sesión "En Vivo" activa.
+        val provider = UserPreferences.storedProvider ?: return
         val supportsMovies = Provider.supportsMovies(provider)
         val supportsTvShows = Provider.supportsTvShows(provider)
 
@@ -389,7 +434,7 @@ class MainMobileActivity : FragmentActivity() {
         }
     }
 
-    private fun isTopLevelProviderDestination(destinationId: Int?): Boolean { return destinationId in setOf(R.id.search, R.id.home, R.id.movies, R.id.tv_shows, R.id.favorites, R.id.settings) }
+    private fun isTopLevelProviderDestination(destinationId: Int?): Boolean { return destinationId in setOf(R.id.search, R.id.home, R.id.live, R.id.movies, R.id.tv_shows, R.id.favorites, R.id.settings) }
 
     private fun navigateToProviderHome(navController: androidx.navigation.NavController) {
         if (!navController.popBackStack(R.id.home, false)) { navController.navigate(R.id.home, null, navOptions { launchSingleTop = true; popUpTo(R.id.providers) { inclusive = true } }) }

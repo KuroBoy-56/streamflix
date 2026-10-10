@@ -5,7 +5,10 @@ import android.os.Bundle
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.streamflixreborn.streamflix.models.Movie
+import com.streamflixreborn.streamflix.models.TvShow
 import com.streamflixreborn.streamflix.models.Video
+import com.streamflixreborn.streamflix.providers.Provider
 import com.streamflixreborn.streamflix.utils.CustomTabHelper
 import com.streamflixreborn.streamflix.utils.EpisodeManager
 import com.streamflixreborn.streamflix.utils.OpenSubtitles
@@ -29,6 +32,24 @@ class PlayerViewModel(
 
     private val _subtitleState = MutableSharedFlow<SubtitleState>()
     val subtitleState: SharedFlow<SubtitleState> = _subtitleState
+
+    /**
+     * Proveedor elegido desde Ajustes > Proveedores. Si es null se usa el proveedor actual.
+     * No cambia el proveedor del inicio: solo afecta a esta reproducción.
+     */
+    private var playbackProvider: Provider? = null
+
+    val activeProvider: Provider?
+        get() = playbackProvider ?: UserPreferences.currentProvider
+
+    sealed class ProviderSwitchEvent {
+        data class Searching(val providerName: String) : ProviderSwitchEvent()
+        data class Switched(val providerName: String) : ProviderSwitchEvent()
+        data class NotFound(val providerName: String) : ProviderSwitchEvent()
+    }
+
+    private val _providerSwitchEvents = MutableSharedFlow<ProviderSwitchEvent>()
+    val providerSwitchEvents: SharedFlow<ProviderSwitchEvent> = _providerSwitchEvents
 
     private val _playPreviousOrNextEpisode = MutableSharedFlow<Video.Type.Episode>()
     val playPreviousOrNextEpisode: SharedFlow<Video.Type.Episode> = _playPreviousOrNextEpisode
@@ -90,6 +111,8 @@ class PlayerViewModel(
         }
     }
     fun playEpisode(episode: Video.Type.Episode) {
+        // Los siguientes episodios se resuelven con el proveedor del contenido original.
+        playbackProvider = null
         getServers(episode, episode.id)
         getSubtitles(episode)
     }
@@ -100,11 +123,11 @@ class PlayerViewModel(
         lastId = id
         _state.emit(State.LoadingServers)
         try {
-            val servers = UserPreferences.currentProvider!!.getServers(id, videoType)
+            val servers = activeProvider!!.getServers(id, videoType)
             if (servers.isEmpty()) throw Exception("No servers found")
             
             // LOG POTENZIATO: Mostra tutti i server disponibili per il player
-            Log.i("StreamFlixES", "[SERVERS LIST] -> Provider: ${UserPreferences.currentProvider!!.name}")
+            Log.i("StreamFlixES", "[SERVERS LIST] -> Provider: ${activeProvider!!.name}")
             Log.i("StreamFlixES", "[SERVERS LIST] -> Found ${servers.size} servers: ${servers.joinToString { it.name }}")
 
             Log.d("PlayerViewModel", "Ricerca server completata: ${servers.size} server trovati")
@@ -115,18 +138,107 @@ class PlayerViewModel(
         }
     }
 
+    /**
+     * Busca el mismo contenido en otro proveedor asignado por el panel y carga sus servidores.
+     * Si no se encuentra, se mantiene la reproducción actual.
+     */
+    fun switchProvider(providerName: String) = viewModelScope.launch(Dispatchers.IO) {
+        val type = lastVideoType ?: return@launch
+        val target = Provider.findByName(providerName) ?: return@launch
+
+        if (target.name == UserPreferences.currentProvider?.name) {
+            playbackProvider = null
+            _providerSwitchEvents.emit(ProviderSwitchEvent.Switched(target.name))
+            lastId?.let { getServers(type, it) }
+            return@launch
+        }
+
+        _providerSwitchEvents.emit(ProviderSwitchEvent.Searching(target.name))
+        try {
+            val (resolvedType, resolvedId) = findOnProvider(target, type)
+                ?: throw Exception("Not found on ${target.name}")
+
+            val servers = target.getServers(resolvedId, resolvedType)
+            if (servers.isEmpty()) throw Exception("No servers found")
+
+            playbackProvider = target
+            lastVideoType = resolvedType
+            lastId = resolvedId
+            _providerSwitchEvents.emit(ProviderSwitchEvent.Switched(target.name))
+            _state.emit(State.SuccessLoadingServers(servers))
+        } catch (e: Exception) {
+            Log.e("PlayerViewModel", "switchProvider(${target.name}): ", e)
+            _providerSwitchEvents.emit(ProviderSwitchEvent.NotFound(target.name))
+        }
+    }
+
+    private suspend fun findOnProvider(provider: Provider, type: Video.Type): Pair<Video.Type, String>? {
+        fun normalize(value: String?) = value.orEmpty()
+            .lowercase()
+            .replace(Regex("\\(.*?\\)|\\[.*?]"), " ")
+            .replace(Regex("[^\\p{L}\\p{N}]+"), " ")
+            .trim()
+
+        fun score(candidate: String, wanted: String): Int {
+            val c = normalize(candidate)
+            val w = normalize(wanted)
+            return when {
+                c.isEmpty() || w.isEmpty() -> 0
+                c == w -> 3
+                c.startsWith(w) || w.startsWith(c) -> 2
+                c.contains(w) || w.contains(c) -> 1
+                else -> 0
+            }
+        }
+
+        return when (type) {
+            is Video.Type.Movie -> {
+                val movie = provider.search(type.title)
+                    .filterIsInstance<Movie>()
+                    .map { it to score(it.title, type.title) }
+                    .filter { it.second > 0 }
+                    .maxByOrNull { it.second }
+                    ?.first
+                    ?: return null
+                type.copy(id = movie.id) to movie.id
+            }
+
+            is Video.Type.Episode -> {
+                val match = provider.search(type.tvShow.title)
+                    .filterIsInstance<TvShow>()
+                    .map { it to score(it.title, type.tvShow.title) }
+                    .filter { it.second > 0 }
+                    .maxByOrNull { it.second }
+                    ?.first
+                    ?: return null
+
+                val tvShow = provider.getTvShow(match.id)
+                val season = tvShow.seasons.firstOrNull { it.number == type.season.number }
+                    ?: tvShow.seasons.singleOrNull()
+                    ?: return null
+                val episodes = season.episodes.ifEmpty { provider.getEpisodesBySeason(season.id) }
+                val episode = episodes.firstOrNull { it.number == type.number } ?: return null
+
+                type.copy(
+                    id = episode.id,
+                    tvShow = type.tvShow.copy(id = tvShow.id),
+                ) to episode.id
+            }
+        }
+    }
+
     fun getVideo(server: Video.Server) = viewModelScope.launch(Dispatchers.IO) {
         Log.d("PlayerViewModel", "Inizio estrazione video dal server: ${server.name}")
         _state.emit(State.LoadingVideo(server))
         try {
-            val video = UserPreferences.currentProvider!!.getVideo(server)
+            val video = activeProvider!!.getVideo(server)
             if (video.source.isEmpty()) throw Exception("No source found")
 
             // LOGICA SOTTOTITOLI GLOBALE: 
             // Se il provider non ha già impostato un default (es. i "forced" in spagnolo),
             // allora proviamo ad attivare l'ultimo sottotitolo usato dall'utente.
             // MA: se siamo su un provider spagnolo e non ci sono forced, non dobbiamo attivare nulla.
-            val currentProviderLang = UserPreferences.currentProvider?.language ?: ""
+            val currentProviderLang = activeProvider?.language ?: ""
             val hasDefaultAlready = video.subtitles.any { it.default }
 
             if (!hasDefaultAlready && currentProviderLang != "es") {

@@ -63,18 +63,23 @@ abstract class AppDatabase : RoomDatabase() {
             getInstance(context)
         }
 
+        // Instancias abiertas por proveedor: permite alternar entre el inicio y la sección
+        // "En Vivo" sin cerrar la base que todavía usan los ViewModels del otro proveedor.
+        private val INSTANCES = java.util.concurrent.ConcurrentHashMap<String, AppDatabase>()
+
         fun getInstance(context: Context): AppDatabase {
             val providerName = UserPreferences.currentProvider?.name
                 ?: currentProviderName
                 ?: throw IllegalStateException("Current provider is not set")
 
-            return INSTANCE?.takeIf { currentProviderName == providerName } ?: synchronized(this) {
+            INSTANCE?.takeIf { currentProviderName == providerName }?.let { return it }
+            return synchronized(this) {
                 INSTANCE?.takeIf { currentProviderName == providerName } ?: run {
-                    INSTANCE?.close()
-                    buildDatabase(providerName, context).also { instance ->
-                        INSTANCE = instance
-                        currentProviderName = providerName
-                    }
+                    INSTANCES.getOrPut(providerName) { buildDatabase(providerName, context) }
+                        .also { instance ->
+                            INSTANCE = instance
+                            currentProviderName = providerName
+                        }
                 }
             }
         }
@@ -82,7 +87,8 @@ abstract class AppDatabase : RoomDatabase() {
         // Metodo per forzare il cambio di database quando cambia il provider
         fun resetInstance() {
             synchronized(this) {
-                INSTANCE?.close()
+                INSTANCES.values.forEach { runCatching { it.close() } }
+                INSTANCES.clear()
                 INSTANCE = null
                 currentProviderName = null
             }

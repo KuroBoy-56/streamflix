@@ -507,4 +507,13 @@
     <string name="settings_force_extra_buffer_summary">Activa búfer extra para todos los servidores de forma predeterminada</string>
     <string name="supabase_instructions_title">Instrucciones</string>
     <string name="supabase_instructions_summary">Abrir en el navegador la guía detallada para configurar la cuenta y la sincronización de Supabase</string>
+    <string name="player_settings_providers_title">Proveedores</string>
+    <string name="player_settings_providers_label">Proveedores</string>
+    <string name="player_provider_switching">Buscando en %1$s…</string>
+    <string name="player_provider_not_found">No disponible en %1$s</string>
+    <string name="main_menu_live">En Vivo</string>
+    <string name="live_select_provider">Proveedor en vivo</string>
+    <string name="live_empty">No hay canales en vivo disponibles</string>
+    <string name="home_featured">Destacados</string>
+    <string name="home_next_row">Siguiente: %1$s</string>
 </resources>

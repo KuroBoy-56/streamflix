@@ -42,6 +42,11 @@
             app:destination="@id/tv_show" />
     </fragment>
     <fragment
+        android:id="@+id/live"
+        android:name="com.streamflixreborn.streamflix.fragments.live.LiveMobileFragment"
+        android:label="fragment_live_mobile"
+        tools:layout="@layout/fragment_live_mobile" />
+    <fragment
         android:id="@+id/favorites"
         android:name="com.streamflixreborn.streamflix.fragments.favorites.FavoritesMobileFragment"
         android:label="fragment_favorites_mobile"

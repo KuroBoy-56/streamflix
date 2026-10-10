@@ -1,12 +1,11 @@
 package com.streamflixreborn.streamflix.fragments.providers
 
 import android.app.Application
-import android.content.Context
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.streamflixreborn.streamflix.models.Provider as ModelProvider
-import com.streamflixreborn.streamflix.providers.Provider
+import com.streamflixreborn.streamflix.utils.AssignedProviders
 import com.streamflixreborn.streamflix.utils.UserPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -37,19 +36,9 @@ class ProvidersViewModel(application: Application) : AndroidViewModel(applicatio
             val isFavoritesFilter = language == "favorites"
             val favorites = UserPreferences.favoriteProviders
 
-            // ⚡️ LECTURA ESTRICTA: Solo sacar los servidores autorizados por tu Panel Web
-            val prefs = getApplication<Application>().getSharedPreferences("SecureGatewayPrefs", Context.MODE_PRIVATE)
-            val assignedStr = prefs.getString("assigned_servers", "") ?: ""
-            val assignedList = assignedStr.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-
-            val allProviders = Provider.providers.keys.toList()
-
-            // Si el panel envió servidores, filtramos a la fuerza. Si no, muestra la base.
-            val baseProviders = if (assignedList.isNotEmpty()) {
-                allProviders.filter { assignedList.contains(it.name) }
-            } else {
-                allProviders
-            }
+            // Solo los servidores autorizados por el panel web (los de canales en vivo
+            // tienen su propia sección cuando también hay contenido VOD).
+            val baseProviders = AssignedProviders.homeProviders(getApplication())
 
             // ⚡️ SE ELIMINARON LOS TMDb EXTRAS PARA DEJAR UNA LISTA LIMPIA
             val finalProviders = baseProviders

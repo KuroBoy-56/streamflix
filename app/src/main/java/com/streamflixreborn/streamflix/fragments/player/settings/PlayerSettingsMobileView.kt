@@ -27,7 +27,8 @@ class PlayerSettingsMobileView @JvmOverloads constructor(
         true
     )
 
-    private val settingsAdapter = SettingsAdapter(this, Settings.listMobile)
+    // Se recrea en cada visualización para reflejar las secciones disponibles (p. ej. Proveedores)
+    private val settingsAdapter get() = SettingsAdapter(this, Settings.listMobile)
     private val qualityAdapter = SettingsAdapter(this, Settings.Quality.list)
     private val audioAdapter = SettingsAdapter(this, Settings.Audio.list)
     private val subtitlesAdapter = SettingsAdapter(this, Settings.Subtitle.list)
@@ -49,6 +50,7 @@ class PlayerSettingsMobileView @JvmOverloads constructor(
     private val gesturesAdapter = SettingsAdapter(this, Settings.Gestures.list)
     private val keepScreenOnAdapter = SettingsAdapter(this, Settings.KeepScreenOn.list)
     private val serversAdapter = SettingsAdapter(this, Settings.Server.list)
+    private val providersAdapter = SettingsAdapter(this, Settings.ProviderOption.list)
     private val marginAdapter = SettingsAdapter(this, Settings.Subtitle.Style.Margin.list)
 
     override var onSubtitlesClicked: (() -> Unit)? = null
@@ -71,6 +73,7 @@ class PlayerSettingsMobileView @JvmOverloads constructor(
             Setting.SUBTITLES,
             Setting.SPEED,
             Setting.SERVERS,
+            Setting.PROVIDERS,
             Setting.GESTURES,
             Setting.KEEP_SCREEN_ON,
             Setting.EXTRA_BUFFERING,
@@ -128,6 +131,7 @@ class PlayerSettingsMobileView @JvmOverloads constructor(
                 Setting.EXTRA_BUFFERING -> context.getString(R.string.player_settings_extra_buffer_title)
                 Setting.SOFTWARE_DECODER -> context.getString(R.string.player_settings_software_decoder_title)
                 Setting.SERVERS -> context.getString(R.string.player_settings_servers_title)
+                Setting.PROVIDERS -> context.getString(R.string.player_settings_providers_title)
                 Setting.CAPTION_STYLE_MARGIN -> context.getString(R.string.player_settings_caption_style_margin_title)
                 Setting.GESTURES -> context.getString(R.string.player_settings_gestures_title)
                 Setting.KEEP_SCREEN_ON -> context.getString(R.string.player_settings_keep_screen_on_title)
@@ -158,6 +162,7 @@ class PlayerSettingsMobileView @JvmOverloads constructor(
             Setting.EXTRA_BUFFERING -> extraBufferingAdapter
             Setting.SOFTWARE_DECODER -> softwareDecoderAdapter
             Setting.SERVERS -> serversAdapter
+            Setting.PROVIDERS -> providersAdapter
             Setting.CAPTION_STYLE_MARGIN -> marginAdapter
             Setting.GESTURES -> gesturesAdapter
             Setting.KEEP_SCREEN_ON -> keepScreenOnAdapter
@@ -234,6 +239,7 @@ class PlayerSettingsMobileView @JvmOverloads constructor(
                                 Settings.ExtraBuffering -> settingsView.displaySettings(Setting.EXTRA_BUFFERING)
                                 Settings.SoftwareDecoder -> settingsView.displaySettings(Setting.SOFTWARE_DECODER)
                                 Settings.Server -> settingsView.displaySettings(Setting.SERVERS)
+                                Settings.ProviderOption -> settingsView.displaySettings(Setting.PROVIDERS)
                                 Settings.Gestures -> settingsView.displaySettings(Setting.GESTURES)
                                 Settings.KeepScreenOn -> settingsView.displaySettings(Setting.KEEP_SCREEN_ON)
                                 Settings.ManualZoom -> {
@@ -416,6 +422,11 @@ class PlayerSettingsMobileView @JvmOverloads constructor(
                             settingsView.onServerSelected?.invoke(item)
                             settingsView.displaySettings(Setting.MAIN)
                         }
+
+                        is Settings.ProviderOption -> {
+                            if (!item.isSelected) settingsView.onProviderSelected?.invoke(item)
+                            settingsView.hide()
+                        }
                         else -> {}
                     }
                 }
@@ -449,6 +460,7 @@ class PlayerSettingsMobileView @JvmOverloads constructor(
                         Settings.ExtraBuffering -> R.drawable.ic_player_settings_extra_buffer
                         Settings.SoftwareDecoder -> R.drawable.ic_player_settings_extra_buffer
                         Settings.Server -> R.drawable.ic_player_settings_servers
+                        Settings.ProviderOption -> R.drawable.ic_menu_tv
                         Settings.Gestures -> R.drawable.ic_player_settings_gestures
                         Settings.KeepScreenOn -> R.drawable.ic_brightness
                         Settings.ManualZoom -> R.drawable.exo_styled_controls_aspect_ratio
@@ -466,6 +478,7 @@ class PlayerSettingsMobileView @JvmOverloads constructor(
                         Settings.ExtraBuffering -> context.getString(R.string.player_settings_extra_buffer_server_label)
                         Settings.SoftwareDecoder -> context.getString(R.string.player_settings_software_decoder_label)
                         Settings.Server -> context.getString(R.string.player_settings_servers_label)
+                        Settings.ProviderOption -> context.getString(R.string.player_settings_providers_label)
                         Settings.Gestures -> context.getString(R.string.player_settings_gestures_title)
                         Settings.KeepScreenOn -> context.getString(R.string.player_settings_keep_screen_on_title)
                         Settings.ManualZoom -> context.getString(R.string.player_settings_manual_zoom_label)
@@ -553,6 +566,8 @@ class PlayerSettingsMobileView @JvmOverloads constructor(
                     is Settings.KeepScreenOn -> context.getString(item.stringId)
 
                     is Settings.Server -> item.name
+
+                    is Settings.ProviderOption -> item.name
                     else -> ""
                 }
             }
@@ -584,6 +599,7 @@ class PlayerSettingsMobileView @JvmOverloads constructor(
                         Settings.Gestures -> context.getString(Settings.Gestures.selected.stringId)
                         Settings.KeepScreenOn -> context.getString(Settings.KeepScreenOn.selected.stringId)
                         Settings.Server -> Settings.Server.selected?.name ?: ""
+                        Settings.ProviderOption -> Settings.ProviderOption.selected?.name ?: ""
                         Settings.ManualZoom -> ""
                         else -> ""
                     }
@@ -727,6 +743,11 @@ class PlayerSettingsMobileView @JvmOverloads constructor(
                         else -> View.GONE
                     }
 
+                    is Settings.ProviderOption -> when {
+                        item.isSelected -> View.VISIBLE
+                        else -> View.GONE
+                    }
+
                     else -> View.GONE
                 }
             }
@@ -743,7 +764,8 @@ class PlayerSettingsMobileView @JvmOverloads constructor(
                             Settings.SoftwareDecoder,
                             Settings.Gestures,
                             Settings.KeepScreenOn,
-                            Settings.Server -> View.VISIBLE
+                            Settings.Server,
+                            Settings.ProviderOption -> View.VISIBLE
                             else -> View.GONE
                         }
                     }

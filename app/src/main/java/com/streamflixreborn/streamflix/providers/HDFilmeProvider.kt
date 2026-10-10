@@ -39,7 +39,7 @@ import retrofit2.http.Path
 object HDFilmeProvider : Provider {
 
     override val name: String = "HDFilme"
-    override val baseUrl: String = "https://hdfilme.win"
+    override val baseUrl: String = "https://hdfilme.ceo"
     override val logo: String = "$baseUrl/templates/hdfilme/images/apple-touch-icon.png"
     override val language: String = "de"
 

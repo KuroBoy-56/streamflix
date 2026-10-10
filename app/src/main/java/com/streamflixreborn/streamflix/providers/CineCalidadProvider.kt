@@ -20,9 +20,9 @@ import kotlinx.coroutines.coroutineScope
 object CineCalidadProvider : Provider {
 
     override val name = "CineCalidad"
-    override val baseUrl = "https://www.cinecalidad.ec"
+    override val baseUrl = "https://www.cinecalidad.am"
     override val language = "es"
-    override val logo = "https://www.cinecalidad.ec/wp-content/themes/Cinecalidad/assets/img/logo.png"
+    override val logo = "https://www.cinecalidad.am/wp-content/themes/Cinecalidad/assets/img/logo.png"
 
     private fun getOkHttpClient(): OkHttpClient {
         val appCache = Cache(File("cacheDir", "okhttpcache"), 10 * 1024 * 1024)

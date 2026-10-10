@@ -64,6 +64,8 @@ import com.streamflixreborn.streamflix.ui.PlayerMobileView
 import com.streamflixreborn.streamflix.utils.MediaServer
 import com.streamflixreborn.streamflix.utils.SubtitleOffsetRenderersFactory
 import com.streamflixreborn.streamflix.utils.UserPreferences
+import com.streamflixreborn.streamflix.providers.IptvProvider
+import com.streamflixreborn.streamflix.utils.AssignedProviders
 import com.streamflixreborn.streamflix.utils.UserDataCache
 import com.streamflixreborn.streamflix.utils.dp
 import com.streamflixreborn.streamflix.utils.getFileName
@@ -268,6 +270,7 @@ class PlayerMobileFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        setupProviderSwitching()
         initializePlayer(false)
         initializeVideo()
         gestureHelper = PlayerGestureHelper(
@@ -537,6 +540,44 @@ class PlayerMobileFragment : Fragment() {
         super.onStop()
         if (::player.isInitialized) {
             player.pause()
+        }
+    }
+
+    /** Ajustes > Proveedores: lista los proveedores del panel y busca el contenido en el elegido. */
+    private fun setupProviderSwitching() {
+        val current = UserPreferences.currentProvider
+        val isLive = current is IptvProvider
+        // Solo los proveedores seleccionados desde el panel (del mismo tipo: VOD o en vivo).
+        val assigned = if (AssignedProviders.hasPanelAssignment(requireContext())) {
+            AssignedProviders.all(requireContext()).filter { (it is IptvProvider) == isLive }
+        } else {
+            emptyList()
+        }
+        val providers = if (current != null && assigned.none { it.name == current.name }) listOf(current) + assigned else assigned
+
+        PlayerSettingsView.Settings.ProviderOption.init(providers, viewModel.activeProvider?.name)
+
+        binding.settings.setOnProviderSelectedListener { option ->
+            viewModel.switchProvider(option.name)
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.providerSwitchEvents.flowWithLifecycle(lifecycle, Lifecycle.State.STARTED).collect { event ->
+                val context = context ?: return@collect
+                when (event) {
+                    is PlayerViewModel.ProviderSwitchEvent.Searching -> Toast.makeText(
+                        context, getString(R.string.player_provider_switching, event.providerName), Toast.LENGTH_SHORT
+                    ).show()
+                    is PlayerViewModel.ProviderSwitchEvent.Switched ->
+                        PlayerSettingsView.Settings.ProviderOption.select(event.providerName)
+                    is PlayerViewModel.ProviderSwitchEvent.NotFound -> {
+                        PlayerSettingsView.Settings.ProviderOption.select(viewModel.activeProvider?.name)
+                        Toast.makeText(
+                            context, getString(R.string.player_provider_not_found, event.providerName), Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+            }
         }
     }
 

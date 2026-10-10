@@ -27,6 +27,7 @@ import com.streamflixreborn.streamflix.activities.main.MainMobileActivity
 import com.streamflixreborn.streamflix.activities.main.MainTvActivity
 import com.streamflixreborn.streamflix.providers.Provider
 import com.streamflixreborn.streamflix.sync.CloudSyncManager
+import com.streamflixreborn.streamflix.utils.AssignedProviders
 import com.streamflixreborn.streamflix.utils.UserPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -331,25 +332,13 @@ class SyncGatewayActivity : AppCompatActivity() {
                                 putString("custom_background_url", customBgMobileUrl)
                                 putString("custom_background_tv_url", customBgTvUrl)
                                 putString("custom_splash_url", customSplashUrl)
-                                putString("assigned_servers", namesList.joinToString(","))
+                                putString(AssignedProviders.KEY_ASSIGNED_SERVERS, namesList.joinToString(","))
                                 commit()
                             }
 
-                            val previousProvider = UserPreferences.currentProvider
-                            val allAppProviders = Provider.providers.keys.toList()
-
-                            val assignedProviders = namesList.mapNotNull { name ->
-                                allAppProviders.find { it.name.equals(name, ignoreCase = true) }
-                            }
-
-                            // LA MAGIA: Si hay 1 solo, lo asigna directo.
-                            if (assignedProviders.size == 1) {
-                                UserPreferences.currentProvider = assignedProviders.first()
-                            } else {
-                                if (previousProvider != null && !assignedProviders.contains(previousProvider)) {
-                                    UserPreferences.currentProvider = null
-                                }
-                            }
+                            // Lógica unificada: si hay un solo proveedor para el inicio se asigna
+                            // directo; si el actual ya no está autorizado se corrige.
+                            AssignedProviders.normalizeCurrentProvider(this@SyncGatewayActivity)
 
                             try {
                                 val isTv = packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)

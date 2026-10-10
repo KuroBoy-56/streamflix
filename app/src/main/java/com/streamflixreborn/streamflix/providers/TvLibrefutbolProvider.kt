@@ -11,6 +11,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.*
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
@@ -404,9 +405,9 @@ object TvLibrefutbolProvider : IptvProvider {
             val doc = fetchDocument(id) ?: throw Exception("No se pudo cargar")
             val servers = mutableListOf<Video.Server>()
 
-            doc.select("div.options-left a.option").forEach { element ->
+            doc.select("div.options-left .option").forEach { element ->
                 val name = element.text().trim()
-                val url = element.attr("href")
+                val url = element.attr("href").ifEmpty { element.attr("data-src") }
 
                 if (url.isNotEmpty()) {
                     val absoluteUrl = if (url.startsWith("http")) url else "${TvLibrefutbolProvider.baseUrl}/$url"
@@ -427,7 +428,7 @@ object TvLibrefutbolProvider : IptvProvider {
             stopLocalServer()
 
             val coreDoc = fetchDocument(server.id) ?: return@withContext Video("")
-            val playerFrameUrl = coreDoc.selectFirst("iframe#player-frame")?.attr("src") ?: ""
+            val playerFrameUrl = (coreDoc.selectFirst("iframe#player-frame") ?: coreDoc.selectFirst("iframe[src]"))?.attr("src") ?: ""
 
             if (playerFrameUrl.isEmpty()) {
                 Log.e(TAG, "Servidor offline (sin iframe)")
@@ -436,6 +437,23 @@ object TvLibrefutbolProvider : IptvProvider {
 
             val iframeDoc = fetchDocument(playerFrameUrl, server.id) ?: return@withContext Video("")
             val iframeHtml = iframeDoc.html()
+
+            // Formato nuevo: var src = "https:\/\/host\/playlist\/14\/index.m3u8?token=..."
+            val directM3u8 = """["'](https:(?:\\/|/)[^"']+?\.m3u8[^"']*)["']""".toRegex()
+                .find(iframeHtml)
+                ?.groupValues?.get(1)
+                ?.replace("\\/", "/")
+            if (directM3u8 != null) {
+                val iframeOrigin = playerFrameUrl.toHttpUrlOrNull()?.let { "${it.scheme}://${it.host}" } ?: ""
+                return@withContext Video(
+                    source = directM3u8,
+                    headers = mapOf(
+                        "User-Agent" to USER_AGENT,
+                        "Referer" to playerFrameUrl,
+                        "Origin" to iframeOrigin,
+                    )
+                )
+            }
 
             val playlistRegex = """["'](https:[^"']+playlist\.php[^"']+)["']""".toRegex()
             val playlistMatch = playlistRegex.find(iframeHtml)

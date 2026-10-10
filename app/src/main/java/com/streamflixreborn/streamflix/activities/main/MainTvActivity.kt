@@ -38,6 +38,9 @@ import com.streamflixreborn.streamflix.R
 import com.streamflixreborn.streamflix.databinding.ActivityMainTvBinding
 import com.streamflixreborn.streamflix.databinding.ContentHeaderMenuMainTvBinding
 import com.streamflixreborn.streamflix.fragments.player.PlayerTvFragment
+import com.streamflixreborn.streamflix.fragments.home.HomeTvFragment
+import com.streamflixreborn.streamflix.fragments.live.LiveSession
+import com.streamflixreborn.streamflix.fragments.live.LiveTvFragment
 import com.streamflixreborn.streamflix.ui.UpdateAppTvDialog
 import com.streamflixreborn.streamflix.providers.IptvProvider
 import com.streamflixreborn.streamflix.providers.Provider
@@ -47,6 +50,7 @@ import com.streamflixreborn.streamflix.providers.ZaluknijProvider
 import com.streamflixreborn.streamflix.providers.GuardaSerieProvider
 import com.streamflixreborn.streamflix.utils.AppLanguageManager
 import com.streamflixreborn.streamflix.utils.ThemeManager
+import com.streamflixreborn.streamflix.utils.AssignedProviders
 import com.streamflixreborn.streamflix.utils.UserPreferences
 import com.streamflixreborn.streamflix.utils.dp
 import com.streamflixreborn.streamflix.utils.getCurrentFragment
@@ -137,6 +141,9 @@ class MainTvActivity : FragmentActivity() {
             return
         }
 
+        // Corrige el proveedor del inicio según lo asignado en el panel (los de canales en vivo van a "En Vivo").
+        AssignedProviders.normalizeCurrentProvider(this)
+
         if (savedInstanceState == null) {
             UserPreferences.currentProvider?.let {
                 navController.navigate(R.id.home)
@@ -155,8 +162,8 @@ class MainTvActivity : FragmentActivity() {
                 val header = ContentHeaderMenuMainTvBinding.bind(this)
 
                 // ⚡️ LEER EL LOGO DE PREFS PARA ASEGURARNOS DE QUE EXISTE
-                val customLogo = prefs.getString("custom_logo_url", "") ?: ""
-                val providerLogo = UserPreferences.currentProvider?.logo ?: ""
+                val customLogo = UserPreferences.customLogoUrl.replace("null", "").trim()
+                val providerLogo = UserPreferences.storedProvider?.logo ?: ""
                 val targetUrl = if (customLogo.isNotEmpty()) customLogo else providerLogo
 
                 header.ivNavigationHeaderIcon.scaleType = ImageView.ScaleType.FIT_CENTER
@@ -184,10 +191,7 @@ class MainTvActivity : FragmentActivity() {
                 header.tvNavigationHeaderSubtitle.visibility = View.GONE
                 setBackgroundColor(Color.TRANSPARENT)
 
-                val assignedStr = prefs.getString("assigned_servers", "") ?: ""
-                val assignedList = assignedStr.split(",").filter { it.isNotBlank() }
-
-                if (assignedList.size > 1) {
+                if (AssignedProviders.canSwitchHomeProvider(this@MainTvActivity)) {
                     isFocusable = true
                     isClickable = true
                     setOnClickListener { navController.navigate(R.id.providers) }
@@ -199,7 +203,13 @@ class MainTvActivity : FragmentActivity() {
             }
 
             when (destination.id) {
-                R.id.search, R.id.home, R.id.movies, R.id.tv_shows, R.id.favorites, R.id.settings -> {
+                // La sesión "En Vivo" solo dura mientras se navega por esa sección.
+                R.id.live -> LiveSession.enter(this@MainTvActivity)
+                R.id.search, R.id.home, R.id.movies, R.id.tv_shows, R.id.favorites, R.id.settings, R.id.providers -> LiveSession.exit()
+            }
+
+            when (destination.id) {
+                R.id.search, R.id.home, R.id.live, R.id.movies, R.id.tv_shows, R.id.favorites, R.id.settings -> {
                     binding.navMain.visibility = View.VISIBLE
                     updateNavigationVisibility()
                 }
@@ -278,7 +288,11 @@ class MainTvActivity : FragmentActivity() {
 
                 when (navController.currentDestination?.id) {
                     R.id.home -> {
-                        if (binding.navMain.hasFocus()) {
+                        val homeHandled = !binding.navMain.hasFocus() &&
+                                ((getCurrentFragment() as? HomeTvFragment)?.onBackPressed() == true)
+                        if (homeHandled) {
+                            // Volvió a la primera fila del inicio.
+                        } else if (binding.navMain.hasFocus()) {
                             AlertDialog.Builder(this@MainTvActivity)
                                 .setTitle("Salir de la aplicación")
                                 .setMessage("¿Estás seguro que deseas salir?")
@@ -286,6 +300,14 @@ class MainTvActivity : FragmentActivity() {
                                 .setNegativeButton("Cancelar", null)
                                 .show()
                         } else {
+                            binding.navMain.requestFocus()
+                        }
+                    }
+                    R.id.live -> {
+                        val liveHandled = !binding.navMain.hasFocus() &&
+                                ((getCurrentFragment() as? LiveTvFragment)?.onBackPressed() == true)
+                        if (!liveHandled) {
+                            navigateToProviderHome(navController)
                             binding.navMain.requestFocus()
                         }
                     }
@@ -460,7 +482,9 @@ class MainTvActivity : FragmentActivity() {
     }
 
     private fun updateNavigationVisibility() {
-        UserPreferences.currentProvider?.let { provider ->
+        binding.navMain.menu.findItem(R.id.live)?.isVisible = AssignedProviders.hasLiveSection(this)
+        // El menú refleja el proveedor del inicio aunque haya una sesión "En Vivo" activa.
+        UserPreferences.storedProvider?.let { provider ->
             binding.navMain.menu.findItem(R.id.movies)?.isVisible = Provider.supportsMovies(provider)
             val tvShowsItem = binding.navMain.menu.findItem(R.id.tv_shows)
             tvShowsItem?.isVisible = Provider.supportsTvShows(provider)

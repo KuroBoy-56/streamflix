@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit
 object SeriesTurcasProvider : Provider {
 
     override val name = "Series Turcas"
-    override val baseUrl = "https://tbg.seriesturcastv.to"
+    override val baseUrl = "https://kaj.seriesturcastv.to"
     override val logo = artworkUrl(
         "$baseUrl/wp-content/uploads/2021/04/favicon.png",
         "$baseUrl/home/"

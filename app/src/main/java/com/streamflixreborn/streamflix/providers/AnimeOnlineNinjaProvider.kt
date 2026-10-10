@@ -39,7 +39,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 object AnimeOnlineNinjaProvider : Provider {
 
-    private const val SITE_BASE_URL = "https://ww3.animeonline.ninja"
+    private const val SITE_BASE_URL = "https://ver.animeonline.ninja"
 
     override val name = "Anime Online Ninja"
     override val baseUrl = SITE_BASE_URL
@@ -49,7 +49,7 @@ object AnimeOnlineNinjaProvider : Provider {
     override val language = "es"
 
     private const val TAG = "AnimeOnlineNinja"
-    private const val MAIN_HOST = "ww3.animeonline.ninja"
+    private const val MAIN_HOST = "ver.animeonline.ninja"
     internal val cronetHost: String get() = MAIN_HOST
     private const val DOCUMENT_CACHE_TTL_MS = 2 * 60 * 1000L
 

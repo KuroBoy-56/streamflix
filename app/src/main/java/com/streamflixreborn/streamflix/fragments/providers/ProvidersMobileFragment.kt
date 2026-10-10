@@ -19,6 +19,7 @@ import com.streamflixreborn.streamflix.databinding.FragmentProvidersMobileBindin
 import com.streamflixreborn.streamflix.models.Provider as ModelProvider
 import com.streamflixreborn.streamflix.providers.Provider
 import com.streamflixreborn.streamflix.ui.SpacingItemDecoration
+import com.streamflixreborn.streamflix.utils.AssignedProviders
 import com.streamflixreborn.streamflix.utils.UserPreferences
 import com.streamflixreborn.streamflix.utils.dp
 import kotlinx.coroutines.launch
@@ -91,7 +92,7 @@ class ProvidersMobileFragment : Fragment() {
                 val name: String,
             )
 
-            val languages = Provider.providers.keys
+            val languages = AssignedProviders.homeProviders(requireContext())
                 .distinctBy { it.language }
                 .map {
                     val locale = Locale.forLanguageTag(it.language)

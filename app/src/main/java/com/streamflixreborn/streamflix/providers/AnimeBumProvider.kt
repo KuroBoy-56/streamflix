@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit
 object AnimeBumProvider : Provider {
 
     override val name = "AnimeBum"
-    override val baseUrl = "https://www.animebum.net"
+    override val baseUrl = "https://animebum.net"
     override val language = "es"
     override val logo = "$baseUrl/images/logo.png"
 

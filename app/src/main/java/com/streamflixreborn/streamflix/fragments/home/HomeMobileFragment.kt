@@ -22,6 +22,7 @@ import com.streamflixreborn.streamflix.models.Episode
 import com.streamflixreborn.streamflix.models.Movie
 import com.streamflixreborn.streamflix.models.TvShow
 import com.streamflixreborn.streamflix.ui.SpacingItemDecoration
+import com.streamflixreborn.streamflix.utils.AssignedProviders
 import com.streamflixreborn.streamflix.utils.UserPreferences
 import com.streamflixreborn.streamflix.utils.dp
 import com.streamflixreborn.streamflix.utils.CacheUtils
@@ -161,11 +162,7 @@ class HomeMobileFragment : Fragment() {
                 .fitCenter()
                 .into(this)
 
-            val prefs = requireContext().getSharedPreferences("SecureGatewayPrefs", Context.MODE_PRIVATE)
-            val assignedStr = prefs.getString("assigned_servers", "") ?: ""
-            val assignedList = assignedStr.split(",").filter { it.isNotBlank() }
-
-            if (assignedList.size > 1) {
+            if (AssignedProviders.canSwitchHomeProvider(requireContext())) {
                 setOnClickListener {
                     findNavController().navigate(R.id.providers)
                 }

@@ -23,7 +23,7 @@ import com.streamflixreborn.streamflix.utils.UserPreferences
 class FrembedExtractor (var newUrl: String = "") : Extractor() {
 
     override val name = "Frembed"
-    val defaultUrl = "https://frembed.casa"
+    val defaultUrl = "https://frembed.bar"
     override var mainUrl = newUrl.ifBlank { defaultUrl }
 
     data class listLinks (
