@@ -291,6 +291,7 @@ class TvShowViewModel(
             _state.emit(State.SuccessLoading(orderedTvShow))
         } catch (e: Exception) {
             Log.e("TvShowViewModel", "getTvShow: ", e)
+            com.streamflixreborn.streamflix.utils.ErrorReporter.report("TvShowViewModel.FailedLoading", e.message, e)
             _state.emit(State.FailedLoading(e))
         }
     }

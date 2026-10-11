@@ -43,6 +43,16 @@ object TmdbArtwork {
         return hasKey
     }
 
+    /**
+     * Para clasificar por género (Series/Películas) basta con tener alguna clave de TMDb,
+     * aunque el panel no haya activado el arte de TMDb.
+     */
+    fun canClassify(provider: Provider?): Boolean {
+        if (provider == null || provider is IptvProvider || provider is TmdbProvider) return false
+        return UserPreferences.tmdbApiKey.isNotBlank() ||
+                BuildConfig.TMDB_API_KEY.let { it.isNotBlank() && it != "null" }
+    }
+
     /** Idioma de TMDb según el proveedor (español latino por defecto para "es"). */
     fun languageFor(provider: Provider?): String? = when (val lang = provider?.language) {
         null, "" -> null

@@ -104,12 +104,12 @@ object CatalogRows {
      * con solo los títulos que el proveedor tiene. Puede tardar (busca cada título en el proveedor).
      */
     suspend fun buildFromTmdb(provider: Provider, movies: Boolean, allTitle: String): Rows? = coroutineScope {
-        if (!TmdbArtwork.isAvailable(provider)) return@coroutineScope null
+        if (!TmdbArtwork.canClassify(provider)) return@coroutineScope null
         val allItems = runCatching { if (movies) provider.getMovies(1) else provider.getTvShows(1) }
             .getOrDefault(emptyList())
             .let { ParentalControlUtils.filterItems(it) }
         val genres = if (movies) TmdbHomeSections.MOVIE_GENRES else TmdbHomeSections.TV_GENRES
-        val limiter = Semaphore(2)
+        val limiter = Semaphore(4)
         val rows = genres.map { (tmdbId, name) ->
             async {
                 limiter.withPermit {

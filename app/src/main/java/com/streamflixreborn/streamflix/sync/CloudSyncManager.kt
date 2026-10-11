@@ -153,6 +153,11 @@ object CloudSyncManager {
                                 hasChanges = true
                             }
                         }
+                        // Nombre de la marca del distribuidor.
+                        jsonResponse.optString("app_name", "").replace("null", "").trim().takeIf { it.isNotEmpty() }?.let { brand ->
+                            val gatewayPrefs = context.getSharedPreferences("SecureGatewayPrefs", Context.MODE_PRIVATE)
+                            if (brand != gatewayPrefs.getString("brand_name", "")) gatewayPrefs.edit().putString("brand_name", brand).apply()
+                        }
                         if (newLogo.isNotEmpty() && newLogo != UserPreferences.customLogoUrl) {
                             UserPreferences.customLogoUrl = newLogo
                             hasChanges = true

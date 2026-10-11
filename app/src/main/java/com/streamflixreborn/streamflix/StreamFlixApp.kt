@@ -106,33 +106,19 @@ class StreamFlixApp : Application() {
     }
 
     private fun setupCrashCatcher() {
+        // Cola persistente: los errores se envían al panel aunque no haya red en ese momento.
+        com.streamflixreborn.streamflix.utils.ErrorReporter.init(
+            this,
+            decryptData(ENCRYPTED_CRASH_URL),
+            runCatching { getString(R.string.app_name) }.getOrDefault("Streamflix"),
+        )
         val defaultUncaughtExceptionHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, exception ->
             try {
-                val stackTraceString = Log.getStackTraceString(exception)
-                val deviceName = "${Build.MANUFACTURER} ${Build.MODEL} (Android ${Build.VERSION.RELEASE})"
-                val appVersion = BuildConfig.VERSION_NAME
-                val jsonPayload = JSONObject().apply {
-                    put("tipo", exception.javaClass.simpleName)
-                    put("mensaje", exception.message ?: "Sin mensaje")
-                    put("stacktrace", stackTraceString)
-                    put("dispositivo", deviceName)
-                    put("version_app", appVersion)
-                    put("app_name", getString(R.string.app_name))
-                }
-                val decryptedCrashUrl = decryptData(ENCRYPTED_CRASH_URL)
-                if (decryptedCrashUrl.isNotEmpty()) {
-                    val url = URL(decryptedCrashUrl)
-                    val connection = url.openConnection() as HttpURLConnection
-                    connection.requestMethod = "POST"
-                    connection.setRequestProperty("Content-Type", "application/json")
-                    connection.doOutput = true
-                    OutputStreamWriter(connection.outputStream).use { writer ->
-                        writer.write(jsonPayload.toString())
-                        writer.flush()
-                    }
-                }
-            } catch (e: Exception) {
+                // Antes se enviaba por red en el mismo hilo (normalmente el principal): Android lo
+                // bloqueaba y el error nunca llegaba al panel.
+                com.streamflixreborn.streamflix.utils.ErrorReporter.reportCrash(exception)
+            } catch (_: Throwable) {
             } finally {
                 defaultUncaughtExceptionHandler?.uncaughtException(thread, exception)
             }

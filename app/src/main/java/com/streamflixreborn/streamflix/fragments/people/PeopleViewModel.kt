@@ -149,6 +149,7 @@ class PeopleViewModel(private val id: String, database: AppDatabase, private val
                 )
             } catch (e: Exception) {
                 Log.e("PeopleViewModel", "loadMorePeopleFilmography: ", e)
+                com.streamflixreborn.streamflix.utils.ErrorReporter.report("PeopleViewModel.FailedLoading", e.message, e)
                 _state.emit(State.FailedLoading(e))
             }
         }

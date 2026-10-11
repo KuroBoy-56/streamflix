@@ -48,6 +48,8 @@ class PlayerViewModel(
         data class NotFound(val providerName: String) : ProviderSwitchEvent()
         /** Respaldo automático: el proveedor actual falló y se pasó a otro. */
         data class AutoFallback(val from: String, val to: String) : ProviderSwitchEvent()
+        /** Respaldo automático en curso: "Cambiando de proveedor, no cierres el reproductor". */
+        data class AutoSearching(val providerName: String) : ProviderSwitchEvent()
     }
 
     /** Proveedores ya intentados en esta reproducción (para no repetir en el respaldo). */
@@ -93,7 +95,7 @@ class PlayerViewModel(
             _state.emit(State.LoadingServers)
             for (target in candidates) {
                 triedProviders += target.name
-                _providerSwitchEvents.emit(ProviderSwitchEvent.Searching(target.name))
+                _providerSwitchEvents.emit(ProviderSwitchEvent.AutoSearching(target.name))
                 val result = runCatching {
                     val (resolvedType, resolvedId) = findOnProvider(target, type) ?: return@runCatching null
                     val servers = target.getServers(resolvedId, resolvedType)
@@ -111,6 +113,10 @@ class PlayerViewModel(
                 _state.emit(State.SuccessLoadingServers(result.third))
                 return@launch
             }
+            com.streamflixreborn.streamflix.utils.ErrorReporter.report(
+                "Player.SinVideo",
+                "Sin video en ningún proveedor: ${(type as? Video.Type.Movie)?.title ?: (type as? Video.Type.Episode)?.tvShow?.title} (falló $failed)",
+            )
             _state.emit(State.FailedLoadingServers(Exception("No se pudo reproducir en ningún proveedor")))
         }
         return true
@@ -204,6 +210,7 @@ class PlayerViewModel(
             _state.emit(State.SuccessLoadingServers(servers))
         } catch (e: Exception) {
             Log.e("PlayerViewModel", "Errore ricerca server: ", e)
+            com.streamflixreborn.streamflix.utils.ErrorReporter.report("PlayerViewModel.FailedLoadingServers", e.message, e)
             _state.emit(State.FailedLoadingServers(e))
         }
     }
@@ -324,6 +331,7 @@ class PlayerViewModel(
             _state.emit(State.SuccessLoadingVideo(video, server))
         } catch (e: Exception) {
             Log.e("PlayerViewModel", "Errore estrazione video: ", e)
+            com.streamflixreborn.streamflix.utils.ErrorReporter.report("PlayerViewModel.FailedLoadingVideo", e.message, e)
             _state.emit(State.FailedLoadingVideo(e, server))
         }
     }

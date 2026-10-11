@@ -117,6 +117,7 @@ class GenreViewModel(private val id: String, database: AppDatabase) : ViewModel(
             _state.emit(State.SuccessLoading(genre, true))
         } catch (e: Exception) {
             Log.e("GenreViewModel", "getGenre: ", e)
+            com.streamflixreborn.streamflix.utils.ErrorReporter.report("GenreViewModel.FailedLoading", e.message, e)
             _state.emit(State.FailedLoading(e))
         }
     }
@@ -146,6 +147,7 @@ class GenreViewModel(private val id: String, database: AppDatabase) : ViewModel(
                 )
             } catch (e: Exception) {
                 Log.e("GenreViewModel", "loadMoreGenreShows: ", e)
+                com.streamflixreborn.streamflix.utils.ErrorReporter.report("GenreViewModel.FailedLoading", e.message, e)
                 _state.emit(State.FailedLoading(e))
             }
         }

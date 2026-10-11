@@ -1,5 +1,7 @@
 package com.streamflixreborn.streamflix.fragments.movies
 
+import com.streamflixreborn.streamflix.utils.HomeCacheStore
+import kotlinx.coroutines.withTimeoutOrNull
 import com.streamflixreborn.streamflix.R
 import com.streamflixreborn.streamflix.StreamFlixApp
 import com.streamflixreborn.streamflix.utils.CatalogRows
@@ -86,26 +88,39 @@ class MoviesViewModel(database: AppDatabase) : ViewModel() {
     fun getMovies() = viewModelScope.launch(Dispatchers.IO) {
         _state.emit(State.Loading)
 
-        // Primero intenta las filas por género (Acción, Terror, Suspenso...) con "Ver todo".
         val rowsProvider = UserPreferences.currentProvider
+        val appContext = StreamFlixApp.instance.applicationContext
+        val allTitle = StreamFlixApp.instance.getString(R.string.movies_all_row)
+
+        // 1) Filas guardadas de la vez anterior: se muestran al instante.
+        val cached = rowsProvider?.let {
+            runCatching { HomeCacheStore.read(appContext, it, ROWS_CACHE) }.getOrNull()
+        }?.filter { it.list.isNotEmpty() }
+        if (!cached.isNullOrEmpty()) _state.emit(State.SuccessLoadingRows(cached))
+
+        // 2) Filas por género (Acción, Terror, Suspenso...) con "Ver todo".
         if (rowsProvider != null) {
             val rows = runCatching {
-                CatalogRows.build(
-                    provider = rowsProvider,
-                    movies = true,
-                    allTitle = StreamFlixApp.instance.getString(R.string.movies_all_row),
-                )
-            }.onFailure { Log.e("MoviesViewModel", "rows: ", it) }.getOrNull()
+                CatalogRows.build(provider = rowsProvider, movies = true, allTitle = allTitle)
+                    ?: withTimeoutOrNull(45_000) { CatalogRows.buildFromTmdb(rowsProvider, true, allTitle) }
+            }.onFailure {
+                Log.e("MoviesViewModel", "rows: ", it)
+                com.streamflixreborn.streamflix.utils.ErrorReporter.report("MoviesViewModel.Rows", it.message, it)
+            }.getOrNull()
             if (rows != null) {
                 _state.emit(State.SuccessLoadingRows(rows.categories))
-                if (TmdbArtwork.isAvailable(rowsProvider)) {
-                    val enriched = TmdbArtwork.enrichedCategories(rowsProvider, rows.categories)
-                    if (_state.value is State.SuccessLoadingRows) _state.emit(State.SuccessLoadingRows(enriched))
-                }
+                val finalRows = if (TmdbArtwork.isAvailable(rowsProvider)) {
+                    TmdbArtwork.enrichedCategories(rowsProvider, rows.categories).also {
+                        if (_state.value is State.SuccessLoadingRows) _state.emit(State.SuccessLoadingRows(it))
+                    }
+                } else rows.categories
+                runCatching { HomeCacheStore.write(appContext, rowsProvider, finalRows, ROWS_CACHE) }
                 return@launch
             }
+            if (!cached.isNullOrEmpty()) return@launch
         }
 
+        // 3) Sin géneros posibles: grilla clásica.
         try {
             val movies = ParentalControlUtils.filterItems(
                 UserPreferences.currentProvider!!.getMovies()
@@ -115,19 +130,6 @@ class MoviesViewModel(database: AppDatabase) : ViewModel() {
 
             _state.emit(State.SuccessLoading(movies, movies.isNotEmpty()))
 
-            // El proveedor no clasifica por género: se muestran primero todos y luego filas de
-            // géneros de TMDb con solo los títulos que tiene el proveedor.
-            if (rowsProvider != null && TmdbArtwork.isAvailable(rowsProvider)) {
-                val tmdbRows = runCatching {
-                    CatalogRows.buildFromTmdb(
-                        rowsProvider, true, StreamFlixApp.instance.getString(R.string.movies_all_row),
-                    )
-                }.getOrNull()
-                if (tmdbRows != null && page == 1 && _state.value is State.SuccessLoading) {
-                    _state.emit(State.SuccessLoadingRows(tmdbRows.categories))
-                }
-            }
-
             // Arte y sinopsis en alta calidad desde TMDb (clave del panel).
             val provider = UserPreferences.currentProvider
             if (TmdbArtwork.isAvailable(provider)) {
@@ -136,8 +138,13 @@ class MoviesViewModel(database: AppDatabase) : ViewModel() {
             }
         } catch (e: Exception) {
             Log.e("MoviesViewModel", "getMovies: ", e)
+            com.streamflixreborn.streamflix.utils.ErrorReporter.report("MoviesViewModel.FailedLoading", e.message, e)
             _state.emit(State.FailedLoading(e))
         }
+    }
+
+    private companion object {
+        const val ROWS_CACHE = "movie_rows"
     }
 
     fun loadMoreMovies() = viewModelScope.launch(Dispatchers.IO) {
@@ -167,6 +174,7 @@ class MoviesViewModel(database: AppDatabase) : ViewModel() {
                 }
             } catch (e: Exception) {
                 Log.e("MoviesViewModel", "loadMoreMovies: ", e)
+                com.streamflixreborn.streamflix.utils.ErrorReporter.report("MoviesViewModel.FailedLoading", e.message, e)
                 _state.emit(State.FailedLoading(e))
             }
         }

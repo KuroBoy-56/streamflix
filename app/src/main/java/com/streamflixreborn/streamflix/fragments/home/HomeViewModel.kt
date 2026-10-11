@@ -458,6 +458,7 @@ class HomeViewModel(database: AppDatabase) : ViewModel() {
         } catch (e: Exception) {
             Log.e("HomeViewModel", "getHome: ", e)
             if (cachedCategories.isNullOrEmpty()) {
+                com.streamflixreborn.streamflix.utils.ErrorReporter.report("HomeViewModel.FailedLoading", e.message, e)
                 _state.emit(State.FailedLoading(e))
             } else if (deferCachedHomeForClearance) {
                 _state.emit(State.SuccessLoading(cachedCategories))

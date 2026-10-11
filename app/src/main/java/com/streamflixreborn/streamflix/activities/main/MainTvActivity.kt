@@ -93,6 +93,12 @@ class MainTvActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(ThemeManager.tvThemeRes(UserPreferences.selectedTheme))
         super.onCreate(savedInstanceState)
+        // Nombre de la marca del distribuidor (enviado por el panel) en la lista de apps recientes.
+        getSharedPreferences(AssignedProviders.PREFS_NAME, android.content.Context.MODE_PRIVATE)
+            .getString("brand_name", "")?.takeIf { it.isNotBlank() }?.let { brand ->
+                @Suppress("DEPRECATION")
+                runCatching { setTaskDescription(android.app.ActivityManager.TaskDescription(brand)) }
+            }
 
         // Sin sesión del distribuidor no se muestra la app: se vuelve al login (logo, fondo y panel).
         val gatewayPrefs = getSharedPreferences("SecureGatewayPrefs", Context.MODE_PRIVATE)

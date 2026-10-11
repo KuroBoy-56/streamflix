@@ -122,6 +122,7 @@ class SearchViewModel(database: AppDatabase) : ViewModel() {
             _state.emit(State.SuccessSearching(results, results.isNotEmpty()))
         } catch (e: Exception) {
             Log.e("SearchViewModel", "search: ", e)
+            com.streamflixreborn.streamflix.utils.ErrorReporter.report("SearchViewModel.FailedSearching", e.message, e)
             _state.emit(State.FailedSearching(e))
         }
     }
@@ -148,6 +149,7 @@ class SearchViewModel(database: AppDatabase) : ViewModel() {
                 )
             } catch (e: Exception) {
                 Log.e("SearchViewModel", "loadMore: ", e)
+                com.streamflixreborn.streamflix.utils.ErrorReporter.report("SearchViewModel.FailedSearching", e.message, e)
                 _state.emit(State.FailedSearching(e))
             }
         }

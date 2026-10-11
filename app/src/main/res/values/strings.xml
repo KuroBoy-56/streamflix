@@ -597,6 +597,7 @@
     <string name="player_provider_switching">Searching on %1$s…</string>
     <string name="player_provider_not_found">Not available on %1$s</string>
     <string name="player_provider_auto_fallback">Playing with %1$s</string>
+    <string name="player_provider_auto_searching">Switching provider, don\'t close the player… (%1$s)</string>
     <string name="main_menu_live">Live</string>
     <string name="live_select_provider">Live provider</string>
     <string name="live_empty">No live channels available</string>

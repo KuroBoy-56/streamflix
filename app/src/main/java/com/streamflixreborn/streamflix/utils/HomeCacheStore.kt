@@ -19,8 +19,8 @@ object HomeCacheStore {
     private val gson = Gson()
     private val memoryCache = ConcurrentHashMap<String, List<CachedCategory>>()
 
-    fun read(context: Context, provider: Provider): List<Category>? {
-        val cacheKey = cacheKey(provider)
+    fun read(context: Context, provider: Provider, section: String? = null): List<Category>? {
+        val cacheKey = cacheKey(provider, section)
         memoryCache[cacheKey]?.let { payload ->
             return payload.toCategories()
         }
@@ -42,10 +42,10 @@ object HomeCacheStore {
         }.getOrNull()
     }
 
-    fun write(context: Context, provider: Provider, categories: List<Category>) {
+    fun write(context: Context, provider: Provider, categories: List<Category>, section: String? = null) {
         runCatching {
             val payload = categories.map { CachedCategory.from(it) }
-            val cacheKey = cacheKey(provider)
+            val cacheKey = cacheKey(provider, section)
             memoryCache[cacheKey] = payload
             cacheFile(context, cacheKey).apply {
                 parentFile?.mkdirs()
@@ -65,13 +65,14 @@ object HomeCacheStore {
         return File(context.filesDir, "home-cache/$safeName.json")
     }
 
-    private fun cacheKey(provider: Provider): String {
+    private fun cacheKey(provider: Provider, section: String? = null): String {
         val baseUrlKey = provider.baseUrl.trim().trimEnd('/')
         return buildList {
             add(provider.name)
             if (baseUrlKey.isNotEmpty()) {
                 add(baseUrlKey)
             }
+            if (!section.isNullOrBlank()) add(section)
         }.joinToString("__")
     }
 
@@ -193,6 +194,8 @@ object HomeCacheStore {
                     this.watchHistory = watchHistory
                 }
 
+                "genre" -> com.streamflixreborn.streamflix.models.Genre(id = id, name = title.orEmpty())
+
                 else -> null
             }
         }
@@ -229,6 +232,12 @@ object HomeCacheStore {
                         rating = item.rating,
                         poster = item.poster,
                         banner = item.banner,
+                    )
+
+                    is com.streamflixreborn.streamflix.models.Genre -> CachedItem(
+                        type = "genre",
+                        id = item.id,
+                        title = item.name,
                     )
 
                     is Episode -> CachedItem(

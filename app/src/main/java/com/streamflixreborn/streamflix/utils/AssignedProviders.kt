@@ -106,9 +106,23 @@ object AssignedProviders {
     fun homeProviders(context: Context? = null): List<Provider> =
         if (hasLiveSection(context)) vod(context) else all(context)
 
-    /** Si hay más de un proveedor para el inicio, se puede abrir el selector. */
-    fun canSwitchHomeProvider(context: Context? = null): Boolean =
-        hasPanelAssignment(context) && homeProviders(context).size > 1
+    /**
+     * Ya no se elige servidor al entrar: con panel, la app entra directo con el proveedor por
+     * defecto y los demás permitidos quedan en el reproductor (Ajustes > Proveedores).
+     */
+    @Suppress("UNUSED_PARAMETER")
+    fun canSwitchHomeProvider(context: Context? = null): Boolean = false
+
+    const val KEY_DEFAULT_PROVIDER = "default_provider"
+
+    /** Proveedor por defecto elegido en el panel al crear el usuario. */
+    fun defaultProvider(context: Context? = null): Provider? {
+        val home = homeProviders(context)
+        val name = context(context).getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getString(KEY_DEFAULT_PROVIDER, "").orEmpty()
+        return resolve(listOf(name)).firstOrNull { p -> home.any { it.name == p.name } }
+            ?: home.firstOrNull()
+    }
 
     /** Proveedor en vivo activo para la sección "En Vivo". */
     fun currentLiveProvider(context: Context? = null): Provider? {
@@ -117,20 +131,12 @@ object AssignedProviders {
         return live.find { it.name == saved } ?: live.firstOrNull()
     }
 
-    /**
-     * Asegura que el proveedor del inicio sea válido según el panel:
-     * - Si solo hay uno, se asigna directamente.
-     * - Si el actual ya no está asignado (o es de canales en vivo con sección propia), se limpia/corrige.
-     */
+    /** El inicio siempre usa el proveedor por defecto del panel (o el primero permitido). */
     fun normalizeCurrentProvider(context: Context? = null) {
         if (!hasPanelAssignment(context)) return
-        val homeProviders = homeProviders(context)
-        val current = UserPreferences.storedProvider
-        when {
-            homeProviders.size == 1 && current != homeProviders.first() ->
-                UserPreferences.currentProvider = homeProviders.first()
-            current != null && homeProviders.none { it.name == current.name } ->
-                UserPreferences.currentProvider = if (hasLiveSection(context)) homeProviders.firstOrNull() else null
+        val target = defaultProvider(context) ?: return
+        if (UserPreferences.storedProvider?.name != target.name) {
+            UserPreferences.currentProvider = target
         }
     }
 }

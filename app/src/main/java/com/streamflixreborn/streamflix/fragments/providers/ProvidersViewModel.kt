@@ -63,6 +63,7 @@ class ProvidersViewModel(application: Application) : AndroidViewModel(applicatio
             _state.emit(State.SuccessLoading(modelProviders))
         } catch (e: Exception) {
             Log.e("ProvidersViewModel", "getProviders: ", e)
+            com.streamflixreborn.streamflix.utils.ErrorReporter.report("ProvidersViewModel.FailedLoading", e.message, e)
             _state.emit(State.FailedLoading(e))
         }
     }

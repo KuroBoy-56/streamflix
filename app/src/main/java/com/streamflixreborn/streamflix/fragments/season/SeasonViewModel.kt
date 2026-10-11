@@ -106,6 +106,7 @@ class SeasonViewModel(
             _state.emit(State.SuccessLoadingEpisodes(episodes))
         } catch (e: Exception) {
             Log.e("SeasonViewModel", "getSeasonEpisodes: ", e)
+            com.streamflixreborn.streamflix.utils.ErrorReporter.report("SeasonViewModel.FailedLoadingEpisodes", e.message, e)
             _state.emit(State.FailedLoadingEpisodes(e))
         }
     }

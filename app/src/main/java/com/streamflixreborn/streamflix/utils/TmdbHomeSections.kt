@@ -187,7 +187,7 @@ object TmdbHomeSections {
         tmdbGenreId: Int,
         page: Int,
     ): List<AppAdapter.Item> = coroutineScope {
-        if (!TmdbArtwork.isAvailable(provider)) return@coroutineScope emptyList()
+        if (!TmdbArtwork.canClassify(provider)) return@coroutineScope emptyList()
         val params = buildMap {
             put("with_genres", tmdbGenreId.toString())
             put("sort_by", "popularity.desc")

@@ -647,6 +647,9 @@ class PlayerTvFragment : Fragment() {
                     ).show()
                     is PlayerViewModel.ProviderSwitchEvent.Switched ->
                         PlayerSettingsView.Settings.ProviderOption.select(event.providerName)
+                    is PlayerViewModel.ProviderSwitchEvent.AutoSearching -> Toast.makeText(
+                        context, getString(R.string.player_provider_auto_searching, event.providerName), Toast.LENGTH_LONG
+                    ).show()
                     is PlayerViewModel.ProviderSwitchEvent.AutoFallback -> {
                         PlayerSettingsView.Settings.ProviderOption.select(event.to)
                         Toast.makeText(
@@ -1344,6 +1347,9 @@ class PlayerTvFragment : Fragment() {
                     Log.i("PlayerTvFragment", "Playback failed, trying next server: ${nextServer.name}")
                     viewModel.getVideo(nextServer)
                 } else {
+                    com.streamflixreborn.streamflix.utils.ErrorReporter.report(
+                        "Player.Reproduccion", "${error.errorCodeName}: ${error.message} [${viewModel.activeProvider?.name}]", error
+                    )
                     viewModel.tryNextProvider()
                 }
             }

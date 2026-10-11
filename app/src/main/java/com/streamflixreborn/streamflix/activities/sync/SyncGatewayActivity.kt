@@ -356,6 +356,8 @@ class SyncGatewayActivity : AppCompatActivity() {
                                 putString("custom_background_tv_url", customBgTvUrl)
                                 putString("custom_splash_url", customSplashUrl)
                                 putString(AssignedProviders.KEY_ASSIGNED_SERVERS, namesList.joinToString(","))
+                                putString("brand_name", jsonResponse.optString("app_name", "").replace("null", "").trim())
+                                putString(AssignedProviders.KEY_DEFAULT_PROVIDER, jsonResponse.optString("default_provider", "").replace("null", "").trim())
                                 putString(com.streamflixreborn.streamflix.providers.PanelM3uProvider.KEY_CHANNEL_LINES, channelLines.joinToString("\n"))
                                 putString(com.streamflixreborn.streamflix.providers.PanelM3uProvider.KEY_PERSONAL_URL, personalUrl.joinToString("\n"))
                                 commit()
@@ -414,18 +416,34 @@ class SyncGatewayActivity : AppCompatActivity() {
                         }
                     }
                 } else {
+                    val code = connection.responseCode
+                    com.streamflixreborn.streamflix.utils.ErrorReporter.report("Login.Servidor", "HTTP $code")
                     withContext(Dispatchers.Main) {
-                        showStatus("Servidor Inalcanzable: ${connection.responseCode}")
+                        if (isAutoLogin && enterWithCachedSession()) return@withContext
+                        showStatus("Servidor Inalcanzable: $code")
                         setLoadingState(false)
                     }
                 }
             } catch (e: Exception) {
+                com.streamflixreborn.streamflix.utils.ErrorReporter.report("Login.Conexion", e.message, e)
                 withContext(Dispatchers.Main) {
+                    if (isAutoLogin && enterWithCachedSession()) return@withContext
                     showStatus("Error de conexión: Verifica tu internet")
                     setLoadingState(false)
                 }
             }
         }
+    }
+
+    /**
+     * Sin internet o con el servidor caído: si el usuario ya había iniciado sesión, se entra con
+     * la configuración guardada (proveedores, marca, TMDb, canales) para que la app no se trabe.
+     */
+    private fun enterWithCachedSession(): Boolean {
+        if (!AssignedProviders.hasPanelAssignment(this)) return false
+        AssignedProviders.normalizeCurrentProvider(this)
+        routeToMainInterface()
+        return true
     }
 
     private fun saveSecureCredentials(alpha: String, beta: String) {
