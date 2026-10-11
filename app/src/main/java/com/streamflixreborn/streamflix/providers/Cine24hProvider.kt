@@ -32,6 +32,8 @@ object Cine24hProvider : Provider {
     private var webViewResolver: WebViewResolver? = null
     private val providerMutex = Mutex()
     private const val TAG = "Cine24hBypass"
+    private const val DESKTOP_USER_AGENT =
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
     private fun getResolver(): WebViewResolver {
         return webViewResolver ?: WebViewResolver(StreamFlixApp.instance).also {
@@ -56,17 +58,37 @@ object Cine24hProvider : Provider {
     private fun isCloudflareChallenge(html: String) =
         html.contains("cf-browser-verification") || html.contains("Checking your browser") || html.contains("Just a moment...")
 
+    // Mismo cliente pero con el DNS del sistema, por si el DNS cifrado (DoH) está bloqueado en la red.
+    private val systemDnsPageClient by lazy {
+        NetworkClient.systemDns.newBuilder()
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(20, TimeUnit.SECONDS)
+            .writeTimeout(10, TimeUnit.SECONDS)
+            .build()
+    }
+
+    private fun fetchHtml(client: okhttp3.OkHttpClient, url: String): String? {
+        // Cloudflare de Cine24h bloquea (403) el User-Agent móvil genérico de la app;
+        // con cabeceras de Chrome de escritorio responde 200 sin desafío.
+        val request = Request.Builder()
+            .url(url)
+            .header("Referer", baseUrl)
+            .header("User-Agent", DESKTOP_USER_AGENT)
+            .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+            .header("Accept-Language", "es-419,es;q=0.9,en;q=0.8")
+            .header("sec-ch-ua", "\"Chromium\";v=\"124\", \"Google Chrome\";v=\"124\", \"Not-A.Brand\";v=\"99\"")
+            .header("sec-ch-ua-mobile", "?0")
+            .header("sec-ch-ua-platform", "\"Windows\"")
+            .build()
+        return client.newCall(request).execute().use { response ->
+            response.body?.string().orEmpty().takeIf { response.isSuccessful }
+        }
+    }
+
     private suspend fun getDocument(url: String): Document {
         val html = withContext(Dispatchers.IO) {
-            runCatching {
-                val request = Request.Builder()
-                    .url(url)
-                    .header("Referer", baseUrl)
-                    .build()
-                pageClient.newCall(request).execute().use { response ->
-                    response.body?.string().orEmpty().takeIf { response.isSuccessful }
-                }
-            }.getOrNull()
+            runCatching { fetchHtml(pageClient, url) }.getOrNull()
+                ?: runCatching { fetchHtml(systemDnsPageClient, url) }.getOrNull()
         }
 
         if (html != null && html.isNotBlank() && !isCloudflareChallenge(html)) {

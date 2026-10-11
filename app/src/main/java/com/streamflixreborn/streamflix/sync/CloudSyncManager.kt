@@ -315,7 +315,13 @@ object CloudSyncManager {
                     writer.flush()
                 }
 
-                val ok = connection.responseCode == 200
+                // El servidor (sync_userdata.php) responde 200 también en errores: se revisa "status".
+                val body = runCatching { connection.inputStream.bufferedReader().use { it.readText() } }.getOrDefault("")
+                val serverStatus = runCatching {
+                    com.google.gson.JsonParser.parseString(body).asJsonObject.get("status")?.asString
+                }.getOrNull()
+                val ok = connection.responseCode == 200 && (serverStatus == null || serverStatus == "success")
+                if (!ok) Log.e(TAG, "❌ El servidor rechazó la subida: ${body.take(200)}")
                 if (ok) {
                     remoteSnapshot = exportData
                     Log.i(TAG, "✅ Favoritos e historial sincronizados a la nube.")
