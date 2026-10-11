@@ -28,7 +28,7 @@ object TmdbHomeSections {
     private const val PER_LIST = 20
     private const val MIN_MATCHES = 5
 
-    private data class Candidate(
+    data class Candidate(
         val isMovie: Boolean,
         val title: String,
         val originalTitle: String,
@@ -101,7 +101,7 @@ object TmdbHomeSections {
         val all: Set<String> get() = setOf(trending, popularMovies, topRatedMovies, popularSeries, topRatedSeries)
     }
 
-    private suspend fun findOnProvider(provider: Provider, candidate: Candidate): AppAdapter.Item? {
+    internal suspend fun findOnProvider(provider: Provider, candidate: Candidate): AppAdapter.Item? {
         val key = "${provider.name}|${normalize(candidate.title)}"
         val results = searchCache[key] ?: runCatching { provider.search(candidate.title, 1) }
             .getOrDefault(emptyList())
@@ -137,7 +137,7 @@ object TmdbHomeSections {
         }
     }
 
-    private fun TMDb3.Movie.toCandidate() = Candidate(
+    internal fun TMDb3.Movie.toCandidate() = Candidate(
         isMovie = true,
         title = title,
         originalTitle = originalTitle,
@@ -148,7 +148,7 @@ object TmdbHomeSections {
         rating = voteAverage.toDouble(),
     )
 
-    private fun TMDb3.Tv.toCandidate() = Candidate(
+    internal fun TMDb3.Tv.toCandidate() = Candidate(
         isMovie = false,
         title = name,
         originalTitle = originalName,
@@ -165,4 +165,44 @@ object TmdbHomeSections {
         .replace(Regex("\\p{M}"), "")
         .replace("&", "y")
         .replace(Regex("[^a-z0-9]"), "")
+
+    /** Géneros de TMDb usados cuando el proveedor no clasifica (p. ej. series en Cuevana). */
+    val TV_GENRES = listOf(
+        10759 to "Acción y Aventura", 18 to "Drama", 80 to "Crimen", 35 to "Comedia",
+        9648 to "Misterio", 10765 to "Ciencia ficción y Fantasía", 16 to "Animación",
+        10751 to "Familia", 99 to "Documental", 10768 to "Bélica y Política",
+    )
+    val MOVIE_GENRES = listOf(
+        28 to "Acción", 27 to "Terror", 53 to "Suspenso", 35 to "Comedia", 18 to "Drama",
+        16 to "Animación", 878 to "Ciencia ficción", 12 to "Aventura", 10749 to "Romance",
+        80 to "Crimen", 14 to "Fantasía", 10751 to "Familia",
+    )
+
+    /**
+     * Títulos populares de un género de TMDb que el proveedor SÍ tiene (con su id del proveedor).
+     */
+    suspend fun discoverOnProvider(
+        provider: Provider,
+        movies: Boolean,
+        tmdbGenreId: Int,
+        page: Int,
+    ): List<AppAdapter.Item> = coroutineScope {
+        if (!TmdbArtwork.isAvailable(provider)) return@coroutineScope emptyList()
+        val params = buildMap {
+            put("with_genres", tmdbGenreId.toString())
+            put("sort_by", "popularity.desc")
+            put("vote_count.gte", "20")
+            put("page", page.toString())
+            TmdbArtwork.languageFor(provider)?.let { put("language", it) }
+        }
+        val candidates = runCatching {
+            if (movies) TMDb3.Discover.movie(params).results.map { it.toCandidate() }
+            else TMDb3.Discover.tv(params).results.map { it.toCandidate() }
+        }.getOrDefault(emptyList())
+        val limiter = Semaphore(4)
+        candidates.map { c -> async { limiter.withPermit { findOnProvider(provider, c) } } }
+            .awaitAll()
+            .filterNotNull()
+            .distinct()
+    }
 }

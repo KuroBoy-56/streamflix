@@ -158,6 +158,13 @@ class GenreViewModel(private val id: String, database: AppDatabase) : ViewModel(
             ALL_MOVIES_ID -> Genre(id, "", shows = provider.getMovies(page))
             ALL_TV_SHOWS_ID -> Genre(id, "", shows = provider.getTvShows(page))
             else -> when {
+                id.startsWith(TMDB_PREFIX) -> {
+                    val (kind, genreId) = id.removePrefix(TMDB_PREFIX).split(":").let { it[0] to it[1].toInt() }
+                    val shows = com.streamflixreborn.streamflix.utils.TmdbHomeSections
+                        .discoverOnProvider(provider, kind == "m", genreId, page)
+                        .filterIsInstance<com.streamflixreborn.streamflix.models.Show>()
+                    Genre(id, "", shows = shows)
+                }
                 id.startsWith(MOVIES_ONLY_PREFIX) -> provider.getGenre(id.removePrefix(MOVIES_ONLY_PREFIX), page)
                     .let { it.copy(shows = it.shows.filterIsInstance<com.streamflixreborn.streamflix.models.Movie>()) }
                 id.startsWith(TV_SHOWS_ONLY_PREFIX) -> provider.getGenre(id.removePrefix(TV_SHOWS_ONLY_PREFIX), page)
@@ -172,6 +179,10 @@ class GenreViewModel(private val id: String, database: AppDatabase) : ViewModel(
         const val ALL_TV_SHOWS_ID = "__all_tv_shows__"
         const val MOVIES_ONLY_PREFIX = "__movies__:"
         const val TV_SHOWS_ONLY_PREFIX = "__tvshows__:"
+        const val TMDB_PREFIX = "__tmdb__:"
+
+        /** "Ver todo" de un género de TMDb (filtrado a lo que tiene el proveedor). */
+        fun tmdbGenreId(tmdbGenreId: Int, movies: Boolean) = "$TMDB_PREFIX${if (movies) "m" else "tv"}:$tmdbGenreId"
 
         /** Ids que usan las filas de Películas/Series para abrir solo un tipo de contenido. */
         fun genreIdFor(rawGenreId: String, movies: Boolean) =

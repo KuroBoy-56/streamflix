@@ -115,11 +115,24 @@ class MoviesViewModel(database: AppDatabase) : ViewModel() {
 
             _state.emit(State.SuccessLoading(movies, movies.isNotEmpty()))
 
+            // El proveedor no clasifica por género: se muestran primero todos y luego filas de
+            // géneros de TMDb con solo los títulos que tiene el proveedor.
+            if (rowsProvider != null && TmdbArtwork.isAvailable(rowsProvider)) {
+                val tmdbRows = runCatching {
+                    CatalogRows.buildFromTmdb(
+                        rowsProvider, true, StreamFlixApp.instance.getString(R.string.movies_all_row),
+                    )
+                }.getOrNull()
+                if (tmdbRows != null && page == 1 && _state.value is State.SuccessLoading) {
+                    _state.emit(State.SuccessLoadingRows(tmdbRows.categories))
+                }
+            }
+
             // Arte y sinopsis en alta calidad desde TMDb (clave del panel).
             val provider = UserPreferences.currentProvider
             if (TmdbArtwork.isAvailable(provider)) {
                 val enriched = TmdbArtwork.enrichedItems(provider, movies)
-                if (page == 1) _state.emit(State.SuccessLoading(enriched, enriched.isNotEmpty()))
+                if (page == 1 && _state.value is State.SuccessLoading) _state.emit(State.SuccessLoading(enriched, enriched.isNotEmpty()))
             }
         } catch (e: Exception) {
             Log.e("MoviesViewModel", "getMovies: ", e)

@@ -351,6 +351,8 @@ class MovieViewHolder(
                         is MovieMobileFragment -> findNavController().navigate(MovieMobileFragmentDirections.actionMovieToMovie(id = movie.id))
                         is TvShowMobileFragment -> findNavController().navigate(TvShowMobileFragmentDirections.actionTvShowToMovie(id = movie.id))
                         is FavoritesMobileFragment -> findNavController().navigate(FavoritesMobileFragmentDirections.actionFavoritesToMovie(id = movie.id))
+                        // Películas (filas por género), Géneros, En Vivo, etc.: navegación genérica.
+                        else -> findNavController().navigate(R.id.movie, android.os.Bundle().apply { putString("id", movie.id) })
                     }
                 }
             }
@@ -438,6 +440,7 @@ class MovieViewHolder(
                         is TvShowTvFragment -> findNavController().navigate(TvShowTvFragmentDirections.actionTvShowToMovie(id = movie.id))
                         is PeopleTvFragment -> findNavController().navigate(PeopleTvFragmentDirections.actionPeopleToMovie(id = movie.id))
                         is FavoritesTvFragment -> findNavController().navigate(FavoritesTvFragmentDirections.actionFavoritesToMovie(id = movie.id))
+                        else -> findNavController().navigate(R.id.movie, android.os.Bundle().apply { putString("id", movie.id) })
                     }
                 }
             }
@@ -518,6 +521,7 @@ class MovieViewHolder(
                         is PeopleMobileFragment -> findNavController().navigate(PeopleMobileFragmentDirections.actionPeopleToMovie(id = movie.id))
                         is SearchMobileFragment -> findNavController().navigate(SearchMobileFragmentDirections.actionSearchToMovie(id = movie.id))
                         is FavoritesMobileFragment -> findNavController().navigate(FavoritesMobileFragmentDirections.actionFavoritesToMovie(id = movie.id))
+                        else -> findNavController().navigate(R.id.movie, android.os.Bundle().apply { putString("id", movie.id) })
                     }
                 }
             }
@@ -583,6 +587,7 @@ class MovieViewHolder(
                         is SearchTvFragment -> findNavController().navigate(SearchTvFragmentDirections.actionSearchToMovie(id = movie.id))
                         is PeopleTvFragment -> findNavController().navigate(PeopleTvFragmentDirections.actionPeopleToMovie(id = movie.id))
                         is FavoritesTvFragment -> findNavController().navigate(FavoritesTvFragmentDirections.actionFavoritesToMovie(id = movie.id))
+                        else -> findNavController().navigate(R.id.movie, android.os.Bundle().apply { putString("id", movie.id) })
                     }
                 }
             }

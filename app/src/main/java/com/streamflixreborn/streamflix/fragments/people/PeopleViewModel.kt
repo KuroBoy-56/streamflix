@@ -7,6 +7,7 @@ import com.streamflixreborn.streamflix.database.AppDatabase
 import com.streamflixreborn.streamflix.models.Movie
 import com.streamflixreborn.streamflix.models.People
 import com.streamflixreborn.streamflix.models.TvShow
+import com.streamflixreborn.streamflix.utils.TmdbPeople
 import com.streamflixreborn.streamflix.utils.UserPreferences
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -18,7 +19,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
 
-class PeopleViewModel(private val id: String, database: AppDatabase) : ViewModel() {
+class PeopleViewModel(private val id: String, database: AppDatabase, private val name: String = "") : ViewModel() {
 
     private val _state = MutableStateFlow<State>(State.Loading)
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -93,24 +94,44 @@ class PeopleViewModel(private val id: String, database: AppDatabase) : ViewModel
     }
 
 
+    /** true cuando la filmografía viene de TMDb (filtrada al proveedor) y no hay más páginas. */
+    private var tmdbFilmography = false
+
     fun getPeople(id: String) = viewModelScope.launch(Dispatchers.IO) {
         _state.emit(State.Loading)
 
-        try {
-            val people = UserPreferences.currentProvider!!.getPeople(id)
+        val provider = UserPreferences.currentProvider
+        val providerResult = runCatching { provider!!.getPeople(id) }
+            .onFailure { Log.e("PeopleViewModel", "getPeople: ", it) }
+        val providerPeople = providerResult.getOrNull()
+        page = 1
 
-            page = 1
+        // Biografía, foto y datos del actor desde TMDb (clave del panel).
+        val info = runCatching { TmdbPeople.find(provider, providerPeople?.name?.ifBlank { null } ?: name) }.getOrNull()
+        if (info == null) {
+            providerResult.fold(
+                onSuccess = { _state.emit(State.SuccessLoading(it, true)) },
+                onFailure = { _state.emit(State.FailedLoading(it as? Exception ?: Exception(it))) },
+            )
+            return@launch
+        }
 
-            _state.emit(State.SuccessLoading(people, true))
-        } catch (e: Exception) {
-            Log.e("PeopleViewModel", "getPeople: ", e)
-            _state.emit(State.FailedLoading(e))
+        val merged = TmdbPeople.merge(providerPeople, info, name)
+        _state.emit(State.SuccessLoading(merged, providerPeople?.filmography?.isNotEmpty() == true))
+
+        // Si el proveedor no da filmografía, se usa la de TMDb con solo lo que el proveedor tiene.
+        if (merged.filmography.isEmpty() && provider != null) {
+            val shows = runCatching { TmdbPeople.filmographyOnProvider(provider, info) }.getOrDefault(emptyList())
+            if (shows.isNotEmpty()) {
+                tmdbFilmography = true
+                _state.emit(State.SuccessLoading(merged.copy(filmography = shows), false))
+            }
         }
     }
 
     fun loadMorePeopleFilmography() = viewModelScope.launch(Dispatchers.IO) {
         val currentState = _state.value
-        if (currentState is State.SuccessLoading) {
+        if (currentState is State.SuccessLoading && !tmdbFilmography) {
             _state.emit(State.LoadingMore)
 
             try {

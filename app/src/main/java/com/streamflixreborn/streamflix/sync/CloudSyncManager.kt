@@ -76,6 +76,20 @@ object CloudSyncManager {
 
     private fun getJsonFolderEndpoint(): String = decryptData(ENCRYPTED_JSON_FOLDER_URL)
 
+    /**
+     * Credenciales del usuario en cabeceras para que sync_userdata.php verifique que el historial
+     * le pertenece (evita que otro lea o sobrescriba su historial conociendo solo el usuario).
+     */
+    private fun addSyncAuth(context: Context, connection: HttpURLConnection) {
+        val prefs = context.applicationContext.getSharedPreferences("SecureGatewayPrefs", Context.MODE_PRIVATE)
+        prefs.getString("alpha_token", null)?.takeIf { it.isNotEmpty() }?.let {
+            connection.setRequestProperty("X-Sync-User", java.net.URLEncoder.encode(it, "UTF-8"))
+        }
+        prefs.getString("beta_token", null)?.takeIf { it.isNotEmpty() }?.let {
+            connection.setRequestProperty("X-Sync-Pass", java.net.URLEncoder.encode(it, "UTF-8"))
+        }
+    }
+
     private fun getActiveUserId(context: Context): String? {
         val prefs = context.applicationContext.getSharedPreferences("SecureGatewayPrefs", Context.MODE_PRIVATE)
         val alphaToken = prefs.getString("alpha_token", null)
@@ -130,6 +144,15 @@ object CloudSyncManager {
                         val newSplash = jsonResponse.optString("custom_splash", "").replace("null", "").trim()
 
                         var hasChanges = false
+                        // Las líneas de canales también se actualizan sin volver a iniciar sesión.
+                        if (jsonResponse.has("channel_lines")) {
+                            val lines = PanelChannelConfig.lines(jsonResponse.opt("channel_lines")).joinToString("\n")
+                            val gatewayPrefs = context.getSharedPreferences("SecureGatewayPrefs", Context.MODE_PRIVATE)
+                            if (lines != gatewayPrefs.getString(com.streamflixreborn.streamflix.providers.PanelM3uProvider.KEY_CHANNEL_LINES, "")) {
+                                gatewayPrefs.edit().putString(com.streamflixreborn.streamflix.providers.PanelM3uProvider.KEY_CHANNEL_LINES, lines).apply()
+                                hasChanges = true
+                            }
+                        }
                         if (newLogo.isNotEmpty() && newLogo != UserPreferences.customLogoUrl) {
                             UserPreferences.customLogoUrl = newLogo
                             hasChanges = true
@@ -189,6 +212,7 @@ object CloudSyncManager {
 
             val connection = URL("$decryptedUrl?u=$userId").openConnection() as HttpURLConnection
             connection.requestMethod = "GET"
+            addSyncAuth(context, connection)
             connection.connectTimeout = 8000
             connection.readTimeout = 8000
 
@@ -305,6 +329,7 @@ object CloudSyncManager {
 
                 val connection = URL("$decryptedUrl?u=$userId").openConnection() as HttpURLConnection
                 connection.requestMethod = "POST"
+                addSyncAuth(context, connection)
                 connection.setRequestProperty("Content-Type", "application/json")
                 connection.connectTimeout = 10000
                 connection.readTimeout = 10000

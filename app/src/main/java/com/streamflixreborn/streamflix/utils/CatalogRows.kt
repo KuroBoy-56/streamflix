@@ -99,6 +99,35 @@ object CatalogRows {
         Rows(allRow, genreRows)
     }
 
+    /**
+     * Respaldo cuando el proveedor no clasifica por género ese tipo de contenido: géneros de TMDb
+     * con solo los títulos que el proveedor tiene. Puede tardar (busca cada título en el proveedor).
+     */
+    suspend fun buildFromTmdb(provider: Provider, movies: Boolean, allTitle: String): Rows? = coroutineScope {
+        if (!TmdbArtwork.isAvailable(provider)) return@coroutineScope null
+        val allItems = runCatching { if (movies) provider.getMovies(1) else provider.getTvShows(1) }
+            .getOrDefault(emptyList())
+            .let { ParentalControlUtils.filterItems(it) }
+        val genres = if (movies) TmdbHomeSections.MOVIE_GENRES else TmdbHomeSections.TV_GENRES
+        val limiter = Semaphore(2)
+        val rows = genres.map { (tmdbId, name) ->
+            async {
+                limiter.withPermit {
+                    val items = runCatching { TmdbHomeSections.discoverOnProvider(provider, movies, tmdbId, 1) }
+                        .getOrDefault(emptyList())
+                        .let { ParentalControlUtils.filterItems(it) }
+                        .take(ROW_SIZE)
+                    if (items.size >= MIN_ROW_SIZE) {
+                        Category(name, items + seeAll(GenreViewModel.tmdbGenreId(tmdbId, movies), name))
+                    } else null
+                }
+            }
+        }.awaitAll().filterNotNull()
+        if (rows.isEmpty()) return@coroutineScope null
+        val allId = if (movies) GenreViewModel.ALL_MOVIES_ID else GenreViewModel.ALL_TV_SHOWS_ID
+        Rows(Category(allTitle, allItems.take(ROW_SIZE) + seeAll(allId, allTitle)), rows)
+    }
+
     private fun seeAll(id: String, name: String) = Genre(id = id, name = name)
 
     fun isSeeAll(item: AppAdapter.Item) = item is Genre

@@ -3,6 +3,9 @@ package com.streamflixreborn.streamflix.utils
 import android.content.Context
 import com.streamflixreborn.streamflix.StreamFlixApp
 import com.streamflixreborn.streamflix.providers.IptvProvider
+import com.streamflixreborn.streamflix.providers.PanelChannelsProvider
+import com.streamflixreborn.streamflix.providers.PanelM3uProvider
+import com.streamflixreborn.streamflix.providers.PersonalProvider
 import com.streamflixreborn.streamflix.providers.Provider
 
 /**
@@ -71,11 +74,21 @@ object AssignedProviders {
             .distinctBy { it.name }
     }
 
-    fun hasPanelAssignment(context: Context? = null): Boolean = names(context).isNotEmpty()
+    fun hasPanelAssignment(context: Context? = null): Boolean =
+        names(context).isNotEmpty() || panelM3u(context).isNotEmpty()
+
+    /** "Canales" (líneas del panel) y "Personal Provider" (URL del usuario), si tienen URL. */
+    fun panelM3u(context: Context? = null): List<Provider> =
+        listOf(PanelChannelsProvider, PersonalProvider).filter { it.isConfigured(context) }
 
     fun all(context: Context? = null): List<Provider> {
         val names = names(context)
-        return if (names.isEmpty()) Provider.providers.keys.toList() else resolve(names)
+        val base = if (names.isEmpty() && panelM3u(context).isEmpty()) {
+            Provider.providers.keys.toList()
+        } else {
+            resolve(names)
+        }
+        return base.filterNot { it is PanelM3uProvider } + panelM3u(context)
     }
 
     fun vod(context: Context? = null): List<Provider> = all(context).filterNot { it is IptvProvider }

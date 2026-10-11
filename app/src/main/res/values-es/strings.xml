@@ -511,6 +511,7 @@
     <string name="player_settings_providers_label">Proveedores</string>
     <string name="player_provider_switching">Buscando en %1$s…</string>
     <string name="player_provider_not_found">No disponible en %1$s</string>
+    <string name="player_provider_auto_fallback">Reproduciendo con %1$s</string>
     <string name="main_menu_live">En Vivo</string>
     <string name="live_select_provider">Proveedor en vivo</string>
     <string name="live_empty">No hay canales en vivo disponibles</string>

@@ -46,6 +46,74 @@ class PlayerViewModel(
         data class Searching(val providerName: String) : ProviderSwitchEvent()
         data class Switched(val providerName: String) : ProviderSwitchEvent()
         data class NotFound(val providerName: String) : ProviderSwitchEvent()
+        /** Respaldo automático: el proveedor actual falló y se pasó a otro. */
+        data class AutoFallback(val from: String, val to: String) : ProviderSwitchEvent()
+    }
+
+    /** Proveedores ya intentados en esta reproducción (para no repetir en el respaldo). */
+    private val triedProviders = mutableSetOf<String>()
+    private var fallbackJob: kotlinx.coroutines.Job? = null
+
+    /**
+     * Candidatos de respaldo: proveedores asignados por el panel (mismo tipo VOD / en vivo),
+     * aún no intentados, ordenados por estabilidad.
+     */
+    private fun fallbackCandidates(): List<Provider> {
+        val current = activeProvider ?: return emptyList()
+        val isLive = current is com.streamflixreborn.streamflix.providers.IptvProvider
+        if (isLive) return emptyList()
+        triedProviders += current.name
+        val assigned = com.streamflixreborn.streamflix.utils.AssignedProviders
+        val pool = if (assigned.hasPanelAssignment()) {
+            assigned.all()
+        } else {
+            // Sin panel: solo proveedores del mismo idioma, y pocos, para no demorar.
+            Provider.providers.keys.filter { it.language == current.language }
+        }
+        return pool
+            .filter { it !is com.streamflixreborn.streamflix.providers.IptvProvider }
+            .filter { it.name !in triedProviders }
+            .sortedByDescending { com.streamflixreborn.streamflix.utils.ProviderStability.score(it.name) }
+            .let { if (assigned.hasPanelAssignment()) it else it.take(3) }
+    }
+
+    /**
+     * Si el proveedor actual no logra reproducir, busca el mismo título en el siguiente
+     * proveedor más estable y carga sus servidores. Devuelve false si no quedan proveedores.
+     */
+    fun tryNextProvider(): Boolean {
+        if (fallbackJob?.isActive == true) return true
+        val type = lastVideoType ?: return false
+        val failed = activeProvider?.name
+        com.streamflixreborn.streamflix.utils.ProviderStability.recordFailure(failed)
+        val candidates = fallbackCandidates()
+        if (candidates.isEmpty()) return false
+
+        fallbackJob = viewModelScope.launch(Dispatchers.IO) {
+            _state.emit(State.LoadingServers)
+            for (target in candidates) {
+                triedProviders += target.name
+                _providerSwitchEvents.emit(ProviderSwitchEvent.Searching(target.name))
+                val result = runCatching {
+                    val (resolvedType, resolvedId) = findOnProvider(target, type) ?: return@runCatching null
+                    val servers = target.getServers(resolvedId, resolvedType)
+                    if (servers.isEmpty()) null else Triple(resolvedType, resolvedId, servers)
+                }.onFailure { Log.w("PlayerViewModel", "fallback ${target.name}: ${it.message}") }
+                    .getOrNull()
+                if (result == null) {
+                    com.streamflixreborn.streamflix.utils.ProviderStability.recordFailure(target.name)
+                    continue
+                }
+                playbackProvider = target
+                lastVideoType = result.first
+                lastId = result.second
+                _providerSwitchEvents.emit(ProviderSwitchEvent.AutoFallback(failed.orEmpty(), target.name))
+                _state.emit(State.SuccessLoadingServers(result.third))
+                return@launch
+            }
+            _state.emit(State.FailedLoadingServers(Exception("No se pudo reproducir en ningún proveedor")))
+        }
+        return true
     }
 
     private val _providerSwitchEvents = MutableSharedFlow<ProviderSwitchEvent>()
@@ -113,6 +181,8 @@ class PlayerViewModel(
     fun playEpisode(episode: Video.Type.Episode) {
         // Los siguientes episodios se resuelven con el proveedor del contenido original.
         playbackProvider = null
+        triedProviders.clear()
+        fallbackJob?.cancel()
         getServers(episode, episode.id)
         getSubtitles(episode)
     }
@@ -250,6 +320,7 @@ class PlayerViewModel(
             }
 
             Log.d("PlayerViewModel", "Estrazione video completata con successo")
+            com.streamflixreborn.streamflix.utils.ProviderStability.recordSuccess(activeProvider?.name)
             _state.emit(State.SuccessLoadingVideo(video, server))
         } catch (e: Exception) {
             Log.e("PlayerViewModel", "Errore estrazione video: ", e)

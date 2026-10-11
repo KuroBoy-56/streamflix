@@ -323,7 +323,11 @@ class SyncGatewayActivity : AppCompatActivity() {
 
                             // Si llegó hasta aquí, `master_api` aprobó su `flixlat = 1`.
                             // Si la lista de servidores no existe, simplemente abortamos por seguridad
-                            if (namesList.isEmpty()) {
+                            // Líneas de canales del distribuidor y URL personal del usuario (panel).
+                            val channelLines = com.streamflixreborn.streamflix.sync.PanelChannelConfig.lines(jsonResponse.opt("channel_lines"))
+                            val personalUrl = com.streamflixreborn.streamflix.sync.PanelChannelConfig.lines(jsonResponse.opt("personal_provider_url"))
+
+                            if (namesList.isEmpty() && channelLines.isEmpty() && personalUrl.isEmpty()) {
                                 showStatus("Acceso Denegado: No tienes servidores configurados")
                                 setLoadingState(false)
                                 if (isAutoLogin) clearSecureCredentials()
@@ -352,6 +356,8 @@ class SyncGatewayActivity : AppCompatActivity() {
                                 putString("custom_background_tv_url", customBgTvUrl)
                                 putString("custom_splash_url", customSplashUrl)
                                 putString(AssignedProviders.KEY_ASSIGNED_SERVERS, namesList.joinToString(","))
+                                putString(com.streamflixreborn.streamflix.providers.PanelM3uProvider.KEY_CHANNEL_LINES, channelLines.joinToString("\n"))
+                                putString(com.streamflixreborn.streamflix.providers.PanelM3uProvider.KEY_PERSONAL_URL, personalUrl.joinToString("\n"))
                                 commit()
                             }
 

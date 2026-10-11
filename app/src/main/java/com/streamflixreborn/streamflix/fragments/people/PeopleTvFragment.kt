@@ -35,7 +35,7 @@ class PeopleTvFragment : Fragment() {
 
     private val args by navArgs<PeopleTvFragmentArgs>()
     private val database by lazy { AppDatabase.getInstance(requireContext()) }
-    private val viewModel by viewModelsFactory { PeopleViewModel(args.id, database) }
+    private val viewModel by viewModelsFactory { PeopleViewModel(args.id, database, args.name) }
 
     private val appAdapter = AppAdapter()
 
@@ -153,6 +153,11 @@ class PeopleTvFragment : Fragment() {
         binding.gPeopleBirthplace.visibility = when {
             binding.tvPeopleBirthplace.text.isNullOrEmpty() -> View.GONE
             else -> View.VISIBLE
+        }
+
+        binding.tvPeopleBiography.apply {
+            text = people.biography
+            visibility = if (people.biography.isNullOrBlank()) View.GONE else View.VISIBLE
         }
 
         appAdapter.submitList(people.filmography.onEach {

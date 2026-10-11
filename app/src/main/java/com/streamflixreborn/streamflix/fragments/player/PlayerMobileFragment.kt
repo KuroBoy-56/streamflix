@@ -349,7 +349,7 @@ class PlayerMobileFragment : Fragment() {
 
                     }
 
-                    is PlayerViewModel.State.FailedLoadingServers -> {
+                    is PlayerViewModel.State.FailedLoadingServers -> if (!viewModel.tryNextProvider()) {
                         Toast.makeText(
                             requireContext(),
                             state.error.message ?: "",
@@ -381,6 +381,8 @@ class PlayerMobileFragment : Fragment() {
                         val nextServer = servers.getOrNull(servers.indexOf(state.server) + 1)
                         if (nextServer != null) {
                             viewModel.getVideo(nextServer)
+                        } else if (viewModel.tryNextProvider()) {
+                            // Todos los servidores fallaron: se continúa con otro proveedor.
                         } else {
                             val providerName = UserPreferences.currentProvider?.name ?: ""
                             val isTmdb = providerName.contains("TMDb", ignoreCase = true)
@@ -570,6 +572,12 @@ class PlayerMobileFragment : Fragment() {
                     ).show()
                     is PlayerViewModel.ProviderSwitchEvent.Switched ->
                         PlayerSettingsView.Settings.ProviderOption.select(event.providerName)
+                    is PlayerViewModel.ProviderSwitchEvent.AutoFallback -> {
+                        PlayerSettingsView.Settings.ProviderOption.select(event.to)
+                        Toast.makeText(
+                            context, getString(R.string.player_provider_auto_fallback, event.to), Toast.LENGTH_SHORT
+                        ).show()
+                    }
                     is PlayerViewModel.ProviderSwitchEvent.NotFound -> {
                         PlayerSettingsView.Settings.ProviderOption.select(viewModel.activeProvider?.name)
                         Toast.makeText(
@@ -1164,6 +1172,8 @@ class PlayerMobileFragment : Fragment() {
                 if (nextServer != null) {
                     Log.i("PlayerMobileFragment", "Playback failed, trying next server: ${nextServer.name}")
                     viewModel.getVideo(nextServer)
+                } else {
+                    viewModel.tryNextProvider()
                 }
             }
         })

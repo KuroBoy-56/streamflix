@@ -39,7 +39,7 @@ class PeopleMobileFragment : Fragment() {
 
     private val args by navArgs<PeopleMobileFragmentArgs>()
     private val database by lazy { AppDatabase.getInstance(requireContext()) }
-    private val viewModel by viewModelsFactory { PeopleViewModel(args.id, database) }
+    private val viewModel by viewModelsFactory { PeopleViewModel(args.id, database, args.name) }
 
     private val appAdapter = AppAdapter()
 
