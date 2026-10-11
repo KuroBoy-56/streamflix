@@ -516,4 +516,12 @@
     <string name="live_empty">No hay canales en vivo disponibles</string>
     <string name="home_featured">Destacados</string>
     <string name="home_next_row">Siguiente: %1$s</string>
+    <string name="see_all">Ver todo</string>
+    <string name="movies_all_row">Todas las películas</string>
+    <string name="tv_shows_all_row">Todas las series</string>
+    <string name="home_tmdb_trending">Tendencias de hoy</string>
+    <string name="home_tmdb_popular_movies">Películas más vistas</string>
+    <string name="home_tmdb_top_rated_movies">Películas mejor valoradas</string>
+    <string name="home_tmdb_popular_series">Series más vistas</string>
+    <string name="home_tmdb_top_rated_series">Series mejor valoradas</string>
 </resources>

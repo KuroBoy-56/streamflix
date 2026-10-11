@@ -27,6 +27,8 @@ class GenreViewHolder(
         when (_binding) {
             is ItemGenreGridMobileBinding -> displayGridMobileItem(_binding)
             is ItemGenreGridTvBinding -> displayGridTvItem(_binding)
+            is com.streamflixreborn.streamflix.databinding.ItemSeeAllMobileBinding -> displaySeeAll(_binding.root, _binding.tvSeeAllGenre, isTv = false)
+            is com.streamflixreborn.streamflix.databinding.ItemSeeAllTvBinding -> displaySeeAll(_binding.root, _binding.tvSeeAllGenre, isTv = true)
         }
     }
 
@@ -71,5 +73,24 @@ class GenreViewHolder(
         }
 
         binding.tvGenreName.text = genre.name
+    }
+
+    /** Tarjeta "Ver todo" al final de una fila: abre la grilla completa de esa categoría. */
+    private fun displaySeeAll(root: android.view.View, genreName: android.widget.TextView, isTv: Boolean) {
+        genreName.text = genre.name
+        root.setOnClickListener {
+            val args = Bundle().apply {
+                putString("id", genre.id)
+                putString("name", genre.name)
+            }
+            root.findNavController().navigate(R.id.genre, args)
+        }
+        if (isTv) {
+            root.setOnFocusChangeListener { _, hasFocus ->
+                val animation = AnimationUtils.loadAnimation(context, if (hasFocus) R.anim.zoom_in else R.anim.zoom_out)
+                animation.fillAfter = true
+                root.startAnimation(animation)
+            }
+        }
     }
 }

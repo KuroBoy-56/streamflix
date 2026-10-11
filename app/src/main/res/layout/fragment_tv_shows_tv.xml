@@ -22,6 +22,18 @@
         app:numberOfColumns="6"
         tools:listitem="@layout/item_tv_show_grid" />
 
+    <!-- Filas por género: póster grande + una fila con "Ver todo" -->
+    <include
+        android:id="@+id/hero"
+        layout="@layout/layout_hero_row_tv"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <include
         android:id="@+id/is_loading"
         layout="@layout/layout_is_loading_tv"

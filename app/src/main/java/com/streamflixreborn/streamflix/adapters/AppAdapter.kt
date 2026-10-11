@@ -104,7 +104,7 @@ class AppAdapter(
     enum class Type {
         CATEGORY_MOBILE_ITEM, CATEGORY_TV_ITEM, CATEGORY_MOBILE_SWIPER, CATEGORY_TV_SWIPER,
         EPISODE_MOBILE_ITEM, EPISODE_TV_ITEM, EPISODE_CONTINUE_WATCHING_MOBILE_ITEM, EPISODE_CONTINUE_WATCHING_TV_ITEM,
-        FOOTER, FAVORITE_SECTION_HEADER, GENRE_GRID_MOBILE_ITEM, GENRE_GRID_TV_ITEM,
+        FOOTER, FAVORITE_SECTION_HEADER, GENRE_GRID_MOBILE_ITEM, GENRE_GRID_TV_ITEM, GENRE_SEE_ALL_MOBILE_ITEM, GENRE_SEE_ALL_TV_ITEM,
         HEADER, LOADING_ITEM,
         MOVIE_MOBILE_ITEM, MOVIE_TV_ITEM, MOVIE_CONTINUE_WATCHING_MOBILE_ITEM, MOVIE_CONTINUE_WATCHING_TV_ITEM, MOVIE_GRID_MOBILE_ITEM, MOVIE_GRID_TV_ITEM, MOVIE_SWIPER_MOBILE_ITEM,
         MOVIE_MOBILE, MOVIE_TV, MOVIE_DIRECTORS_MOBILE, MOVIE_DIRECTORS_TV, MOVIE_CAST_MOBILE, MOVIE_CAST_TV, MOVIE_RECOMMENDATIONS_MOBILE, MOVIE_RECOMMENDATIONS_TV,
@@ -139,6 +139,8 @@ class AppAdapter(
             Type.FAVORITE_SECTION_HEADER -> FavoriteSectionHeaderViewHolder(ItemFavoriteSectionHeaderBinding.inflate(LayoutInflater.from(parent.context), parent, false))
             Type.GENRE_GRID_MOBILE_ITEM -> GenreViewHolder(ItemGenreGridMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
             Type.GENRE_GRID_TV_ITEM -> GenreViewHolder(ItemGenreGridTvBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.GENRE_SEE_ALL_MOBILE_ITEM -> GenreViewHolder(com.streamflixreborn.streamflix.databinding.ItemSeeAllMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.GENRE_SEE_ALL_TV_ITEM -> GenreViewHolder(com.streamflixreborn.streamflix.databinding.ItemSeeAllTvBinding.inflate(LayoutInflater.from(parent.context), parent, false))
             Type.HEADER -> HeaderViewHolder(header!!.binding(parent))
             Type.LOADING_ITEM -> LoadingViewHolder(ItemLoadingBinding.inflate(LayoutInflater.from(parent.context), parent, false))
             Type.MOVIE_CONTINUE_WATCHING_MOBILE_ITEM, Type.MOVIE_MOBILE_ITEM -> MovieViewHolder(ItemMovieMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))

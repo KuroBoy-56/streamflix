@@ -1,5 +1,8 @@
 package com.streamflixreborn.streamflix.fragments.tv_shows
 
+import com.streamflixreborn.streamflix.R
+import com.streamflixreborn.streamflix.StreamFlixApp
+import com.streamflixreborn.streamflix.utils.CatalogRows
 import com.streamflixreborn.streamflix.utils.TmdbArtwork
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -71,6 +74,8 @@ class TvShowsViewModel(database: AppDatabase) : ViewModel() {
         data object Loading : State()
         data object LoadingMore : State()
         data class SuccessLoading(val tvShows: List<TvShow>, val hasMore: Boolean) : State()
+        /** Filas por género (con "Ver todo"); si el proveedor no tiene géneros se usa la grilla. */
+        data class SuccessLoadingRows(val categories: List<com.streamflixreborn.streamflix.models.Category>) : State()
         data class FailedLoading(val error: Exception) : State()
     }
 
@@ -81,6 +86,26 @@ class TvShowsViewModel(database: AppDatabase) : ViewModel() {
 
     fun getTvShows() = viewModelScope.launch(Dispatchers.IO) {
         _state.emit(State.Loading)
+
+        // Primero intenta las filas por género (Acción, Terror, Suspenso...) con "Ver todo".
+        val rowsProvider = UserPreferences.currentProvider
+        if (rowsProvider != null) {
+            val rows = runCatching {
+                CatalogRows.build(
+                    provider = rowsProvider,
+                    movies = false,
+                    allTitle = StreamFlixApp.instance.getString(R.string.tv_shows_all_row),
+                )
+            }.onFailure { Log.e("TvShowsViewModel", "rows: ", it) }.getOrNull()
+            if (rows != null) {
+                _state.emit(State.SuccessLoadingRows(rows.categories))
+                if (TmdbArtwork.isAvailable(rowsProvider)) {
+                    val enriched = TmdbArtwork.enrichedCategories(rowsProvider, rows.categories)
+                    if (_state.value is State.SuccessLoadingRows) _state.emit(State.SuccessLoadingRows(enriched))
+                }
+                return@launch
+            }
+        }
 
         try {
             val tvShows = ParentalControlUtils.filterItems(

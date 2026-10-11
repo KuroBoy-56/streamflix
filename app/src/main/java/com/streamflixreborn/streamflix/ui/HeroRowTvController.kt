@@ -202,6 +202,8 @@ class HeroRowTvController(
 
     private fun bindHero(item: AppAdapter.Item, row: Category) {
         if (!fragment.isAdded) return
+        // La tarjeta "Ver todo" no cambia el póster grande.
+        if (item is com.streamflixreborn.streamflix.models.Genre) return
         val context = binding.root.context
         val live = isLiveContent()
 

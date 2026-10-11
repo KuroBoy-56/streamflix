@@ -108,7 +108,7 @@ class GenreViewModel(private val id: String, database: AppDatabase) : ViewModel(
         _state.emit(State.Loading)
 
         try {
-            val genre = UserPreferences.currentProvider!!.getGenre(id).let {
+            val genre = loadGenrePage(id, 1).let {
                 it.copy(shows = ParentalControlUtils.filterShows(it.shows))
             }
 
@@ -127,7 +127,7 @@ class GenreViewModel(private val id: String, database: AppDatabase) : ViewModel(
             _state.emit(State.LoadingMore)
 
             try {
-                val genre = UserPreferences.currentProvider!!.getGenre(id, page + 1).let {
+                val genre = loadGenrePage(id, page + 1).let {
                     it.copy(shows = ParentalControlUtils.filterShows(it.shows))
                 }
 
@@ -149,5 +149,32 @@ class GenreViewModel(private val id: String, database: AppDatabase) : ViewModel(
                 _state.emit(State.FailedLoading(e))
             }
         }
+    }
+
+    /** Además de los géneros del proveedor, admite "todas las películas/series" (fila "Todas"). */
+    private suspend fun loadGenrePage(id: String, page: Int): Genre {
+        val provider = UserPreferences.currentProvider!!
+        return when (id) {
+            ALL_MOVIES_ID -> Genre(id, "", shows = provider.getMovies(page))
+            ALL_TV_SHOWS_ID -> Genre(id, "", shows = provider.getTvShows(page))
+            else -> when {
+                id.startsWith(MOVIES_ONLY_PREFIX) -> provider.getGenre(id.removePrefix(MOVIES_ONLY_PREFIX), page)
+                    .let { it.copy(shows = it.shows.filterIsInstance<com.streamflixreborn.streamflix.models.Movie>()) }
+                id.startsWith(TV_SHOWS_ONLY_PREFIX) -> provider.getGenre(id.removePrefix(TV_SHOWS_ONLY_PREFIX), page)
+                    .let { it.copy(shows = it.shows.filterIsInstance<com.streamflixreborn.streamflix.models.TvShow>()) }
+                else -> provider.getGenre(id, page)
+            }
+        }
+    }
+
+    companion object {
+        const val ALL_MOVIES_ID = "__all_movies__"
+        const val ALL_TV_SHOWS_ID = "__all_tv_shows__"
+        const val MOVIES_ONLY_PREFIX = "__movies__:"
+        const val TV_SHOWS_ONLY_PREFIX = "__tvshows__:"
+
+        /** Ids que usan las filas de Películas/Series para abrir solo un tipo de contenido. */
+        fun genreIdFor(rawGenreId: String, movies: Boolean) =
+            (if (movies) MOVIES_ONLY_PREFIX else TV_SHOWS_ONLY_PREFIX) + rawGenreId
     }
 }

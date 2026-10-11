@@ -1,6 +1,7 @@
 package com.streamflixreborn.streamflix.fragments.home
 
 import com.streamflixreborn.streamflix.utils.TmdbArtwork
+import com.streamflixreborn.streamflix.utils.TmdbHomeSections
 import android.util.Log
 import com.streamflixreborn.streamflix.StreamFlixApp
 import androidx.lifecycle.ViewModel
@@ -422,16 +423,36 @@ class HomeViewModel(database: AppDatabase) : ViewModel() {
         loadUserDataCache(provider)
 
         try {
+            val titles = tmdbSectionTitles(appContext)
+            // Secciones TMDb ya calculadas (de la caché) para que no parpadeen al refrescar.
+            val previousSections = cachedCategories.orEmpty().filter { it.name in titles.all }
             val categories = provider.getHome()
-            HomeCacheStore.write(appContext, provider, categories)
-            _state.emit(State.SuccessLoading(categories))
+            val withPrevious = withTmdbSections(categories, previousSections)
+            HomeCacheStore.write(appContext, provider, withPrevious)
+            _state.emit(State.SuccessLoading(withPrevious))
 
-            // Arte y sinopsis en alta calidad desde TMDb (clave del panel); se muestra al llegar.
             if (TmdbArtwork.isAvailable(provider)) {
+                // Arte y sinopsis en alta calidad desde TMDb (clave del panel); se muestra al llegar.
                 val enriched = TmdbArtwork.enrichedCategories(provider, categories)
                 if (currentProvider === provider && UserPreferences.currentProvider === provider) {
-                    HomeCacheStore.write(appContext, provider, enriched)
-                    _state.emit(State.SuccessLoading(enriched))
+                    _state.emit(State.SuccessLoading(withTmdbSections(enriched, previousSections)))
+                }
+
+                // Lo más visto / tendencias / mejor valoradas de TMDb, solo con títulos que tenga el proveedor.
+                // Se regeneran como máximo cada 6 h (mientras tanto se usan las de la caché).
+                val lastBuild = UserPreferences.getProviderCache(provider, TMDB_SECTIONS_AT).toLongOrNull() ?: 0L
+                val isFresh = previousSections.isNotEmpty() && System.currentTimeMillis() - lastBuild < TMDB_SECTIONS_TTL_MS
+                val sections = if (isFresh) previousSections else runCatching { TmdbHomeSections.build(provider, titles) }
+                    .onFailure { Log.e("HomeViewModel", "tmdb sections: ", it) }
+                    .getOrDefault(emptyList())
+                    .also { built ->
+                        if (built.isNotEmpty()) UserPreferences.setProviderCache(provider, TMDB_SECTIONS_AT, System.currentTimeMillis().toString())
+                    }
+                    .ifEmpty { previousSections }
+                if (currentProvider === provider && UserPreferences.currentProvider === provider) {
+                    val finalCategories = withTmdbSections(enriched, sections)
+                    HomeCacheStore.write(appContext, provider, finalCategories)
+                    _state.emit(State.SuccessLoading(finalCategories))
                 }
             }
         } catch (e: Exception) {
@@ -494,5 +515,31 @@ class HomeViewModel(database: AppDatabase) : ViewModel() {
                 _userDataCache.value = newData
             }
         }
+    }
+
+    private fun tmdbSectionTitles(context: android.content.Context) = TmdbHomeSections.Titles(
+        trending = context.getString(com.streamflixreborn.streamflix.R.string.home_tmdb_trending),
+        popularMovies = context.getString(com.streamflixreborn.streamflix.R.string.home_tmdb_popular_movies),
+        topRatedMovies = context.getString(com.streamflixreborn.streamflix.R.string.home_tmdb_top_rated_movies),
+        popularSeries = context.getString(com.streamflixreborn.streamflix.R.string.home_tmdb_popular_series),
+        topRatedSeries = context.getString(com.streamflixreborn.streamflix.R.string.home_tmdb_top_rated_series),
+    )
+
+    /** Inserta las secciones TMDb justo después de "Destacados" (sin duplicarlas). */
+    private fun withTmdbSections(categories: List<Category>, sections: List<Category>): List<Category> {
+        if (sections.isEmpty()) return categories
+        val names = sections.map { it.name }.toSet()
+        val base = categories.filter { it.name !in names }
+        val featuredIndex = base.indexOfFirst { it.name == Category.FEATURED }
+        return if (featuredIndex >= 0) {
+            base.take(featuredIndex + 1) + sections + base.drop(featuredIndex + 1)
+        } else {
+            sections + base
+        }
+    }
+
+    companion object {
+        private const val TMDB_SECTIONS_AT = "TMDB_SECTIONS_AT"
+        private const val TMDB_SECTIONS_TTL_MS = 6 * 60 * 60 * 1000L
     }
 }

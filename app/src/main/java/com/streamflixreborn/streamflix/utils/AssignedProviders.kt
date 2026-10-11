@@ -40,11 +40,34 @@ object AssignedProviders {
             .commit()
     }
 
-    /** Resuelve nombres del panel a proveedores (sin distinguir mayúsculas), en el orden del panel. */
+    /** Clave de comparación: minúsculas, solo letras y números ("PlutoTv Mx" == "Pluto TV MX"). */
+    private fun normalize(value: String): String =
+        value.lowercase().replace(Regex("[^a-z0-9]"), "")
+
+    /**
+     * Nombres con los que el panel puede referirse a un proveedor: su nombre visible y el nombre
+     * de su clase (p. ej. "TvporinternetHD" -> TvPorInternet2, "CineCity" -> MAGISTV,
+     * "Vavoo de" -> Vavoo DE Live TV).
+     */
+    private fun matchKeys(provider: Provider): Set<String> {
+        val className = provider.javaClass.simpleName.removeSuffix("Provider")
+        return setOf(
+            normalize(provider.name),
+            normalize(className),
+            normalize(className + provider.language),
+        ).filter { it.isNotEmpty() }.toSet()
+    }
+
+    /** Resuelve nombres del panel a proveedores, en el orden del panel. */
     fun resolve(names: List<String>): List<Provider> {
         val available = Provider.providers.keys.toList()
+        val keysByProvider = available.associateWith(::matchKeys)
         return names
-            .mapNotNull { name -> available.find { it.name.equals(name, ignoreCase = true) } }
+            .flatMap { name ->
+                val key = normalize(name)
+                val exact = available.filter { it.name.equals(name, ignoreCase = true) }
+                exact.ifEmpty { available.filter { key in keysByProvider.getValue(it) } }
+            }
             .distinctBy { it.name }
     }
 

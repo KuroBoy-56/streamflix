@@ -319,7 +319,18 @@ class MainTvActivity : FragmentActivity() {
                             binding.navMain.requestFocus()
                         }
                     }
-                    R.id.settings, R.id.search, R.id.movies, R.id.tv_shows, R.id.favorites -> {
+                    R.id.movies, R.id.tv_shows -> {
+                        val rowsHandled = !binding.navMain.hasFocus() && when (val f = getCurrentFragment()) {
+                            is com.streamflixreborn.streamflix.fragments.movies.MoviesTvFragment -> f.onBackPressed()
+                            is com.streamflixreborn.streamflix.fragments.tv_shows.TvShowsTvFragment -> f.onBackPressed()
+                            else -> false
+                        }
+                        if (!rowsHandled) {
+                            navigateToProviderHome(navController)
+                            binding.navMain.requestFocus()
+                        }
+                    }
+                    R.id.settings, R.id.search, R.id.favorites -> {
                         navigateToProviderHome(navController)
                         binding.navMain.requestFocus()
                     }

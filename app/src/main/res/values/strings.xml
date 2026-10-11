@@ -601,4 +601,12 @@
     <string name="live_empty">No live channels available</string>
     <string name="home_featured">Featured</string>
     <string name="home_next_row">Next: %1$s</string>
+    <string name="see_all">See all</string>
+    <string name="movies_all_row">All movies</string>
+    <string name="tv_shows_all_row">All series</string>
+    <string name="home_tmdb_trending">Trending today</string>
+    <string name="home_tmdb_popular_movies">Most watched movies</string>
+    <string name="home_tmdb_top_rated_movies">Top rated movies</string>
+    <string name="home_tmdb_popular_series">Most watched series</string>
+    <string name="home_tmdb_top_rated_series">Top rated series</string>
 </resources>

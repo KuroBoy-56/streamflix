@@ -1,5 +1,8 @@
 package com.streamflixreborn.streamflix.fragments.movies
 
+import com.streamflixreborn.streamflix.models.TvShow
+import com.streamflixreborn.streamflix.models.Genre
+import com.streamflixreborn.streamflix.models.Category
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -58,7 +61,14 @@ class MoviesMobileFragment : Fragment() {
                         gIsLoadingRetry.visibility = View.GONE
                     }
                     MoviesViewModel.State.LoadingMore -> appAdapter.isLoading = true
+                    is MoviesViewModel.State.SuccessLoadingRows -> {
+                        displayRows(state.categories)
+                        binding.rvMovies.visibility = View.GONE
+                        binding.isLoading.root.visibility = View.GONE
+                    }
                     is MoviesViewModel.State.SuccessLoading -> {
+                        binding.rvMoviesRows.visibility = View.GONE
+                        binding.rvMovies.visibility = View.VISIBLE
                         displayMovies(state.movies, state.hasMore)
                         appAdapter.isLoading = false
                         binding.isLoading.root.visibility = View.GONE
@@ -125,5 +135,31 @@ class MoviesMobileFragment : Fragment() {
         } else {
             appAdapter.setOnLoadMoreListener(null)
         }
+    }
+
+    // ---- Filas por género (~20 portadas + "Ver todo") ----
+    private val rowsAdapter = AppAdapter()
+
+    private fun displayRows(categories: List<Category>) {
+        binding.rvMoviesRows.apply {
+            if (adapter == null) {
+                adapter = rowsAdapter
+                addItemDecoration(SpacingItemDecoration(18.dp(requireContext())))
+            }
+            visibility = View.VISIBLE
+        }
+        val spacing = 10.dp(requireContext())
+        categories.forEach { category ->
+            category.list.forEach { item ->
+                when (item) {
+                    is Movie -> item.itemType = AppAdapter.Type.MOVIE_MOBILE_ITEM
+                    is TvShow -> item.itemType = AppAdapter.Type.TV_SHOW_MOBILE_ITEM
+                    is Genre -> item.itemType = AppAdapter.Type.GENRE_SEE_ALL_MOBILE_ITEM
+                }
+            }
+            category.itemSpacing = spacing
+            category.itemType = AppAdapter.Type.CATEGORY_MOBILE_ITEM
+        }
+        rowsAdapter.submitList(categories)
     }
 }

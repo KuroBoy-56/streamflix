@@ -1,5 +1,9 @@
 package com.streamflixreborn.streamflix.fragments.tv_shows
 
+import com.streamflixreborn.streamflix.models.Movie
+import com.streamflixreborn.streamflix.models.Genre
+import com.streamflixreborn.streamflix.models.Category
+import com.streamflixreborn.streamflix.ui.HeroRowTvController
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -56,7 +60,14 @@ class TvShowsTvFragment : Fragment() {
                         gIsLoadingRetry.visibility = View.GONE
                     }
                     TvShowsViewModel.State.LoadingMore -> appAdapter.isLoading = true
+                    is TvShowsViewModel.State.SuccessLoadingRows -> {
+                        displayRows(state.categories)
+                        binding.vgvTvShows.visibility = View.GONE
+                        binding.isLoading.root.visibility = View.GONE
+                    }
                     is TvShowsViewModel.State.SuccessLoading -> {
+                        binding.hero.root.visibility = View.GONE
+                        binding.vgvTvShows.visibility = View.VISIBLE
                         displayTvShows(state.tvShows, state.hasMore)
                         appAdapter.isLoading = false
                         binding.vgvTvShows.visibility = View.VISIBLE
@@ -100,6 +111,9 @@ class TvShowsTvFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        hero?.release()
+        hero = null
+        rowsFocused = false
         _binding = null
     }
 
@@ -127,4 +141,28 @@ class TvShowsTvFragment : Fragment() {
             appAdapter.setOnLoadMoreListener(null)
         }
     }
+
+    // ---- Filas por género (póster grande + una fila, con "Ver todo") ----
+    private var hero: HeroRowTvController? = null
+    private var rowsFocused = false
+
+    private fun displayRows(categories: List<Category>) {
+        val controller = hero ?: HeroRowTvController(this, binding.hero).also { hero = it }
+        categories.forEach { category ->
+            category.list.forEach { item ->
+                when (item) {
+                    is Movie -> item.itemType = AppAdapter.Type.MOVIE_TV_ITEM
+                    is TvShow -> item.itemType = AppAdapter.Type.TV_SHOW_TV_ITEM
+                    is Genre -> item.itemType = AppAdapter.Type.GENRE_SEE_ALL_TV_ITEM
+                }
+            }
+            category.itemType = AppAdapter.Type.CATEGORY_TV_ITEM
+        }
+        binding.hero.root.visibility = View.VISIBLE
+        controller.submitRows(categories, requestFocus = !rowsFocused)
+        rowsFocused = true
+    }
+
+    /** Atrás: primero vuelve a la primera fila. */
+    fun onBackPressed(): Boolean = hero?.resetToFirstRow() ?: false
 }

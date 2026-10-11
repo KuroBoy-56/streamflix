@@ -1,5 +1,7 @@
 package com.streamflixreborn.streamflix.providers
 
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import android.content.Context
 import android.util.Base64
 import android.util.Log
@@ -41,35 +43,40 @@ object Cine24hProvider : Provider {
         webViewResolver = WebViewResolver(context)
     }
 
+    // Cliente normal: el sitio responde sin Cloudflare, pero algunas páginas tardan ~3 s.
+    // Con el antiguo límite de 3 s, en TV/redes lentas se caía siempre a la WebView (muy lenta).
+    private val pageClient by lazy {
+        NetworkClient.default.newBuilder()
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(20, TimeUnit.SECONDS)
+            .writeTimeout(10, TimeUnit.SECONDS)
+            .build()
+    }
+
+    private fun isCloudflareChallenge(html: String) =
+        html.contains("cf-browser-verification") || html.contains("Checking your browser") || html.contains("Just a moment...")
+
     private suspend fun getDocument(url: String): Document {
-        try {
-            // Tentativo ultra-veloce (3s) per rilevare se serve la WebView
-            val client = NetworkClient.default.newBuilder()
-                .connectTimeout(3, TimeUnit.SECONDS)
-                .readTimeout(3, TimeUnit.SECONDS)
-                .writeTimeout(3, TimeUnit.SECONDS)
-                .build()
-
-            val request = Request.Builder()
-                .url(url)
-                .header("Referer", baseUrl)
-                .build()
-            
-            val response = client.newCall(request).execute()
-            
-            if (response.isSuccessful) {
-                val html = response.body?.string() ?: ""
-                // Se non c'è traccia di Cloudflare, procediamo con OkHttp (veloce)
-                if (!html.contains("cf-browser-verification") && !html.contains("Checking your browser") && !html.contains("Just a moment...")) {
-                    return Jsoup.parse(html).apply { setBaseUri(baseUrl) }
+        val html = withContext(Dispatchers.IO) {
+            runCatching {
+                val request = Request.Builder()
+                    .url(url)
+                    .header("Referer", baseUrl)
+                    .build()
+                pageClient.newCall(request).execute().use { response ->
+                    response.body?.string().orEmpty().takeIf { response.isSuccessful }
                 }
-            }
-        } catch (_: Exception) { }
+            }.getOrNull()
+        }
 
-        // Se OkHttp fallisce o rileva blocco, passiamo SUBITO alla WebView
+        if (html != null && html.isNotBlank() && !isCloudflareChallenge(html)) {
+            return Jsoup.parse(html).apply { setBaseUri(baseUrl) }
+        }
+
+        // Solo si hay bloqueo de Cloudflare (o la red falló) se usa la WebView.
         Log.d(TAG, "[Provider] Launching WebView Bypass for $url")
-        val html = getResolver().get(url)
-        return Jsoup.parse(html).apply { setBaseUri(baseUrl) }
+        val resolved = getResolver().get(url)
+        return Jsoup.parse(resolved).apply { setBaseUri(baseUrl) }
     }
 
     override suspend fun getHome(): List<Category> = providerMutex.withLock {
