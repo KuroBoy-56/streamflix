@@ -61,7 +61,7 @@ class HomeTvFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         hasRequestedInitialFocus = false
-        hero = HeroRowTvController(this, binding.hero) { UserPreferences.currentProvider is IptvProvider }.apply {
+        hero = HeroRowTvController(this, binding.hero, isLiveContent = { UserPreferences.currentProvider is IptvProvider }).apply {
             rowTitle = { category ->
                 when (category.name) {
                     Category.FEATURED -> getString(R.string.home_featured)

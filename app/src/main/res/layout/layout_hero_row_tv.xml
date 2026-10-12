@@ -21,6 +21,19 @@
         app:layout_constraintTop_toTopOf="parent"
         tools:ignore="ContentDescription" />
 
+    <!-- Segunda capa para fundir suavemente un póster con el siguiente. -->
+    <ImageView
+        android:id="@+id/iv_hero_backdrop_alt"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:alpha="0"
+        android:scaleType="centerCrop"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:ignore="ContentDescription" />
+
     <View
         android:layout_width="0dp"
         android:layout_height="0dp"

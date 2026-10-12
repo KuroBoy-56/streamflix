@@ -10,7 +10,6 @@ import androidx.fragment.app.Fragment
 import androidx.leanback.widget.OnChildViewHolderSelectedListener
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.streamflixreborn.streamflix.R
 import com.streamflixreborn.streamflix.adapters.AppAdapter
 import com.streamflixreborn.streamflix.databinding.LayoutHeroRowTvBinding
@@ -33,7 +32,18 @@ class HeroRowTvController(
     private val fragment: Fragment,
     private val binding: LayoutHeroRowTvBinding,
     private val isLiveContent: () -> Boolean = { false },
+    /** Portadas compactas (Inicio, Películas, Series). En Vivo usa el tamaño normal. */
+    private val compactRow: Boolean = true,
 ) {
+
+    /** Tamaño de las portadas de la fila respecto al normal (un poco menos de la mitad). */
+    private val cardScale = 0.45f
+    /** El texto se reduce menos para que siga siendo legible en la TV. */
+    private val cardTextScale = 0.7f
+    private val scaledCards: MutableSet<View> = java.util.Collections.newSetFromMap(java.util.WeakHashMap())
+    private val smoothInterpolator = android.view.animation.PathInterpolator(0.4f, 0f, 0.2f, 1f)
+    /** Capa del póster visible; la otra recibe la siguiente imagen y se funde encima. */
+    private var frontBackdrop: ImageView = binding.ivHeroBackdrop
 
     val adapter = AppAdapter()
 
@@ -57,7 +67,21 @@ class HeroRowTvController(
                 stateRestorationPolicy = RecyclerView.Adapter.StateRestorationPolicy.PREVENT_WHEN_EMPTY
             }
             setRowHeight(ViewGroup.LayoutParams.WRAP_CONTENT)
-            setItemSpacing(resources.getDimension(R.dimen.home_spacing).toInt())
+            val spacing = resources.getDimension(R.dimen.home_spacing)
+            setItemSpacing((if (compactRow) spacing * 0.6f else spacing).toInt())
+
+            // Movimiento fluido: sin animaciones de cambio de lista (evitan parpadeos al cambiar
+            // de fila), tarjetas ya creadas en caché y desplazamiento suave.
+            itemAnimator = null
+            setHasFixedSize(true)
+            setItemViewCacheSize(24)
+            (layoutManager as? androidx.recyclerview.widget.LinearLayoutManager)?.initialPrefetchItemCount = 10
+            if (compactRow) {
+                addOnChildAttachStateChangeListener(object : RecyclerView.OnChildAttachStateChangeListener {
+                    override fun onChildViewAttachedToWindow(view: View) = shrinkCard(view)
+                    override fun onChildViewDetachedFromWindow(view: View) = Unit
+                })
+            }
             isFocusable = true
             descendantFocusability = ViewGroup.FOCUS_AFTER_DESCENDANTS
 
@@ -124,6 +148,7 @@ class HeroRowTvController(
     fun release() {
         heroHandler.removeCallbacksAndMessages(null)
         binding.llHeroRow.animate().cancel()
+        binding.ivHeroBackdropAlt.animate().cancel()
     }
 
     private fun moveRow(delta: Int) {
@@ -135,13 +160,15 @@ class HeroRowTvController(
         binding.vHeroFocusAnchor.isFocusable = true
         binding.vHeroFocusAnchor.requestFocus()
 
-        val distance = 36.dp(binding.root.context).toFloat()
+        val distance = (if (compactRow) 20 else 36).dp(binding.root.context).toFloat()
         val direction = if (delta > 0) -1f else 1f
 
         binding.llHeroRow.animate()
             .alpha(0f)
             .translationY(direction * distance)
-            .setDuration(140)
+            .setDuration(120)
+            .setInterpolator(smoothInterpolator)
+            .withLayer()
             .withEndAction {
                 rowIndex = target
                 showRow(requestFocus = true)
@@ -149,7 +176,9 @@ class HeroRowTvController(
                 binding.llHeroRow.animate()
                     .alpha(1f)
                     .translationY(0f)
-                    .setDuration(180)
+                    .setDuration(220)
+                    .setInterpolator(smoothInterpolator)
+                    .withLayer()
                     .withEndAction { isSwitchingRow = false }
                     .start()
             }
@@ -197,7 +226,8 @@ class HeroRowTvController(
 
     private fun scheduleHero(item: AppAdapter.Item, row: Category) {
         pendingHero?.let { heroHandler.removeCallbacks(it) }
-        pendingHero = Runnable { bindHero(item, row) }.also { heroHandler.postDelayed(it, 180) }
+        pendingHero = Runnable { bindHero(item, row) }.also { heroHandler.postDelayed(it, 120) }
+        preloadNeighbours(row, row.list.indexOf(item))
     }
 
     private fun bindHero(item: AppAdapter.Item, row: Category) {
@@ -269,21 +299,115 @@ class HeroRowTvController(
         currentBackdrop = url
         if (!fragment.isAdded) return
 
-        binding.ivHeroBackdrop.apply {
+        // Dos capas fijas: la de abajo (base) y la de arriba (top). La imagen nueva se carga en
+        // la capa que no se ve y luego solo se anima la transparencia de la capa de arriba.
+        // Así el cambio de póster es un fundido suave, sin pantallazo negro ni recálculos.
+        val base = binding.ivHeroBackdrop
+        val top = binding.ivHeroBackdropAlt
+        val showingTop = frontBackdrop === top
+        top.animate().cancel()
+        top.alpha = if (showingTop) 1f else 0f
+        base.alpha = 1f
+
+        listOf(base, top).forEach { iv ->
             // Los logos de canales en vivo se muestran completos a la derecha (no recortados).
             if (live) {
-                scaleType = ImageView.ScaleType.FIT_END
-                setPadding(0, 40.dp(context), 80.dp(context), 260.dp(context))
+                iv.scaleType = ImageView.ScaleType.FIT_END
+                iv.setPadding(0, 40.dp(iv.context), 80.dp(iv.context), 260.dp(iv.context))
             } else {
-                scaleType = ImageView.ScaleType.CENTER_CROP
-                setPadding(0, 0, 0, 0)
+                iv.scaleType = ImageView.ScaleType.CENTER_CROP
+                iv.setPadding(0, 0, 0, 0)
             }
         }
 
+        val target = if (showingTop) base else top
         Glide.with(fragment)
             .load(url)
-            .transition(DrawableTransitionOptions.withCrossFade(250))
-            .into(binding.ivHeroBackdrop)
+            .dontAnimate()
+            .listener(object : com.bumptech.glide.request.RequestListener<android.graphics.drawable.Drawable> {
+                override fun onLoadFailed(
+                    e: com.bumptech.glide.load.engine.GlideException?, model: Any?,
+                    target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>, isFirstResource: Boolean,
+                ): Boolean = false
+
+                override fun onResourceReady(
+                    resource: android.graphics.drawable.Drawable, model: Any,
+                    target: com.bumptech.glide.request.target.Target<android.graphics.drawable.Drawable>?,
+                    dataSource: com.bumptech.glide.load.DataSource, isFirstResource: Boolean,
+                ): Boolean {
+                    if (currentBackdrop != url) return false
+                    top.post { crossfadeTo(showTop = !showingTop, url = url) }
+                    return false
+                }
+            })
+            .into(target)
+    }
+
+    private fun crossfadeTo(showTop: Boolean, url: String?) {
+        if (!fragment.isAdded || currentBackdrop != url) return
+        val base = binding.ivHeroBackdrop
+        val top = binding.ivHeroBackdropAlt
+        frontBackdrop = if (showTop) top else base
+        top.animate()
+            .alpha(if (showTop) 1f else 0f)
+            .setDuration(320)
+            .setInterpolator(smoothInterpolator)
+            .withEndAction {
+                // La capa que quedó oculta se libera (también evita ver logos viejos detrás en En Vivo).
+                if (fragment.isAdded && currentBackdrop == url) {
+                    runCatching { Glide.with(fragment).clear(if (showTop) base else top) }
+                }
+            }
+            .start()
+    }
+
+    /** Precarga el fondo de las portadas vecinas para que el cambio de póster sea inmediato. */
+    private fun preloadNeighbours(row: Category, position: Int) {
+        if (position < 0 || !fragment.isAdded) return
+        listOf(position - 1, position + 1, position + 2).forEach { i ->
+            val url = when (val it = row.list.getOrNull(i)) {
+                is Movie -> it.banner?.takeIf { b -> b.isNotBlank() } ?: it.poster
+                is TvShow -> it.banner?.takeIf { b -> b.isNotBlank() } ?: it.poster
+                is Episode -> it.tvShow?.banner?.takeIf { b -> b.isNotBlank() } ?: it.poster
+                else -> null
+            }
+            if (!url.isNullOrBlank()) runCatching { Glide.with(fragment).load(url).preload() }
+        }
+    }
+
+    /**
+     * Reduce una tarjeta de la fila (solo dentro de esta fila; las tarjetas de búsqueda,
+     * cuadrículas y otras pantallas mantienen su tamaño). Se hace una sola vez por tarjeta.
+     */
+    private fun shrinkCard(card: View) {
+        if (!scaledCards.add(card)) return
+        scaleView(card)
+    }
+
+    private fun scaleView(view: View) {
+        view.layoutParams?.let { lp ->
+            if (lp.width > 0) lp.width = (lp.width * cardScale).toInt()
+            if (lp.height > 0) lp.height = (lp.height * cardScale).toInt()
+            if (lp is ViewGroup.MarginLayoutParams) {
+                lp.setMargins(
+                    (lp.leftMargin * cardScale).toInt(), (lp.topMargin * cardScale).toInt(),
+                    (lp.rightMargin * cardScale).toInt(), (lp.bottomMargin * cardScale).toInt(),
+                )
+                lp.marginStart = (lp.marginStart * cardScale).toInt()
+                lp.marginEnd = (lp.marginEnd * cardScale).toInt()
+            }
+            view.layoutParams = lp
+        }
+        view.setPaddingRelative(
+            (view.paddingStart * cardScale).toInt(), (view.paddingTop * cardScale).toInt(),
+            (view.paddingEnd * cardScale).toInt(), (view.paddingBottom * cardScale).toInt(),
+        )
+        if (view is android.widget.TextView) {
+            view.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, view.textSize * cardTextScale)
+        }
+        if (view is ViewGroup) {
+            for (i in 0 until view.childCount) scaleView(view.getChildAt(i))
+        }
     }
 
     private fun android.widget.TextView.setTextOrGone(value: String?) {

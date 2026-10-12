@@ -57,7 +57,7 @@ class LiveTvFragment : Fragment() {
         }
 
         hasFocusedContent = false
-        hero = HeroRowTvController(this, binding.hero) { true }
+        hero = HeroRowTvController(this, binding.hero, isLiveContent = { true }, compactRow = false)
 
         val liveProviders = AssignedProviders.live(requireContext())
         if (liveProviders.size > 1) {
