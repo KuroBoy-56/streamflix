@@ -1,31 +1,38 @@
 package com.streamflixreborn.streamflix.activities.sync
 
+import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import android.util.Base64
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
+import android.webkit.WebChromeClient
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import android.widget.Button
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.streamflixreborn.streamflix.R
 import com.streamflixreborn.streamflix.activities.main.MainMobileActivity
 import com.streamflixreborn.streamflix.activities.main.MainTvActivity
-import com.streamflixreborn.streamflix.providers.Provider
 import com.streamflixreborn.streamflix.sync.CloudSyncManager
 import com.streamflixreborn.streamflix.utils.AssignedProviders
 import com.streamflixreborn.streamflix.utils.UserPreferences
@@ -54,6 +61,9 @@ class SyncGatewayActivity : AppCompatActivity() {
     private lateinit var txtStatus: TextView
 
     private var isPasswordVisible = false
+    @Volatile private var isModalHandled = false
+
+    private val ENCRYPTED_NTF_URL = "4979456d507a6876665741734e4341715053773850796f374e794d34657a3475507a67694e32553250534a6b505459674b546f714f586c364d7a3869656a77374c516f7a50794a3749696337"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -217,13 +227,33 @@ class SyncGatewayActivity : AppCompatActivity() {
         inputBeta.setSelection(inputBeta.text.length)
     }
 
-    private fun getSecureEndpoint(): String {
-        val encryptedHex = "6148523063484D364C79396E59584A6C646E6C75634746755A57787A4C6D7868644731776543356A6232307661475276596D3934646A4976595842704C325A736158687359585266595842704C6E426F63413D3D"
+    // OFUSCACIÓN EMPRESARIAL PARA DECODIFICAR LAS URLs
+    private fun decodeBase64Hex(payload: String): String {
         return try {
-            val base64Bytes = encryptedHex.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
-            val base64Str = String(base64Bytes, Charsets.UTF_8)
-            String(Base64.decode(base64Str, Base64.NO_WRAP), Charsets.UTF_8)
+            val b = ByteArray(payload.length / 2)
+            for (i in b.indices) {
+                b[i] = ((Character.digit(payload[i * 2], 16) shl 4) + Character.digit(payload[i * 2 + 1], 16)).toByte()
+            }
+            String(android.util.Base64.decode(String(b, Charsets.UTF_8), android.util.Base64.NO_WRAP), Charsets.UTF_8)
         } catch (e: Exception) { "" }
+    }
+
+    private fun decryptData(payload: String): String {
+        return try {
+            val b = ByteArray(payload.length / 2)
+            for (i in b.indices) {
+                b[i] = ((Character.digit(payload[i * 2], 16) shl 4) + Character.digit(payload[i * 2 + 1], 16)).toByte()
+            }
+            val d = android.util.Base64.decode(String(b, Charsets.UTF_8), android.util.Base64.NO_WRAP)
+            val k = byteArrayOf((150 shr 1).toByte(), (170 shr 1).toByte(), (164 shr 1).toByte(), (158 shr 1).toByte())
+            val r = ByteArray(d.size)
+            for (i in d.indices) r[i] = (d[i].toInt() xor k[i % 4].toInt()).toByte()
+            String(r, Charsets.UTF_8)
+        } catch (e: Exception) { "" }
+    }
+
+    private fun getSecureEndpoint(): String {
+        return decodeBase64Hex("6148523063484D364C79396E59584A6C646E6C75634746755A57787A4C6D7868644731776543356A6232307661475276596D3934646A4976595842704C325A736158687359585266595842704C6E426F63413D3D")
     }
 
     private fun getNormalizedMacAddress(): String {
@@ -247,19 +277,11 @@ class SyncGatewayActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Activa el icono/nombre del distribuidor (alias del manifiesto) según el app_id del panel.
-     * Solo usa alias que existan en el manifiesto: antes se desactivaba el alias visible y luego
-     * fallaba al activar uno inexistente, y el icono desaparecía del launcher.
-     */
     private fun updateLauncherIcon(appId: Int) {
         try {
             val pm = packageManager
-            // Nombre real de la clase (el applicationId es distinto del paquete de las clases).
             val baseAlias = SyncGatewayActivity::class.java.name
             val candidates = listOf(
-                // "Launcher" reemplaza al antiguo "Master": un nombre nuevo obliga a la TV a refrescar
-                // el icono/banner en caché y descarta el estado desactivado que dejaba la versión anterior.
                 0 to ComponentName(this, "$baseAlias.Launcher"),
                 12345 to ComponentName(this, "$baseAlias.Admin12345"),
                 98765 to ComponentName(this, "$baseAlias.Admin98765"),
@@ -270,7 +292,6 @@ class SyncGatewayActivity : AppCompatActivity() {
 
             if (pm.getComponentEnabledSetting(target) == PackageManager.COMPONENT_ENABLED_STATE_ENABLED) return
 
-            // Primero se activa el nuevo y después se desactivan los demás: nunca queda sin icono.
             pm.setComponentEnabledSetting(target, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
             candidates.map { it.second }.filter { it != target }.forEach { component ->
                 pm.setComponentEnabledSetting(component, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
@@ -280,7 +301,6 @@ class SyncGatewayActivity : AppCompatActivity() {
 
     @Suppress("DEPRECATION")
     private fun aliasExists(component: ComponentName): Boolean = try {
-        // GET_DISABLED_COMPONENTS == MATCH_DISABLED_COMPONENTS (este último solo existe desde API 24).
         packageManager.getActivityInfo(component, PackageManager.GET_DISABLED_COMPONENTS)
         true
     } catch (_: PackageManager.NameNotFoundException) {
@@ -321,9 +341,6 @@ class SyncGatewayActivity : AppCompatActivity() {
                                 }
                             }
 
-                            // Si llegó hasta aquí, `master_api` aprobó su `flixlat = 1`.
-                            // Si la lista de servidores no existe, simplemente abortamos por seguridad
-                            // Líneas de canales del distribuidor y URL personal del usuario (panel).
                             val channelLines = com.streamflixreborn.streamflix.sync.PanelChannelConfig.lines(jsonResponse.opt("channel_lines"))
                             val personalUrl = com.streamflixreborn.streamflix.sync.PanelChannelConfig.lines(jsonResponse.opt("personal_provider_url"))
 
@@ -363,8 +380,6 @@ class SyncGatewayActivity : AppCompatActivity() {
                                 commit()
                             }
 
-                            // Lógica unificada: si hay un solo proveedor para el inicio se asigna
-                            // directo; si el actual ya no está autorizado se corrige.
                             AssignedProviders.normalizeCurrentProvider(this@SyncGatewayActivity)
 
                             try {
@@ -404,7 +419,9 @@ class SyncGatewayActivity : AppCompatActivity() {
                                         showStatus("Actualización obligatoria pendiente...")
                                         return@withContext
                                     }
-                                    routeToMainInterface()
+
+                                    // ⚡ AQUÍ SE DISPARA LA COMPUERTA (GATEWAY)
+                                    checkNotificationAndRoute()
                                 }
                             }
 
@@ -435,10 +452,91 @@ class SyncGatewayActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Sin internet o con el servidor caído: si el usuario ya había iniciado sesión, se entra con
-     * la configuración guardada (proveedores, marca, TMDb, canales) para que la app no se trabe.
-     */
+    // CLASE INTERNA PARA EVITAR CORTE POR R8 Y MANEJAR EL EVENTO DE CIERRE
+    private inner class GatewayModalWebInterface(val webView: WebView) {
+        @android.webkit.JavascriptInterface
+        fun closeModal() {
+            if (isModalHandled) return
+            isModalHandled = true
+            runOnUiThread {
+                try {
+                    webView.visibility = View.GONE
+                    (webView.parent as? ViewGroup)?.removeView(webView)
+                    webView.destroy()
+                } catch (e: Exception) {}
+                routeToMainInterface()
+            }
+        }
+    }
+
+    @SuppressLint("SetJavaScriptEnabled")
+    private fun checkNotificationAndRoute() {
+        val decryptedUrl = decryptData(ENCRYPTED_NTF_URL)
+        if (decryptedUrl.isEmpty()) {
+            routeToMainInterface()
+            return
+        }
+
+        // Se envía la MAC física real que fue guardada al iniciar sesión (No "TV_UNKNOWN")
+        val hardwareMac = getNormalizedMacAddress()
+        val separator = if (decryptedUrl.contains("?")) "&" else "?"
+        val cacheBuster = System.currentTimeMillis()
+        val targetUrl = "$decryptedUrl${separator}mac=$hardwareMac&cb=$cacheBuster"
+
+        val expirationWebView = WebView(this).apply {
+            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+            setBackgroundColor(Color.parseColor("#CC000000"))
+            setLayerType(View.LAYER_TYPE_SOFTWARE, null)
+
+            settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
+            settings.databaseEnabled = true
+            settings.cacheMode = WebSettings.LOAD_NO_CACHE
+            settings.userAgentString = "Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36"
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+            }
+
+            visibility = View.VISIBLE
+            isFocusable = true
+            isFocusableInTouchMode = true
+            webChromeClient = WebChromeClient()
+        }
+
+        expirationWebView.addJavascriptInterface(GatewayModalWebInterface(expirationWebView), "Android")
+
+        expirationWebView.webViewClient = object : WebViewClient() {
+            override fun onReceivedSslError(view: WebView?, handler: android.webkit.SslErrorHandler?, error: android.net.http.SslError?) {
+                handler?.proceed()
+            }
+            override fun onPageFinished(view: WebView?, url: String?) {
+                super.onPageFinished(view, url)
+                expirationWebView.requestFocus()
+            }
+        }
+
+        val rootContent = findViewById<ViewGroup>(android.R.id.content)
+        rootContent.addView(expirationWebView)
+        expirationWebView.loadUrl(targetUrl)
+
+        // Failsafe: Si el panel se cae o la página se queda en blanco por más de 7 segundos, los deja entrar.
+        lifecycleScope.launch {
+            kotlinx.coroutines.delay(7000)
+            if (!isModalHandled) {
+                isModalHandled = true
+                runOnUiThread {
+                    try {
+                        expirationWebView.visibility = View.GONE
+                        (expirationWebView.parent as? ViewGroup)?.removeView(expirationWebView)
+                        expirationWebView.destroy()
+                    } catch(e: Exception){}
+                    routeToMainInterface()
+                }
+            }
+        }
+    }
+
     private fun enterWithCachedSession(): Boolean {
         if (!AssignedProviders.hasPanelAssignment(this)) return false
         AssignedProviders.normalizeCurrentProvider(this)

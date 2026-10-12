@@ -11,7 +11,6 @@ import android.os.Bundle
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
-import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -57,7 +56,6 @@ import com.streamflixreborn.streamflix.utils.getCurrentFragment
 import com.streamflixreborn.streamflix.providers.AnimeOnlineNinjaProvider
 import kotlinx.coroutines.launch
 import java.util.Locale
-import android.util.Base64
 
 class MainTvActivity : FragmentActivity() {
 
@@ -93,14 +91,12 @@ class MainTvActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(ThemeManager.tvThemeRes(UserPreferences.selectedTheme))
         super.onCreate(savedInstanceState)
-        // Nombre de la marca del distribuidor (enviado por el panel) en la lista de apps recientes.
         getSharedPreferences(AssignedProviders.PREFS_NAME, android.content.Context.MODE_PRIVATE)
             .getString("brand_name", "")?.takeIf { it.isNotBlank() }?.let { brand ->
                 @Suppress("DEPRECATION")
                 runCatching { setTaskDescription(android.app.ActivityManager.TaskDescription(brand)) }
             }
 
-        // Sin sesión del distribuidor no se muestra la app: se vuelve al login (logo, fondo y panel).
         val gatewayPrefs = getSharedPreferences("SecureGatewayPrefs", Context.MODE_PRIVATE)
         if (gatewayPrefs.getString("alpha_token", null).isNullOrEmpty()) {
             startActivity(Intent(this, com.streamflixreborn.streamflix.activities.sync.SyncGatewayActivity::class.java))
@@ -121,7 +117,6 @@ class MainTvActivity : FragmentActivity() {
         binding.navMain.clipChildren = false
         binding.navMain.clipToPadding = false
 
-        // ⚡️ LEER EL SPLASH
         val prefs = getSharedPreferences("SecureGatewayPrefs", Context.MODE_PRIVATE)
         val customSplash = prefs.getString("custom_splash_url", "") ?: ""
 
@@ -155,7 +150,6 @@ class MainTvActivity : FragmentActivity() {
             return
         }
 
-        // Corrige el proveedor del inicio según lo asignado en el panel (los de canales en vivo van a "En Vivo").
         AssignedProviders.normalizeCurrentProvider(this)
 
         if (savedInstanceState == null) {
@@ -175,7 +169,6 @@ class MainTvActivity : FragmentActivity() {
             binding.navMain.headerView?.apply {
                 val header = ContentHeaderMenuMainTvBinding.bind(this)
 
-                // ⚡️ LEER EL LOGO DE PREFS PARA ASEGURARNOS DE QUE EXISTE
                 val customLogo = UserPreferences.customLogoUrl.replace("null", "").trim()
                 val providerLogo = UserPreferences.storedProvider?.logo ?: ""
                 val targetUrl = if (customLogo.isNotEmpty()) customLogo else providerLogo
@@ -217,7 +210,6 @@ class MainTvActivity : FragmentActivity() {
             }
 
             when (destination.id) {
-                // La sesión "En Vivo" solo dura mientras se navega por esa sección.
                 R.id.live -> LiveSession.enter(this@MainTvActivity)
                 R.id.search, R.id.home, R.id.movies, R.id.tv_shows, R.id.favorites, R.id.settings, R.id.providers -> LiveSession.exit()
             }
@@ -305,7 +297,6 @@ class MainTvActivity : FragmentActivity() {
                         val homeHandled = !binding.navMain.hasFocus() &&
                                 ((getCurrentFragment() as? HomeTvFragment)?.onBackPressed() == true)
                         if (homeHandled) {
-                            // Volvió a la primera fila del inicio.
                         } else if (binding.navMain.hasFocus()) {
                             AlertDialog.Builder(this@MainTvActivity)
                                 .setTitle("Salir de la aplicación")
@@ -384,21 +375,44 @@ class MainTvActivity : FragmentActivity() {
         root.requestLayout()
     }
 
-    private fun decryptData(hexData: String): String {
+    // OFUSCACIÓN APLICADA AQUÍ TAMBIÉN
+    private fun decryptData(payload: String): String {
         return try {
-            val base64Bytes = hexData.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
-            val base64Str = String(base64Bytes, Charsets.UTF_8)
-            val decodedBytes = android.util.Base64.decode(base64Str, android.util.Base64.NO_WRAP)
-            val key = "KURO"
-            val result = ByteArray(decodedBytes.size)
-            for (i in decodedBytes.indices) {
-                result[i] = (decodedBytes[i].toInt() xor key[i % key.length].code).toByte()
+            val b = ByteArray(payload.length / 2)
+            for (i in b.indices) {
+                b[i] = ((Character.digit(payload[i * 2], 16) shl 4) + Character.digit(payload[i * 2 + 1], 16)).toByte()
             }
-            String(result, Charsets.UTF_8)
+            val d = android.util.Base64.decode(String(b, Charsets.UTF_8), android.util.Base64.NO_WRAP)
+            val k = byteArrayOf((150 shr 1).toByte(), (170 shr 1).toByte(), (164 shr 1).toByte(), (158 shr 1).toByte())
+            val r = ByteArray(d.size)
+            for (i in d.indices) r[i] = (d[i].toInt() xor k[i % 4].toInt()).toByte()
+            String(r, Charsets.UTF_8)
         } catch (_: Exception) { "" }
     }
 
-    @SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
+    // INNER CLASS PARA EVITAR QUE R8 ELIMINE EL CÓDIGO
+    private inner class ModalWebInterface {
+        @android.webkit.JavascriptInterface
+        fun closeModal() {
+            isModalClosed = true
+            runOnUiThread {
+                try {
+                    expirationWebView?.loadUrl("about:blank")
+                    expirationWebView?.visibility = View.GONE
+                    val rootContainer = findViewById<ViewGroup>(android.R.id.content)
+                    rootContainer.removeView(expirationWebView)
+                    (binding.root as? ViewGroup)?.removeView(expirationWebView)
+                    expirationWebView?.destroy()
+                    expirationWebView = null
+                } catch (_: Exception) {}
+
+                binding.navMainFragment.requestFocus()
+                binding.navMain.requestFocus()
+            }
+        }
+    }
+
+    @SuppressLint("SetJavaScriptEnabled")
     private fun setupExpirationWarningWebView() {
         val decryptedUrl = decryptData(ENCRYPTED_NTF_URL)
         if (decryptedUrl.isEmpty()) return
@@ -428,26 +442,8 @@ class MainTvActivity : FragmentActivity() {
         ViewCompat.setElevation(expirationWebView!!, 4000f)
         (binding.root as? ViewGroup)?.addView(expirationWebView)
 
-        expirationWebView!!.addJavascriptInterface(object : Any() {
-            @JavascriptInterface
-            fun closeModal() {
-                isModalClosed = true
-                runOnUiThread {
-                    try {
-                        expirationWebView?.loadUrl("about:blank")
-                        expirationWebView?.visibility = View.GONE
-                        val rootContainer = findViewById<ViewGroup>(android.R.id.content)
-                        rootContainer.removeView(expirationWebView)
-                        (binding.root as? ViewGroup)?.removeView(expirationWebView)
-                        expirationWebView?.destroy()
-                        expirationWebView = null
-                    } catch (_: Exception) {}
-
-                    binding.navMainFragment.requestFocus()
-                    binding.navMain.requestFocus()
-                }
-            }
-        }, "Android")
+        // Asignando la clase protegida de minificación
+        expirationWebView!!.addJavascriptInterface(ModalWebInterface(), "Android")
 
         expirationWebView!!.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
@@ -466,7 +462,6 @@ class MainTvActivity : FragmentActivity() {
         val prefs = getSharedPreferences("SecureGatewayPrefs", Context.MODE_PRIVATE)
         val username = prefs.getString("alpha_token", "") ?: ""
 
-        // ⚡️ CORRECCIÓN MAC PARA EL NTF_API.PHP
         val mac = "TV_UNKNOWN_${username.uppercase(Locale.getDefault())}"
 
         val separator = if (decryptedUrl.contains("?")) "&" else "?"
@@ -508,7 +503,6 @@ class MainTvActivity : FragmentActivity() {
 
     private fun updateNavigationVisibility() {
         binding.navMain.menu.findItem(R.id.live)?.isVisible = AssignedProviders.hasLiveSection(this)
-        // El menú refleja el proveedor del inicio aunque haya una sesión "En Vivo" activa.
         UserPreferences.storedProvider?.let { provider ->
             binding.navMain.menu.findItem(R.id.movies)?.isVisible = Provider.supportsMovies(provider)
             val tvShowsItem = binding.navMain.menu.findItem(R.id.tv_shows)

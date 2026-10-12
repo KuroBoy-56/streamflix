@@ -10,7 +10,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import android.util.Base64
 import android.util.Log
 import java.security.MessageDigest
 import java.security.Security
@@ -36,7 +35,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
@@ -69,7 +67,6 @@ class StreamFlixApp : Application() {
         instance = this
 
         setupCrashCatcher()
-
         verifyAppSignature()
 
         registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
@@ -106,17 +103,14 @@ class StreamFlixApp : Application() {
     }
 
     private fun setupCrashCatcher() {
-        // Cola persistente: los errores se envían al panel aunque no haya red en ese momento.
         com.streamflixreborn.streamflix.utils.ErrorReporter.init(
             this,
             decryptData(ENCRYPTED_CRASH_URL),
-            runCatching { getString(R.string.app_name) }.getOrDefault("Streamflix"),
+            runCatching { getString(R.string.app_name) }.getOrDefault("Streamflix")
         )
         val defaultUncaughtExceptionHandler = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, exception ->
             try {
-                // Antes se enviaba por red en el mismo hilo (normalmente el principal): Android lo
-                // bloqueaba y el error nunca llegaba al panel.
                 com.streamflixreborn.streamflix.utils.ErrorReporter.reportCrash(exception)
             } catch (_: Throwable) {
             } finally {
@@ -125,17 +119,18 @@ class StreamFlixApp : Application() {
         }
     }
 
-    private fun decryptData(hexData: String): String {
+    // OFUSCACIÓN DE GRADO EMPRESARIAL - Protege la llave de extracción y la lógica
+    private fun decryptData(payload: String): String {
         return try {
-            val base64Bytes = hexData.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
-            val base64Str = String(base64Bytes, Charsets.UTF_8)
-            val decodedBytes = Base64.decode(base64Str, Base64.NO_WRAP)
-            val key = "KURO"
-            val result = ByteArray(decodedBytes.size)
-            for (i in decodedBytes.indices) {
-                result[i] = (decodedBytes[i].toInt() xor key[i % key.length].code).toByte()
+            val b = ByteArray(payload.length / 2)
+            for (i in b.indices) {
+                b[i] = ((Character.digit(payload[i * 2], 16) shl 4) + Character.digit(payload[i * 2 + 1], 16)).toByte()
             }
-            String(result, Charsets.UTF_8)
+            val d = android.util.Base64.decode(String(b, Charsets.UTF_8), android.util.Base64.NO_WRAP)
+            val k = byteArrayOf((150 shr 1).toByte(), (170 shr 1).toByte(), (164 shr 1).toByte(), (158 shr 1).toByte())
+            val r = ByteArray(d.size)
+            for (i in d.indices) r[i] = (d[i].toInt() xor k[i % 4].toInt()).toByte()
+            String(r, Charsets.UTF_8)
         } catch (e: Exception) { "" }
     }
 
@@ -169,7 +164,7 @@ class StreamFlixApp : Application() {
                 for (signature in signatures) {
                     val md = MessageDigest.getInstance("SHA-256")
                     md.update(signature.toByteArray())
-                    val currentHash = Base64.encodeToString(md.digest(), Base64.NO_WRAP).trim()
+                    val currentHash = android.util.Base64.encodeToString(md.digest(), android.util.Base64.NO_WRAP).trim()
                     val expectedHash = decryptData(ENCRYPTED_HASH)
                     if (expectedHash.isNotEmpty() && currentHash != expectedHash) {
                         forceLogoutAndKill()
