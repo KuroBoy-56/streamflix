@@ -196,10 +196,11 @@ class MainTvActivity : FragmentActivity() {
                 header.tvNavigationHeaderSubtitle.visibility = View.GONE
                 setBackgroundColor(Color.TRANSPARENT)
 
-                if (AssignedProviders.canSwitchHomeProvider(this@MainTvActivity)) {
+                // Logo: abre "¿Quién está viendo?" para cambiar de perfil.
+                if (com.streamflixreborn.streamflix.profiles.ProfileManager.limit(this@MainTvActivity) >= 2) {
                     isFocusable = true
                     isClickable = true
-                    setOnClickListener { navController.navigate(R.id.providers) }
+                    setOnClickListener { com.streamflixreborn.streamflix.profiles.ProfilesActivity.start(this@MainTvActivity, fromApp = true) }
                 } else {
                     isFocusable = false
                     isClickable = false

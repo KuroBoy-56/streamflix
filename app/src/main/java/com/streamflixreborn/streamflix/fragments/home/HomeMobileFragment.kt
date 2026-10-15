@@ -149,9 +149,10 @@ class HomeMobileFragment : Fragment() {
                 .fitCenter()
                 .into(this)
 
-            if (AssignedProviders.canSwitchHomeProvider(requireContext())) {
+            // Logo: abre "¿Quién está viendo?" para cambiar de perfil.
+            if (com.streamflixreborn.streamflix.profiles.ProfileManager.limit(requireContext()) >= 2) {
                 setOnClickListener {
-                    findNavController().navigate(R.id.providers)
+                    com.streamflixreborn.streamflix.profiles.ProfilesActivity.start(requireContext(), fromApp = true)
                 }
             } else {
                 setOnClickListener(null)

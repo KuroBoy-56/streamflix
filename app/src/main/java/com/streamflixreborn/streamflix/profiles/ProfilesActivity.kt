@@ -51,12 +51,14 @@ class ProfilesActivity : AppCompatActivity() {
 
     companion object {
         /** Abre la pantalla de perfiles; al elegir uno se entra a la app. */
-        fun start(context: Context) {
-            context.startActivity(
-                Intent(context, ProfilesActivity::class.java)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-            )
+        /** [fromApp]: abierto desde el logo del inicio; Atrás vuelve a la app en vez de cerrarla. */
+        fun start(context: Context, fromApp: Boolean = false) {
+            val intent = Intent(context, ProfilesActivity::class.java).putExtra(EXTRA_FROM_APP, fromApp)
+            if (!fromApp) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            context.startActivity(intent)
         }
+
+        private const val EXTRA_FROM_APP = "from_app"
 
         fun openMain(context: Context) {
             val useTv = when (BuildConfig.APP_LAYOUT) {
@@ -92,7 +94,9 @@ class ProfilesActivity : AppCompatActivity() {
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (manageMode) setManageMode(false) else finishAffinity()
+                if (manageMode) setManageMode(false)
+                else if (intent.getBooleanExtra(EXTRA_FROM_APP, false)) finish()
+                else finishAffinity()
             }
         })
 

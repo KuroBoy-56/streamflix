@@ -574,4 +574,5 @@
     <string name="update_required_message">Hay una nueva versión obligatoria disponible.</string>
     <string name="update_download">Descargar</string>
     <string name="settings_category_application">Aplicación</string>
+    <string name="settings_panel_note_title">Aviso</string>
 </resources>

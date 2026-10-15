@@ -438,7 +438,7 @@ class SettingsMobileFragment : PreferenceFragmentCompat() {
             }
         }
 
-        com.streamflixreborn.streamflix.utils.PanelBranding.bindProfilePreference(this)
+        com.streamflixreborn.streamflix.utils.PanelBranding.bindNotePreference(this)
 
         findPreference<Preference>("p_settings_about")?.apply {
             val palette = ThemeManager.palette(UserPreferences.selectedTheme)
