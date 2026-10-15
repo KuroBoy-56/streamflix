@@ -61,8 +61,24 @@ object LiveSession {
         return runCatching { provider.groupShows(category.name) }.getOrNull()?.ifEmpty { null } ?: shown
     }
 
+    // Categoría y canales completos del último cambio de canal en el reproductor: las filas de
+    // "En Vivo" muestran solo los primeros canales y el elegido puede no estar entre ellos.
+    @Volatile private var lastCategory: Category? = null
+    @Volatile private var lastChannels: List<TvShow> = emptyList()
+
+    fun rememberSelection(category: Category, channels: List<TvShow>) {
+        lastCategory = category
+        lastChannels = channels
+    }
+
     fun categoryOf(provider: Provider?, channelId: String): Category? =
-        categories(provider).firstOrNull { c -> c.list.any { (it as? TvShow)?.id == channelId } }
+        lastCategory?.takeIf { provider?.name == categoriesProvider && lastChannels.any { it.id == channelId } }
+            ?: categories(provider).firstOrNull { c -> c.list.any { (it as? TvShow)?.id == channelId } }
+
+    /** Canales ya conocidos de la categoría (la lista completa si se eligió desde el reproductor). */
+    fun knownChannels(category: Category): List<TvShow> =
+        if (lastCategory?.name == category.name && lastChannels.isNotEmpty()) lastChannels
+        else category.list.filterIsInstance<TvShow>()
 
     /** Argumentos del reproductor para un canal (igual que al abrirlo desde la lista). */
     fun playerArgs(show: TvShow): Bundle = Bundle().apply {

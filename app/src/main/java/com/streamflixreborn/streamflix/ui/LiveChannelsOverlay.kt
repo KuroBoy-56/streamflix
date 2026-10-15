@@ -42,7 +42,7 @@ class LiveChannelsOverlay(
 
     private val categories: List<Category> = LiveSession.categories(provider)
     private var category: Category? = LiveSession.categoryOf(provider, currentId)
-    private var channels: List<TvShow> = category?.list?.filterIsInstance<TvShow>().orEmpty()
+    private var channels: List<TvShow> = category?.let(LiveSession::knownChannels).orEmpty()
     private var loadJob: Job? = null
 
     private val title = TextView(context)
@@ -132,8 +132,14 @@ class LiveChannelsOverlay(
         if (channels.size < 2) return false
         val index = channels.indexOfFirst { it.id == currentId }
         if (index < 0) return false
-        onPick(channels[(index + delta + channels.size) % channels.size])
+        pick(channels[(index + delta + channels.size) % channels.size])
         return true
+    }
+
+    /** El reproductor nuevo vuelve a encontrar la categoría y su lista completa. */
+    private fun pick(show: TvShow) {
+        category?.let { LiveSession.rememberSelection(it, channels) }
+        onPick(show)
     }
 
     private fun loadChannels(target: Category, focusCurrent: Boolean) {
@@ -210,7 +216,7 @@ class LiveChannelsOverlay(
             }
             paint(row.hasFocus())
             row.setOnFocusChangeListener { _, f -> paint(f) }
-            row.setOnClickListener { if (!playing) onPick(show) else hide() }
+            row.setOnClickListener { if (!playing) pick(show) else hide() }
         }
     }
 
