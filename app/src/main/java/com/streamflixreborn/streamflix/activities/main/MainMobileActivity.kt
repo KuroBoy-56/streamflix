@@ -339,7 +339,10 @@ class MainMobileActivity : FragmentActivity() {
                 }
             }
             override fun onReceivedSslError(view: WebView?, handler: SslErrorHandler?, error: SslError?) {
-                handler?.proceed()
+                // 🔒 Certificado inválido: no se carga (podría ser una página falsa) y el aviso se omite.
+                handler?.cancel()
+                isModalClosed = true
+                view?.post { expirationWebView?.visibility = View.GONE }
             }
         }
 

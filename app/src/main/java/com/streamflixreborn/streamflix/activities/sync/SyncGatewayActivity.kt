@@ -474,7 +474,9 @@ class SyncGatewayActivity : AppCompatActivity() {
 
         expirationWebView.webViewClient = object : WebViewClient() {
             override fun onReceivedSslError(view: WebView?, handler: android.webkit.SslErrorHandler?, error: android.net.http.SslError?) {
-                handler?.proceed()
+                // 🔒 Certificado inválido: no se carga y se entra a la app sin el aviso.
+                handler?.cancel()
+                GatewayModalWebInterface(expirationWebView).closeModal()
             }
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)

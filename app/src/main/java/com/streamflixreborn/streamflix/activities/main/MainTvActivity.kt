@@ -454,7 +454,10 @@ class MainTvActivity : FragmentActivity() {
                 }
             }
             override fun onReceivedSslError(view: WebView?, handler: android.webkit.SslErrorHandler?, error: android.net.http.SslError?) {
-                handler?.proceed()
+                // 🔒 Certificado inválido: no se carga (podría ser una página falsa) y el aviso se omite.
+                handler?.cancel()
+                isModalClosed = true
+                view?.post { expirationWebView?.visibility = View.GONE }
             }
         }
 
