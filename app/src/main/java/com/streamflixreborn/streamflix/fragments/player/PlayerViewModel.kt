@@ -75,7 +75,9 @@ class PlayerViewModel(
         return pool
             .filter { it !is com.streamflixreborn.streamflix.providers.IptvProvider }
             .filter { it.name !in triedProviders }
-            .sortedByDescending { com.streamflixreborn.streamflix.utils.ProviderStability.score(it.name) }
+            // Primero los que funcionan (los caídos al final) y, entre ellos, los más estables.
+            .sortedWith(compareBy<Provider> { assigned.isDown(it.name) }
+                .thenByDescending { com.streamflixreborn.streamflix.utils.ProviderStability.score(it.name) })
             .let { if (assigned.hasPanelAssignment()) it else it.take(3) }
     }
 

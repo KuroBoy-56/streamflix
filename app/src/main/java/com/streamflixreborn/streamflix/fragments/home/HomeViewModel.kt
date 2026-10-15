@@ -427,6 +427,8 @@ class HomeViewModel(database: AppDatabase) : ViewModel() {
             // Secciones TMDb ya calculadas (de la caché) para que no parpadeen al refrescar.
             val previousSections = cachedCategories.orEmpty().filter { it.name in titles.all }
             val categories = provider.getHome()
+            if (categories.none { it.list.isNotEmpty() }) throw Exception("Inicio vacío")
+            com.streamflixreborn.streamflix.utils.AssignedProviders.onHomeProviderLoaded(provider, appContext)
             val withPrevious = withTmdbSections(categories, previousSections)
             HomeCacheStore.write(appContext, provider, withPrevious)
             _state.emit(State.SuccessLoading(withPrevious))
@@ -457,6 +459,8 @@ class HomeViewModel(database: AppDatabase) : ViewModel() {
             }
         } catch (e: Exception) {
             Log.e("HomeViewModel", "getHome: ", e)
+            // Proveedor caído: el inicio se dibuja con el siguiente proveedor permitido.
+            if (com.streamflixreborn.streamflix.utils.AssignedProviders.onHomeProviderFailed(provider, "Inicio", e, appContext)) return@launch
             if (cachedCategories.isNullOrEmpty()) {
                 com.streamflixreborn.streamflix.utils.ErrorReporter.report("HomeViewModel.FailedLoading", e.message, e)
                 _state.emit(State.FailedLoading(e))

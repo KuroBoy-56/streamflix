@@ -138,6 +138,10 @@ class MoviesViewModel(database: AppDatabase) : ViewModel() {
             }
         } catch (e: Exception) {
             Log.e("MoviesViewModel", "getMovies: ", e)
+            // Proveedor caído: la sección se dibuja con el siguiente proveedor permitido.
+            UserPreferences.currentProvider?.let {
+                if (com.streamflixreborn.streamflix.utils.AssignedProviders.onHomeProviderFailed(it, "Películas", e)) return@launch
+            }
             com.streamflixreborn.streamflix.utils.ErrorReporter.report("MoviesViewModel.FailedLoading", e.message, e)
             _state.emit(State.FailedLoading(e))
         }

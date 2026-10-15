@@ -42,13 +42,15 @@ object ErrorReporter {
     }
 
     /** Error no fatal. */
-    fun report(type: String, message: String?, error: Throwable? = null) {
+    fun report(type: String, message: String?, error: Throwable? = null, provider: String? = null) {
         val key = "$type|${message?.take(120)}|${error?.javaClass?.name}"
         val now = System.currentTimeMillis()
         val last = lastSent[key]
         if (last != null && now - last < THROTTLE_MS) return
         lastSent[key] = now
-        enqueue(build(type, message ?: error?.message ?: "Sin mensaje", error))
+        enqueue(build(type, message ?: error?.message ?: "Sin mensaje", error).apply {
+            if (provider != null) put("proveedor", provider)
+        })
         flushAsync()
     }
 

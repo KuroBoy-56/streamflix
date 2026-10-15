@@ -140,6 +140,10 @@ class TvShowsViewModel(database: AppDatabase) : ViewModel() {
             }
         } catch (e: Exception) {
             Log.e("TvShowsViewModel", "getTvShows: ", e)
+            // Proveedor caído: la sección se dibuja con el siguiente proveedor permitido.
+            UserPreferences.currentProvider?.let {
+                if (com.streamflixreborn.streamflix.utils.AssignedProviders.onHomeProviderFailed(it, "Series", e)) return@launch
+            }
             com.streamflixreborn.streamflix.utils.ErrorReporter.report("TvShowsViewModel.FailedLoading", e.message, e)
             _state.emit(State.FailedLoading(e))
         }

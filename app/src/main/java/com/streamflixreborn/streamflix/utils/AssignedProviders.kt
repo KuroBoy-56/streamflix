@@ -115,13 +115,66 @@ object AssignedProviders {
 
     const val KEY_DEFAULT_PROVIDER = "default_provider"
 
-    /** Proveedor por defecto elegido en el panel al crear el usuario. */
+    /**
+     * Proveedor por defecto elegido en el panel al crear el usuario. Si está caído (no cargó el
+     * inicio hace poco), el siguiente permitido que funcione.
+     */
     fun defaultProvider(context: Context? = null): Provider? {
         val home = homeProviders(context)
         val name = context(context).getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .getString(KEY_DEFAULT_PROVIDER, "").orEmpty()
-        return resolve(listOf(name)).firstOrNull { p -> home.any { it.name == p.name } }
+        val preferred = resolve(listOf(name)).firstOrNull { p -> home.any { it.name == p.name } }
             ?: home.firstOrNull()
+        if (preferred == null || !isDown(preferred.name, context)) return preferred
+        return home.firstOrNull { !isDown(it.name, context) } ?: preferred
+    }
+
+    // ---------------------------------------------------------------------------------------
+    // Proveedores caídos
+    // ---------------------------------------------------------------------------------------
+
+    private const val KEY_DOWN = "providers_down"
+    /** Tras este tiempo se vuelve a probar el proveedor por defecto. */
+    private const val DOWN_TTL_MS = 3 * 60 * 60 * 1000L
+
+    private fun downMap(context: Context?): org.json.JSONObject = runCatching {
+        org.json.JSONObject(context(context).getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getString(KEY_DOWN, "{}").orEmpty())
+    }.getOrDefault(org.json.JSONObject())
+
+    fun isDown(name: String, context: Context? = null): Boolean =
+        System.currentTimeMillis() - downMap(context).optLong(name, 0L) < DOWN_TTL_MS
+
+    private fun setDown(name: String, down: Boolean, context: Context?) {
+        val map = downMap(context)
+        if (down) map.put(name, System.currentTimeMillis()) else map.remove(name)
+        context(context).getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putString(KEY_DOWN, map.toString()).apply()
+    }
+
+    /** Nombre con el que el panel conoce al proveedor (para marcarlo en rojo allí). */
+    fun panelName(provider: Provider, context: Context? = null): String =
+        names(context).firstOrNull { n -> resolve(listOf(n)).any { it.name == provider.name } } ?: provider.name
+
+    /**
+     * El proveedor del inicio no cargó (inicio, películas o series): se reporta al panel, se
+     * marca caído por unas horas y el inicio pasa al siguiente proveedor permitido.
+     * Devuelve true si se cambió de proveedor (la pantalla se recarga sola).
+     */
+    fun onHomeProviderFailed(provider: Provider, where: String, error: Throwable?, context: Context? = null): Boolean {
+        if (provider is IptvProvider || UserPreferences.sessionProviderOverride != null) return false
+        if (UserPreferences.currentProvider?.name != provider.name) return false
+        val panel = panelName(provider, context)
+        ErrorReporter.report("Proveedor.Caido", "$panel no carga ($where): ${error?.message.orEmpty()}".take(500), error, provider = panel)
+        setDown(provider.name, true, context)
+        val next = homeProviders(context).firstOrNull { it.name != provider.name && !isDown(it.name, context) } ?: return false
+        UserPreferences.currentProvider = next
+        return true
+    }
+
+    /** El proveedor volvió a cargar: deja de estar en rojo en el panel. */
+    fun onHomeProviderLoaded(provider: Provider, context: Context? = null) {
+        if (provider is IptvProvider || !downMap(context).has(provider.name)) return
+        setDown(provider.name, false, context)
+        ErrorReporter.report("Proveedor.OK", "${panelName(provider, context)} volvió a cargar", provider = panelName(provider, context))
     }
 
     /** Proveedor en vivo activo para la sección "En Vivo". */
