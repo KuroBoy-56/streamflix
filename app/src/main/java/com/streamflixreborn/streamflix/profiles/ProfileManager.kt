@@ -85,10 +85,19 @@ object ProfileManager {
      * El equipo guarda historial y favoritos de una sola cuenta. Si entra otra cuenta, se
      * borran los datos locales de la anterior (ya están en su nube) para no subirlos a la nueva.
      */
-    fun claimDevice(context: Context, username: String) {
+    suspend fun claimDevice(context: Context, username: String, freshLogin: Boolean) {
         val owners = context.applicationContext.getSharedPreferences("LocalDeviceOwner", Context.MODE_PRIVATE)
         val previous = owners.getString("owner", "").orEmpty()
-        if (previous.isNotEmpty() && !previous.equals(username, ignoreCase = true)) {
+        val sameAccount = previous.equals(username, ignoreCase = true)
+        // La nube manda: al iniciar sesión en un equipo se borra lo local y se descarga la nube.
+        val replace = when {
+            previous.isNotEmpty() && !sameAccount -> true          // datos de otra cuenta
+            !freshLogin -> false                                    // reapertura con la sesión guardada
+            previous.isEmpty() -> true                              // datos locales de origen desconocido
+            // Misma cuenta: primero se sube lo pendiente; sin internet se conserva lo local.
+            else -> kotlinx.coroutines.withTimeoutOrNull(10_000) { runCatching { CloudSyncManager.syncNow(context) }.getOrDefault(false) } == true
+        }
+        if (replace) {
             wipeLocalUserData(context)
             resetToMain(context)
         }

@@ -362,11 +362,7 @@ class SyncGatewayActivity : AppCompatActivity() {
                                 commit()
                             }
                             com.streamflixreborn.streamflix.profiles.ProfileManager.saveLimit(this@SyncGatewayActivity, jsonResponse.optInt("profile_limit", 1))
-                            // Otra cuenta en este equipo: los datos locales del usuario anterior no se mezclan.
-                            com.streamflixreborn.streamflix.profiles.ProfileManager.claimDevice(
-                                this@SyncGatewayActivity,
-                                jsonResponse.optJSONObject("user_info")?.optString("username").orEmpty().ifEmpty { alpha },
-                            )
+                            val accountName = jsonResponse.optJSONObject("user_info")?.optString("username").orEmpty().ifEmpty { alpha }
 
                             AssignedProviders.normalizeCurrentProvider(this@SyncGatewayActivity)
 
@@ -377,6 +373,10 @@ class SyncGatewayActivity : AppCompatActivity() {
                             saveSecureCredentials(alpha, beta)
 
                             CoroutineScope(Dispatchers.IO).launch {
+                                // Inicio de sesión en este equipo: se borra lo local y se descarga la nube.
+                                com.streamflixreborn.streamflix.profiles.ProfileManager.claimDevice(
+                                    this@SyncGatewayActivity, accountName, freshLogin = !isAutoLogin,
+                                )
                                 CloudSyncManager.initialize(this@SyncGatewayActivity)
                                 kotlinx.coroutines.delay(1800)
                                 withContext(Dispatchers.Main) {
