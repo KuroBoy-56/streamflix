@@ -413,7 +413,7 @@ abstract class PlayerSettingsView @JvmOverloads constructor(
                 Gestures,
                 KeepScreenOn,
                 ManualZoom,
-            ).filter { it != ProviderOption || ProviderOption.list.size > 1 }
+            ).filter { it != ProviderOption } // Proveedores ocultos: el cambio automático entre proveedores/líneas sigue activo.
             val listTv get() = listOf(
                 Quality,
                 Audio,
@@ -424,7 +424,7 @@ abstract class PlayerSettingsView @JvmOverloads constructor(
                 ExtraBuffering,
                 SoftwareDecoder,
                 ManualZoom,
-            ).filter { it != ProviderOption || ProviderOption.list.size > 1 }
+            ).filter { it != ProviderOption } // Proveedores ocultos: el cambio automático entre proveedores/líneas sigue activo.
         }
 
         data object ManualZoom : Settings()

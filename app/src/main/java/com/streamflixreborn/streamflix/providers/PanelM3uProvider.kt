@@ -56,6 +56,8 @@ abstract class PanelM3uProvider(
         .build()
 
     @Volatile private var cache: List<Channel>? = null
+    /** Mismo canal en otras líneas/listas (URLs distintas): respaldo si una no funciona. */
+    @Volatile private var alternates: Map<String, List<Channel>> = emptyMap()
     @Volatile private var cacheKey: String = ""
     @Volatile private var cacheTime = 0L
 
@@ -83,6 +85,12 @@ abstract class PanelM3uProvider(
         }
         val filtered = filter(loaded)
         if (filtered.isNotEmpty() || cache == null || key != cacheKey) {
+            alternates = loaded
+                .filter { it.url.startsWith("http", true) && it.name.isNotBlank() }
+                .filterNot { ch -> ADULT.containsMatchIn(normalize(ch.name)) || ADULT.containsMatchIn(normalize(ch.group)) }
+                .distinctBy { it.url }
+                .groupBy { channelKey(it.name) }
+                .filter { (key, list) -> key.isNotEmpty() && list.size > 1 }
             cache = filtered
             cacheKey = key
             cacheTime = now
@@ -191,6 +199,9 @@ abstract class PanelM3uProvider(
         return all.filter { normalize(it.name).contains(q) }.take(100).map { it.toShow() }
     }
 
+    /** Todos los canales de una categoría (para cambiar de canal desde el reproductor). */
+    suspend fun groupShows(group: String): List<TvShow> = channels().filter { it.group == group }.map { it.toShow() }
+
     override suspend fun getGenre(id: String, page: Int): Genre {
         val list = channels().filter { it.group == id }
         return Genre(id = id, name = id, shows = list.drop((page - 1) * PAGE).take(PAGE).map { it.toShow() })
@@ -214,8 +225,22 @@ abstract class PanelM3uProvider(
     override suspend fun getEpisodesBySeason(seasonId: String): List<Episode> =
         listOf(Episode(id = seasonId, number = 1, title = "Ver en directo"))
 
-    override suspend fun getServers(id: String, videoType: Video.Type): List<Video.Server> =
-        listOf(Video.Server(id = id, name = name))
+    /**
+     * La línea elegida primero y luego el mismo canal en las demás líneas: si una falla, el
+     * reproductor pasa sola a la siguiente hasta encontrar una que funcione.
+     */
+    override suspend fun getServers(id: String, videoType: Video.Type): List<Video.Server> {
+        val ch = decode(id) ?: return listOf(Video.Server(id = id, name = "1"))
+        runCatching { channels() }
+        val others = alternates[channelKey(ch.name)].orEmpty().filter { it.url != ch.url }.map(::encode)
+        return (listOf(id) + others).distinct().mapIndexed { i, serverId -> Video.Server(id = serverId, name = "${i + 1}") }
+    }
+
+    /** "ESPN HD", "ESPN (720p)", "espn" -> "espn". */
+    private fun channelKey(name: String) = normalize(name)
+        .replace(Regex("\\[.*?]|\\(.*?\\)"), " ")
+        .replace(Regex("\\b(hd|fhd|uhd|sd|4k|1080p?|720p?|480p?|backup|alt)\\b"), " ")
+        .replace(Regex("[^a-z0-9]+"), "")
 
     override suspend fun getVideo(server: Video.Server): Video {
         val ch = decode(server.id) ?: throw Exception("Canal no válido")

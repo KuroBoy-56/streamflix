@@ -27,9 +27,10 @@ object CloudAccountSettingsController {
             val isSignedIn = !alphaToken.isNullOrEmpty()
 
             status.summary = if (isSignedIn) {
-                "Sincronización Cloud Activa ($alphaToken)"
+                val profile = com.streamflixreborn.streamflix.profiles.ProfileManager.activeProfile(fragment.requireContext())?.name
+                fragment.getString(R.string.cloud_sync_active, listOfNotNull(alphaToken, profile).distinct().joinToString(" · "))
             } else {
-                "Sesión no iniciada en el Gateway"
+                fragment.getString(R.string.cloud_sync_no_session)
             }
 
             signIn?.isVisible = false
@@ -47,11 +48,11 @@ object CloudAccountSettingsController {
                     val ok = CloudSyncManager.syncNow(fragment.requireContext())
                     Toast.makeText(
                         fragment.requireContext(),
-                        if (ok) "Favoritos e historial guardados en la nube" else "No se pudo sincronizar con la nube. Revisa tu conexión.",
+                        fragment.getString(if (ok) R.string.cloud_sync_ok else R.string.cloud_sync_failed),
                         Toast.LENGTH_LONG
                     ).show()
                 } catch (e: Exception) {
-                    Toast.makeText(fragment.requireContext(), "Error al sincronizar: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(fragment.requireContext(), fragment.getString(R.string.cloud_sync_failed), Toast.LENGTH_LONG).show()
                 }
                 refresh()
             }

@@ -60,6 +60,15 @@ object HomeCacheStore {
         cacheFile(context, cacheKey).delete()
     }
 
+    /** Al eliminar un perfil (sus archivos ya se borraron). */
+    fun clearMemory() = memoryCache.clear()
+
+    /** Al cambiar de cuenta en el equipo. */
+    fun clearAll(context: Context) {
+        memoryCache.clear()
+        File(context.filesDir, "home-cache").deleteRecursively()
+    }
+
     private fun cacheFile(context: Context, cacheKey: String): File {
         val safeName = cacheKey.replace(Regex("[^a-zA-Z0-9._-]+"), "_")
         return File(context.filesDir, "home-cache/$safeName.json")
@@ -73,7 +82,7 @@ object HomeCacheStore {
                 add(baseUrlKey)
             }
             if (!section.isNullOrBlank()) add(section)
-        }.joinToString("__")
+        }.joinToString("__") + com.streamflixreborn.streamflix.profiles.ProfileManager.storageSuffix() // filas de cada perfil
     }
 
     private fun List<CachedCategory>.toCategories(): List<Category> {

@@ -156,7 +156,8 @@ class MainMobileActivity : FragmentActivity() {
             val splashParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
             ViewCompat.setElevation(splashOverlay!!, 2000f)
             rootFrame.addView(splashOverlay, splashParams)
-            Glide.with(this).load(customSplash).into(splashOverlay!!)
+            // Archivo local + memoria: el splash del panel aparece al instante y no se recarga.
+            com.streamflixreborn.streamflix.utils.BrandAssets.load(splashOverlay!!, com.streamflixreborn.streamflix.utils.BrandAssets.Kind.SPLASH)
 
             lifecycleScope.launch {
                 kotlinx.coroutines.delay(1800)
@@ -376,11 +377,11 @@ class MainMobileActivity : FragmentActivity() {
         if (isFinishing || isDestroyed) return
         dismissUpdateDialog()
         androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle("Actualización Disponible")
-            .setMessage("Nueva versión ${state.newReleases.firstOrNull()?.tagName}\n\n${state.newReleases.firstOrNull()?.body}")
+            .setTitle(R.string.update_available_title)
+            .setMessage(getString(R.string.update_available_message, state.newReleases.firstOrNull()?.tagName.orEmpty()) + "\n\n${state.newReleases.firstOrNull()?.body.orEmpty()}")
             .setCancelable(false)
-            .setPositiveButton("Actualizar") { _, _ -> viewModel.downloadUpdate(this@MainMobileActivity, state.asset) }
-            .setNegativeButton("Ignorar", null).show()
+            .setPositiveButton(R.string.update_download) { _, _ -> viewModel.downloadUpdate(this@MainMobileActivity, state.asset) }
+            .setNegativeButton(R.string.profiles_cancel, null).show()
     }
 
     private fun dismissUpdateDialog() { updateAppDialog?.takeIf { it.isShowing }?.dismiss(); updateAppDialog = null }

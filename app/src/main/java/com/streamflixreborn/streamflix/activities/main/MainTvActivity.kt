@@ -125,10 +125,8 @@ class MainTvActivity : FragmentActivity() {
             binding.ivSplashOverlay.scaleType = ImageView.ScaleType.FIT_CENTER
             binding.ivSplashOverlay.visibility = View.VISIBLE
 
-            Glide.with(this)
-                .load(customSplash)
-                .diskCacheStrategy(DiskCacheStrategy.ALL)
-                .into(binding.ivSplashOverlay)
+            // Archivo local + memoria: el splash del panel aparece al instante y no se recarga.
+            com.streamflixreborn.streamflix.utils.BrandAssets.load(binding.ivSplashOverlay, com.streamflixreborn.streamflix.utils.BrandAssets.Kind.SPLASH)
 
             binding.ivSplashOverlay.animate().alpha(0f).setDuration(800).setStartDelay(1500).start()
         }
@@ -299,10 +297,10 @@ class MainTvActivity : FragmentActivity() {
                         if (homeHandled) {
                         } else if (binding.navMain.hasFocus()) {
                             AlertDialog.Builder(this@MainTvActivity)
-                                .setTitle("Salir de la aplicación")
-                                .setMessage("¿Estás seguro que deseas salir?")
-                                .setPositiveButton("Sí, salir") { _, _ -> finish() }
-                                .setNegativeButton("Cancelar", null)
+                                .setTitle(R.string.exit_app_title)
+                                .setMessage(R.string.exit_app_message)
+                                .setPositiveButton(R.string.exit_app_confirm) { _, _ -> finish() }
+                                .setNegativeButton(R.string.profiles_cancel, null)
                                 .show()
                         } else {
                             binding.navMain.requestFocus()

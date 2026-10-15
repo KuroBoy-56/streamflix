@@ -240,10 +240,10 @@ class StreamFlixApp : Application() {
             kotlinx.coroutines.delay(1500)
             val activity = currentActivity ?: return@withContext
             AlertDialog.Builder(activity)
-                .setTitle("Actualización Requerida")
-                .setMessage("Hay una nueva versión obligatoria disponible.\n\n$notes")
+                .setTitle(R.string.update_required_title)
+                .setMessage(activity.getString(R.string.update_required_message) + "\n\n$notes")
                 .setCancelable(false)
-                .setPositiveButton("Descargar") { _, _ ->
+                .setPositiveButton(R.string.update_download) { _, _ ->
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(downloadUrl))
                     activity.startActivity(intent)
                     android.os.Process.killProcess(android.os.Process.myPid())

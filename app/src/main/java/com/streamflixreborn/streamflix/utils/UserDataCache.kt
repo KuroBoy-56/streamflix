@@ -44,9 +44,10 @@ object UserDataCache {
 
     private fun cacheKey(provider: Provider): String {
         val baseUrlKey = provider.baseUrl.trim().trimEnd('/')
+        // El sufijo del perfil separa "Continuar viendo" y favoritos de cada perfil.
         return listOf(provider.name, baseUrlKey)
             .filter { it.isNotEmpty() }
-            .joinToString("__")
+            .joinToString("__") + com.streamflixreborn.streamflix.profiles.ProfileManager.storageSuffix()
     }
 
     private fun cacheFile(context: Context, cacheKey: String): File {
@@ -107,6 +108,9 @@ object UserDataCache {
         memoryCache.remove(key)
         cacheFile(context, key).delete()
     }
+
+    /** Al eliminar un perfil (sus archivos ya se borraron). */
+    fun clearMemory() = memoryCache.clear()
 
     fun clearAll(context: Context) {
         memoryCache.clear()

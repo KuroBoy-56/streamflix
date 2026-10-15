@@ -17,6 +17,7 @@ import android.util.TypedValue
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
+import android.view.KeyEvent
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.webkit.CookieManager
@@ -259,6 +260,7 @@ class PlayerTvFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         setupProviderSwitching()
+        setupLiveChannels()
 
         initializePlayer(false)
         initializeVideo()
@@ -620,6 +622,58 @@ class PlayerTvFragment : Fragment() {
         hideNextEpisodeOverlay()
     }
 
+    private var liveOverlay: com.streamflixreborn.streamflix.ui.LiveChannelsOverlay? = null
+
+    /**
+     * Canales en vivo estilo TiviMate: ▲/▼ (o CH+/CH-) cambian de canal, OK o ◄ abren la lista
+     * de categorías y canales, ► muestra los controles. Todo sin salir del reproductor.
+     */
+    private fun setupLiveChannels() {
+        val provider = viewModel.activeProvider?.takeIf { it is IptvProvider } ?: return
+        if (args.videoType !is Video.Type.Episode) return
+        val overlay = com.streamflixreborn.streamflix.ui.LiveChannelsOverlay(
+            requireContext(), isTv = true, provider = provider, currentId = args.id,
+            scope = viewLifecycleOwner.lifecycleScope,
+        ) { show -> switchLiveChannel(show) }
+        if (!overlay.isAvailable) return
+        liveOverlay = overlay
+        overlay.view.elevation = 7f * resources.displayMetrics.density
+        (binding.root as ViewGroup).addView(overlay.view, androidx.constraintlayout.widget.ConstraintLayout.LayoutParams(0, 0).apply {
+            startToStart = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
+            endToEnd = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
+            topToTop = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
+            bottomToBottom = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
+        })
+        val keys = setOf(
+            KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_CHANNEL_UP, KeyEvent.KEYCODE_CHANNEL_DOWN,
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER,
+            KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
+        )
+        binding.pvPlayer.liveKeyHandler = handler@{ event ->
+            if (event.keyCode !in keys) return@handler false
+            if (event.action != KeyEvent.ACTION_DOWN) return@handler true
+            when (event.keyCode) {
+                KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_CHANNEL_UP -> overlay.zap(-1)
+                KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_CHANNEL_DOWN -> overlay.zap(1)
+                KeyEvent.KEYCODE_DPAD_RIGHT -> binding.pvPlayer.showController()
+                else -> overlay.show()
+            }
+            true
+        }
+    }
+
+    private fun switchLiveChannel(show: com.streamflixreborn.streamflix.models.TvShow) {
+        liveOverlay?.hide()
+        releasePlayer()
+        isSetupDone = false
+        val nav = findNavController()
+        nav.navigate(
+            R.id.player,
+            com.streamflixreborn.streamflix.fragments.live.LiveSession.playerArgs(show),
+            NavOptions.Builder().setPopUpTo(nav.currentDestination?.id ?: return, true).setLaunchSingleTop(false).build(),
+        )
+    }
+
     /** Ajustes > Proveedores: lista los proveedores del panel y busca el contenido en el elegido. */
     private fun setupProviderSwitching() {
         val current = UserPreferences.currentProvider
@@ -681,6 +735,11 @@ class PlayerTvFragment : Fragment() {
     }
 
     fun onBackPressed(): Boolean = when {
+        liveOverlay?.isShowing == true -> {
+            liveOverlay?.hide()
+            binding.pvPlayer.requestFocus()
+            true
+        }
 
 
         (binding.pvPlayer as? PlayerTvView)?.isManualZoomEnabled == true -> {

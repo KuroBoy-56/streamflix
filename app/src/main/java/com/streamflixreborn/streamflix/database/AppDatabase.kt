@@ -45,7 +45,7 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var currentProviderName: String? = null
 
-        private fun sanitizeProviderName(name: String): String {
+        internal fun sanitizeProviderName(name: String): String {
             // Rimuove caratteri non validi per i nomi dei file DB, 
             // come spazi, parentesi, e li converte in lowercase.
             return name.lowercase()
@@ -54,8 +54,9 @@ abstract class AppDatabase : RoomDatabase() {
                 .trim('_') // Rimuove underscore iniziale/finale
         }
 
+        // Cada perfil tiene sus propias bases (el principal conserva los nombres de siempre).
         fun databaseNameFor(providerName: String): String =
-            "${sanitizeProviderName(providerName)}.db"
+            "${sanitizeProviderName(providerName)}${com.streamflixreborn.streamflix.profiles.ProfileManager.storageSuffix()}.db"
 
         fun setup(context: Context) {
             if (UserPreferences.currentProvider == null) return
@@ -99,11 +100,10 @@ abstract class AppDatabase : RoomDatabase() {
         }
 
         private fun buildDatabase(providerName: String, context: Context): AppDatabase {
-            val sanitizedName = sanitizeProviderName(providerName)
             return Room.databaseBuilder(
                 context = context.applicationContext,
                 klass = AppDatabase::class.java,
-                name = "$sanitizedName.db"
+                name = databaseNameFor(providerName)
             )
                 .allowMainThreadQueries()
                 .addMigrations(MIGRATION_1_2)

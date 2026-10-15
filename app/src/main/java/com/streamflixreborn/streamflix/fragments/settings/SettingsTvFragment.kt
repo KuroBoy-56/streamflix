@@ -473,6 +473,8 @@ class SettingsTvFragment : LeanbackPreferenceFragmentCompat() {
             }
         }
 
+        com.streamflixreborn.streamflix.utils.PanelBranding.bindProfilePreference(this)
+
         findPreference<Preference>("p_settings_about")?.apply {
             val palette = ThemeManager.palette(UserPreferences.selectedTheme)
             val titleStr = getString(R.string.settings_version_tv)
@@ -1455,13 +1457,12 @@ class SettingsTvFragment : LeanbackPreferenceFragmentCompat() {
     }
 
     private fun updateOverviewLabels() {
-        val providerName = UserPreferences.currentProvider?.name
+        // El nombre del proveedor no se muestra: en su lugar va la nota/marca del panel.
+        val providerName = com.streamflixreborn.streamflix.utils.PanelBranding.brand(requireContext())
 
         findPreference<PreferenceScreen>("screen_provider")?.apply {
             title = getString(R.string.settings_provider_connection_title)
-            summary = providerName?.let {
-                getString(R.string.settings_screen_provider_summary_with_name, it)
-            } ?: getString(R.string.settings_screen_provider_summary)
+            summary = com.streamflixreborn.streamflix.utils.PanelBranding.providerSummary(requireContext())
         }
 
         findPreference<PreferenceCategory>("pc_provider_settings")?.title = providerName?.let {

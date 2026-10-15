@@ -2,6 +2,13 @@
 <androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
+    <!-- PERFIL (cuentas con 2 o más perfiles) -->
+    <Preference
+        android:key="p_settings_profile"
+        android:title="@string/profiles_switch"
+        app:iconSpaceReserved="false"
+        app:isPreferenceVisible="false" />
+
     <!-- CONTENIDO (TMDb) -->
     <PreferenceScreen
         android:key="screen_content"
@@ -126,7 +133,7 @@
 
     <!-- INFORMACIÓN DE LA APP -->
     <PreferenceCategory
-        android:title="Aplicación"
+        android:title="@string/settings_category_application"
         app:iconSpaceReserved="false">
 
         <Preference

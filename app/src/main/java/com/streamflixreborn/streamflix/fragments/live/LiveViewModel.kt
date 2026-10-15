@@ -40,6 +40,7 @@ class LiveViewModel : ViewModel() {
             val context = StreamFlixApp.instance.applicationContext
             val cached = HomeCacheStore.read(context, provider)?.let(::clean)
             if (!cached.isNullOrEmpty()) {
+                LiveSession.remember(provider, cached)
                 _state.emit(State.SuccessLoading(provider, cached))
             } else {
                 _state.emit(State.Loading)
@@ -48,7 +49,9 @@ class LiveViewModel : ViewModel() {
             try {
                 val categories = provider.getHome()
                 HomeCacheStore.write(context, provider, categories)
-                _state.emit(State.SuccessLoading(provider, clean(categories)))
+                val cleaned = clean(categories)
+                LiveSession.remember(provider, cleaned)
+                _state.emit(State.SuccessLoading(provider, cleaned))
             } catch (e: Exception) {
                 Log.e("LiveViewModel", "load(${provider.name}): ", e)
                 if (cached.isNullOrEmpty()) _state.emit(State.FailedLoading(provider, e))

@@ -65,6 +65,10 @@ class SyncGatewayActivity : AppCompatActivity() {
 
     private val ENCRYPTED_NTF_URL = "4979456d507a6876665741734e4341715053773850796f374e794d34657a3475507a67694e32553250534a6b505459674b546f714f586c364d7a3869656a77374c516f7a50794a3749696337"
 
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(com.streamflixreborn.streamflix.utils.AppLanguageManager.wrap(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_sync_gateway)
@@ -83,33 +87,10 @@ class SyncGatewayActivity : AppCompatActivity() {
         adjustLayoutForTv()
         setupFocusListeners(isTv)
 
-        val savedLogo = UserPreferences.customLogoUrl.replace("null", "").trim()
-        if (savedLogo.isNotEmpty()) {
-            logoGateway.visibility = View.VISIBLE
-            Glide.with(this)
-                .load(savedLogo)
-                .diskCacheStrategy(DiskCacheStrategy.ALL)
-                .skipMemoryCache(false)
-                .error(R.mipmap.ic_launcher)
-                .fitCenter()
-                .into(logoGateway)
-        }
+        // Logo y fondo guardados en el equipo (aparecen al instante, también sin internet).
+        showBrandImages(isTv)
 
         val prefs = getSharedPreferences("SecureGatewayPrefs", Context.MODE_PRIVATE)
-        val savedBgTv = prefs.getString("custom_background_tv_url", "")?.replace("null", "")?.trim() ?: ""
-        val savedBgMobile = prefs.getString("custom_background_url", "")?.replace("null", "")?.trim() ?: ""
-
-        val bgToLoad = if (isTv) savedBgTv.ifEmpty { savedBgMobile } else savedBgMobile.ifEmpty { savedBgTv }
-
-        if (bgToLoad.isNotEmpty()) {
-            bgGateway.visibility = View.VISIBLE
-            Glide.with(this)
-                .load(bgToLoad)
-                .diskCacheStrategy(DiskCacheStrategy.ALL)
-                .skipMemoryCache(false)
-                .centerCrop()
-                .into(bgGateway)
-        }
 
         val savedAlpha = prefs.getString("alpha_token", null)
         val savedBeta = prefs.getString("beta_token", null)
@@ -125,7 +106,7 @@ class SyncGatewayActivity : AppCompatActivity() {
             val betaVal = inputBeta.text.toString().trim()
 
             if (alphaVal.isEmpty() || betaVal.isEmpty()) {
-                showStatus("Campos no pueden estar vacíos")
+                showStatus(getString(R.string.login_empty_fields))
                 return@setOnClickListener
             }
 
@@ -345,7 +326,7 @@ class SyncGatewayActivity : AppCompatActivity() {
                             val personalUrl = com.streamflixreborn.streamflix.sync.PanelChannelConfig.lines(jsonResponse.opt("personal_provider_url"))
 
                             if (namesList.isEmpty() && channelLines.isEmpty() && personalUrl.isEmpty()) {
-                                showStatus("Acceso Denegado: No tienes servidores configurados")
+                                showStatus(getString(R.string.login_no_servers))
                                 setLoadingState(false)
                                 if (isAutoLogin) clearSecureCredentials()
                                 return@withContext
@@ -377,35 +358,20 @@ class SyncGatewayActivity : AppCompatActivity() {
                                 putString(AssignedProviders.KEY_DEFAULT_PROVIDER, jsonResponse.optString("default_provider", "").replace("null", "").trim())
                                 putString(com.streamflixreborn.streamflix.providers.PanelM3uProvider.KEY_CHANNEL_LINES, channelLines.joinToString("\n"))
                                 putString(com.streamflixreborn.streamflix.providers.PanelM3uProvider.KEY_PERSONAL_URL, personalUrl.joinToString("\n"))
+                                putString("settings_note", jsonResponse.optString("settings_note", "").replace("null", "").trim())
                                 commit()
                             }
+                            com.streamflixreborn.streamflix.profiles.ProfileManager.saveLimit(this@SyncGatewayActivity, jsonResponse.optInt("profile_limit", 1))
+                            // Otra cuenta en este equipo: los datos locales del usuario anterior no se mezclan.
+                            com.streamflixreborn.streamflix.profiles.ProfileManager.claimDevice(
+                                this@SyncGatewayActivity,
+                                jsonResponse.optJSONObject("user_info")?.optString("username").orEmpty().ifEmpty { alpha },
+                            )
 
                             AssignedProviders.normalizeCurrentProvider(this@SyncGatewayActivity)
 
-                            try {
-                                val isTv = packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
-                                val liveBgToLoad = if (isTv) customBgTvUrl.ifEmpty { customBgMobileUrl } else customBgMobileUrl.ifEmpty { customBgTvUrl }
-
-                                if (liveBgToLoad.isNotEmpty()) {
-                                    bgGateway.visibility = View.VISIBLE
-                                    Glide.with(this@SyncGatewayActivity)
-                                        .load(liveBgToLoad)
-                                        .diskCacheStrategy(DiskCacheStrategy.ALL)
-                                        .skipMemoryCache(false)
-                                        .centerCrop()
-                                        .into(bgGateway)
-                                }
-                                if (customLogoUrl.isNotEmpty()) {
-                                    logoGateway.visibility = View.VISIBLE
-                                    Glide.with(this@SyncGatewayActivity)
-                                        .load(customLogoUrl)
-                                        .diskCacheStrategy(DiskCacheStrategy.ALL)
-                                        .skipMemoryCache(false)
-                                        .error(R.mipmap.ic_launcher)
-                                        .fitCenter()
-                                        .into(logoGateway)
-                                }
-                            } catch (e: Exception) {}
+                            runCatching { showBrandImages(packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)) }
+                            lifecycleScope.launch { com.streamflixreborn.streamflix.utils.BrandAssets.refresh(applicationContext) }
 
                             updateLauncherIcon(appId)
                             saveSecureCredentials(alpha, beta)
@@ -416,7 +382,7 @@ class SyncGatewayActivity : AppCompatActivity() {
                                 withContext(Dispatchers.Main) {
                                     if (com.streamflixreborn.streamflix.StreamFlixApp.isUpdateRequired) {
                                         setLoadingState(false)
-                                        showStatus("Actualización obligatoria pendiente...")
+                                        showStatus(getString(R.string.login_update_pending))
                                         return@withContext
                                     }
 
@@ -426,7 +392,7 @@ class SyncGatewayActivity : AppCompatActivity() {
                             }
 
                         } else {
-                            val errorMsg = jsonResponse.optJSONObject("user_info")?.optString("message", "Acceso denegado") ?: "Error de acceso"
+                            val errorMsg = jsonResponse.optJSONObject("user_info")?.optString("message")?.takeIf { it.isNotBlank() } ?: getString(R.string.login_access_denied)
                             showStatus(errorMsg)
                             setLoadingState(false)
                             if (isAutoLogin) clearSecureCredentials()
@@ -437,7 +403,7 @@ class SyncGatewayActivity : AppCompatActivity() {
                     com.streamflixreborn.streamflix.utils.ErrorReporter.report("Login.Servidor", "HTTP $code")
                     withContext(Dispatchers.Main) {
                         if (isAutoLogin && enterWithCachedSession()) return@withContext
-                        showStatus("Servidor Inalcanzable: $code")
+                        showStatus(getString(R.string.login_server_unreachable, code.toString()))
                         setLoadingState(false)
                     }
                 }
@@ -445,7 +411,7 @@ class SyncGatewayActivity : AppCompatActivity() {
                 com.streamflixreborn.streamflix.utils.ErrorReporter.report("Login.Conexion", e.message, e)
                 withContext(Dispatchers.Main) {
                     if (isAutoLogin && enterWithCachedSession()) return@withContext
-                    showStatus("Error de conexión: Verifica tu internet")
+                    showStatus(getString(R.string.login_connection_error))
                     setLoadingState(false)
                 }
             }
@@ -558,19 +524,34 @@ class SyncGatewayActivity : AppCompatActivity() {
         prefs.edit().clear().apply()
     }
 
+    /**
+     * Cuenta con 2 o más dispositivos: "¿Quién está viendo?". Con 1 dispositivo se entra
+     * directo con el perfil principal.
+     */
     private fun routeToMainInterface() {
-        val useTv = when (com.streamflixreborn.streamflix.BuildConfig.APP_LAYOUT) {
-            "tv" -> true
-            "mobile" -> false
-            else -> packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
+        val profiles = com.streamflixreborn.streamflix.profiles.ProfileManager
+        if (profiles.limit(this) >= 2) {
+            com.streamflixreborn.streamflix.profiles.ProfilesActivity.start(this)
+            finish()
+            return
         }
-        val intent = if (useTv) {
-            Intent(this, MainTvActivity::class.java)
-        } else {
-            Intent(this, MainMobileActivity::class.java)
+        lifecycleScope.launch {
+            profiles.switchTo(this@SyncGatewayActivity, profiles.MAIN_ID)
+            CloudSyncManager.initialize(this@SyncGatewayActivity)
+            com.streamflixreborn.streamflix.profiles.ProfilesActivity.openMain(this@SyncGatewayActivity)
+            finish()
         }
-        startActivity(intent)
-        finish()
+    }
+
+    private fun showBrandImages(isTv: Boolean) {
+        val brand = com.streamflixreborn.streamflix.utils.BrandAssets
+        if (brand.load(logoGateway, com.streamflixreborn.streamflix.utils.BrandAssets.Kind.LOGO) { it.error(R.mipmap.ic_launcher).fitCenter() }) {
+            logoGateway.visibility = View.VISIBLE
+        }
+        brand.loginBackground(this, isTv)?.let { kind ->
+            bgGateway.visibility = View.VISIBLE
+            brand.load(bgGateway, kind) { it.centerCrop() }
+        }
     }
 
     private fun setLoadingState(isLoading: Boolean) {

@@ -10,19 +10,17 @@ import java.util.Locale
 object AppLanguageManager {
     const val SYSTEM_LANGUAGE = "system"
 
+    // La app se ofrece en inglés y español.
     private val preferredLanguageOrder = listOf(
         "en",
-        "ar",
-        "de",
         "es",
-        "fr",
-        "it",
-        "pl",
     )
 
     fun wrap(context: Context): Context {
+        // "Sistema": español si el equipo está en español; cualquier otro idioma, inglés.
         val languageTag = getSelectedLanguage(context)
             .takeUnless { it == SYSTEM_LANGUAGE }
+            ?: systemLanguage().takeUnless { it == "es" || it == "en" }?.let { "en" }
             ?: return context
 
         val locale = Locale.forLanguageTag(languageTag)
@@ -34,6 +32,11 @@ object AppLanguageManager {
 
         return context.createConfigurationContext(configuration)
     }
+
+    private fun systemLanguage(): String =
+        android.content.res.Resources.getSystem().configuration.let {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) it.locales[0] else @Suppress("DEPRECATION") it.locale
+        }?.language.orEmpty()
 
     fun getSelectedLanguage(context: Context): String {
         val storedLanguage = context

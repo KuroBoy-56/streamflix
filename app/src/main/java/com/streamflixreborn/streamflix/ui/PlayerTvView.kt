@@ -26,6 +26,8 @@ class PlayerTvView @JvmOverloads constructor(
         private set
 
     var onMediaPreviousClicked: (() -> Boolean)? = null
+    /** Canales en vivo: teclas para cambiar de canal / abrir la lista (sin los controles visibles). */
+    var liveKeyHandler: ((KeyEvent) -> Boolean)? = null
     var onMediaNextClicked: (() -> Boolean)? = null
 
     private var zoomToast: Toast? = null
@@ -105,6 +107,12 @@ class PlayerTvView @JvmOverloads constructor(
 
         if (player.isCommandAvailable(Player.COMMAND_GET_CURRENT_MEDIA_ITEM) && player.isPlayingAd) {
             return super.dispatchKeyEvent(event)
+        }
+
+        if (event.keyCode == KeyEvent.KEYCODE_CHANNEL_UP || event.keyCode == KeyEvent.KEYCODE_CHANNEL_DOWN ||
+            !controller.isVisible
+        ) {
+            if (liveKeyHandler?.invoke(event) == true) return true
         }
 
         if (controller.isVisible) return super.dispatchKeyEvent(event)

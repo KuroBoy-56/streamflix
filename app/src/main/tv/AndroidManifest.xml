@@ -59,6 +59,12 @@
         </activity-alias>
 
         <activity
+            android:name=".profiles.ProfilesActivity"
+            android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize|keyboard|keyboardHidden|navigation"
+            android:exported="false"
+            android:theme="@style/AppTheme.Mobile" />
+
+        <activity
             android:name=".activities.main.MainTvActivity"
             android:exported="true"
             android:theme="@style/AppTheme.Tv">

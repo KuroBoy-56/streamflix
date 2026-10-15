@@ -11,8 +11,10 @@ import com.streamflixreborn.streamflix.database.AppDatabase
 import com.streamflixreborn.streamflix.models.Episode
 import com.streamflixreborn.streamflix.models.Movie
 import com.streamflixreborn.streamflix.models.TvShow
+import com.streamflixreborn.streamflix.profiles.ProfileManager
 import com.streamflixreborn.streamflix.providers.Provider
 import com.streamflixreborn.streamflix.providers.TmdbProvider
+import com.streamflixreborn.streamflix.utils.BrandAssets
 import com.streamflixreborn.streamflix.utils.ProviderChangeNotifier
 import com.streamflixreborn.streamflix.utils.UserDataCache
 import com.streamflixreborn.streamflix.utils.UserPreferences
@@ -76,6 +78,23 @@ object CloudSyncManager {
 
     private fun getJsonFolderEndpoint(): String = decryptData(ENCRYPTED_JSON_FOLDER_URL)
 
+    /** Otro archivo de la misma carpeta de la API (p. ej. "profiles.php"). */
+    fun endpoint(file: String): String =
+        decryptData(ENCRYPTED_SYNC_URL).takeIf { it.isNotEmpty() }?.substringBeforeLast('/')?.let { "$it/$file" }.orEmpty()
+
+    /** Nube del perfil activo: ?u=<usuario>&p=<perfil>. */
+    private fun syncUrl(userId: String, profileId: String): URL =
+        URL("${decryptData(ENCRYPTED_SYNC_URL)}?u=$userId&p=$profileId")
+
+    /** Al cambiar de perfil: se olvida lo leído de la nube y se cancela lo pendiente. */
+    fun reset() {
+        uploadJob?.cancel()
+        initJob?.cancel()
+        initialSyncDone = false
+        syncedUserId = null
+        remoteSnapshot = emptyMap()
+    }
+
     /**
      * Credenciales del usuario en cabeceras para que sync_userdata.php verifique que el historial
      * le pertenece (evita que otro lea o sobrescriba su historial conociendo solo el usuario).
@@ -97,18 +116,22 @@ object CloudSyncManager {
         return alphaToken.replace("[^a-zA-Z0-9]".toRegex(), "_")
     }
 
+    /** Usuario + perfil: cada perfil tiene su propia nube. */
+    private fun syncKey(userId: String, profileId: String) = "$userId-$profileId"
+
     suspend fun initialize(context: Context) {
         val appContext = context.applicationContext
         val userId = getActiveUserId(appContext) ?: return
+        val key = syncKey(userId, ProfileManager.activeId)
 
-        // Se llama desde el arranque y el login: solo descarga una vez por usuario y sesión.
-        if (syncedUserId != userId) {
+        // Se llama desde el arranque y el login: solo descarga una vez por usuario, perfil y sesión.
+        if (syncedUserId != key) {
             initialSyncDone = false
             remoteSnapshot = emptyMap()
         }
         if (!initialSyncDone && initJob?.isActive != true) {
             Log.i(TAG, "🚀 Iniciando sincronización de nube para usuario: $userId")
-            initJob = scope.launch { downloadAndApply(appContext, userId) }
+            initJob = scope.launch { downloadAndApply(appContext, userId, ProfileManager.activeId) }
         }
         startLivePanelWatchdog(appContext)
     }
@@ -121,83 +144,68 @@ object CloudSyncManager {
             while (true) {
                 delay(300_000) // 5 minutos
                 try {
-                    val folderUrl = getJsonFolderEndpoint()
-                    if (folderUrl.isEmpty()) continue
-
-                    val appId = UserPreferences.savedAppId
-                    val filename = if (appId == 0) "config.json" else "config_$appId.json"
-                    val cacheBuster = System.currentTimeMillis()
-                    val url = URL("$folderUrl/$filename?cb=$cacheBuster")
-
-                    val connection = url.openConnection() as HttpURLConnection
-                    connection.requestMethod = "GET"
-                    connection.connectTimeout = 8000
-                    connection.readTimeout = 8000
-
-                    if (connection.responseCode == 200) {
-                        val responseStr = connection.inputStream.bufferedReader().use { it.readText() }
-                        val jsonResponse = JSONObject(responseStr)
-
-                        val newLogo = jsonResponse.optString("custom_logo", "").replace("null", "").trim()
-                        val newBgMobile = jsonResponse.optString("custom_background", "").replace("null", "").trim()
-                        val newBgTv = jsonResponse.optString("custom_background_tv", "").replace("null", "").trim()
-                        val newSplash = jsonResponse.optString("custom_splash", "").replace("null", "").trim()
-
-                        var hasChanges = false
-                        // Las líneas de canales también se actualizan sin volver a iniciar sesión.
-                        if (jsonResponse.has("channel_lines")) {
-                            val lines = PanelChannelConfig.lines(jsonResponse.opt("channel_lines")).joinToString("\n")
-                            val gatewayPrefs = context.getSharedPreferences("SecureGatewayPrefs", Context.MODE_PRIVATE)
-                            if (lines != gatewayPrefs.getString(com.streamflixreborn.streamflix.providers.PanelM3uProvider.KEY_CHANNEL_LINES, "")) {
-                                gatewayPrefs.edit().putString(com.streamflixreborn.streamflix.providers.PanelM3uProvider.KEY_CHANNEL_LINES, lines).apply()
-                                hasChanges = true
-                            }
-                        }
-                        // Nombre de la marca del distribuidor.
-                        jsonResponse.optString("app_name", "").replace("null", "").trim().takeIf { it.isNotEmpty() }?.let { brand ->
-                            val gatewayPrefs = context.getSharedPreferences("SecureGatewayPrefs", Context.MODE_PRIVATE)
-                            if (brand != gatewayPrefs.getString("brand_name", "")) gatewayPrefs.edit().putString("brand_name", brand).apply()
-                        }
-                        if (newLogo.isNotEmpty() && newLogo != UserPreferences.customLogoUrl) {
-                            UserPreferences.customLogoUrl = newLogo
-                            hasChanges = true
-                        }
-
-                        val prefs = context.getSharedPreferences("SecureGatewayPrefs", Context.MODE_PRIVATE)
-                        val savedBgTv = prefs.getString("custom_background_tv_url", "") ?: ""
-                        val savedBgMobile = prefs.getString("custom_background_url", "") ?: ""
-                        val savedSplash = prefs.getString("custom_splash_url", "") ?: ""
-
-                        if ((newBgTv.isNotEmpty() && newBgTv != savedBgTv) ||
-                            (newBgMobile.isNotEmpty() && newBgMobile != savedBgMobile) ||
-                            (newSplash.isNotEmpty() && newSplash != savedSplash)) {
-                            prefs.edit().apply {
-                                putString("custom_background_tv_url", newBgTv)
-                                putString("custom_background_url", newBgMobile)
-                                putString("custom_splash_url", newSplash)
-                                apply()
-                            }
-                            hasChanges = true
-                        }
-
-                        if (hasChanges) {
-                            try {
-                                if (newLogo.isNotEmpty()) Glide.with(context).load(newLogo).diskCacheStrategy(DiskCacheStrategy.ALL).preload()
-                                if (newBgMobile.isNotEmpty()) Glide.with(context).load(newBgMobile).diskCacheStrategy(DiskCacheStrategy.ALL).preload()
-                                if (newBgTv.isNotEmpty()) Glide.with(context).load(newBgTv).diskCacheStrategy(DiskCacheStrategy.ALL).preload()
-                                if (newSplash.isNotEmpty()) Glide.with(context).load(newSplash).diskCacheStrategy(DiskCacheStrategy.ALL).preload()
-                            } catch (_: Exception) {}
-
-                            withContext(Dispatchers.Main) {
-                                ProviderChangeNotifier.notifyProviderChanged()
-                            }
-                        }
+                    if (applyPanelBranding(context)) {
+                        withContext(Dispatchers.Main) { ProviderChangeNotifier.notifyProviderChanged() }
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error watchdog JSON: ${e.message}")
                 }
             }
         }
+    }
+
+    private fun fetchConfig(folderUrl: String, filename: String): JSONObject? = runCatching {
+        val connection = URL("$folderUrl/$filename?cb=${System.currentTimeMillis()}").openConnection() as HttpURLConnection
+        connection.connectTimeout = 8000
+        connection.readTimeout = 8000
+        if (connection.responseCode != 200) return@runCatching null
+        JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+    }.getOrNull()
+
+    /**
+     * Logo, splash, fondos, marca, nota y líneas de canales del panel, igual que al iniciar
+     * sesión: cada campo vacío del administrador se completa con el del dueño. Devuelve true si
+     * algo cambió (las imágenes nuevas se guardan en el equipo).
+     */
+    private suspend fun applyPanelBranding(context: Context): Boolean {
+        val folderUrl = getJsonFolderEndpoint()
+        if (folderUrl.isEmpty()) return false
+        val appId = UserPreferences.savedAppId
+        val master = fetchConfig(folderUrl, "config.json")
+        val own = if (appId != 0) fetchConfig(folderUrl, "config_$appId.json") else null
+        // Si una de las dos no se pudo leer ahora, no se cambia nada (evita alternar marcas).
+        if (master == null || (appId != 0 && own == null)) return false
+
+        fun text(json: JSONObject?, key: String) = json?.optString(key, "").orEmpty().replace("null", "").trim()
+        fun field(key: String) = text(own, key).ifEmpty { text(master, key) }
+        fun lines(json: JSONObject?) = if (json?.has("channel_lines") == true) PanelChannelConfig.lines(json.opt("channel_lines")) else emptyList()
+
+        val prefs = context.getSharedPreferences("SecureGatewayPrefs", Context.MODE_PRIVATE)
+        val values = mapOf(
+            "custom_background_url" to field("custom_background"),
+            "custom_background_tv_url" to field("custom_background_tv"),
+            "custom_splash_url" to field("custom_splash"),
+            "brand_name" to field("app_name"),
+            "settings_note" to field("settings_note"),
+            com.streamflixreborn.streamflix.providers.PanelM3uProvider.KEY_CHANNEL_LINES to
+                    lines(own).ifEmpty { lines(master) }.joinToString("\n"),
+        )
+        var changed = false
+        val editor = prefs.edit()
+        values.forEach { (key, value) ->
+            if (prefs.getString(key, "").orEmpty() != value) {
+                editor.putString(key, value)
+                changed = true
+            }
+        }
+        editor.apply()
+        val logo = field("custom_logo")
+        if (logo != UserPreferences.customLogoUrl) {
+            UserPreferences.customLogoUrl = logo
+            changed = true
+        }
+        BrandAssets.refresh(context)
+        return changed
     }
 
     // ------------------------------------------------------------------------------------
@@ -208,14 +216,17 @@ object CloudSyncManager {
      * Descarga el documento del usuario y lo fusiona con lo local (gana el registro más reciente).
      * Devuelve true si la nube respondió (con datos o vacía), false si no se pudo leer.
      */
-    private suspend fun downloadAndApply(context: Context, userId: String): Boolean = syncMutex.withLock {
-        if (initialSyncDone && syncedUserId == userId) return@withLock true
+    private suspend fun downloadAndApply(context: Context, userId: String, profileId: String): Boolean = syncMutex.withLock {
+        val key = syncKey(userId, profileId)
+        if (initialSyncDone && syncedUserId == key) return@withLock true
+        // Cambió el perfil mientras se esperaba: no se aplica la nube de otro perfil.
+        if (profileId != ProfileManager.activeId) return@withLock false
         try {
             isApplyingRemote = true
             val decryptedUrl = decryptData(ENCRYPTED_SYNC_URL)
             if (decryptedUrl.isEmpty()) return@withLock false
 
-            val connection = URL("$decryptedUrl?u=$userId").openConnection() as HttpURLConnection
+            val connection = syncUrl(userId, profileId).openConnection() as HttpURLConnection
             connection.requestMethod = "GET"
             addSyncAuth(context, connection)
             connection.connectTimeout = 8000
@@ -240,7 +251,7 @@ object CloudSyncManager {
                 Log.i(TAG, "☁️ Nube vacía para este usuario.")
             }
             remoteSnapshot = cloudData
-            syncedUserId = userId
+            syncedUserId = key
             initialSyncDone = true
             true
         } catch (e: Exception) {
@@ -262,7 +273,7 @@ object CloudSyncManager {
             if (obj.get("status")?.takeIf { it.isJsonPrimitive }?.asString == "empty") return emptyMap()
             val type = object : TypeToken<Map<String, Any?>>() {}.type
             gson.fromJson<Map<String, Any?>>(obj, type)
-                .filterValues { it is Map<*, *> }
+                .filter { (key, value) -> value is Map<*, *> && !key.startsWith("_") }
         } catch (e: Exception) {
             null
         }
@@ -293,14 +304,18 @@ object CloudSyncManager {
 
     private suspend fun uploadNow(context: Context): Boolean {
         val userId = getActiveUserId(context) ?: return false
+        val profileId = ProfileManager.activeId
+        val key = syncKey(userId, profileId)
 
         // Nunca subir antes de haber leído la nube: en un dispositivo nuevo borraría datos de otros.
-        if (!(initialSyncDone && syncedUserId == userId) && !downloadAndApply(context, userId)) {
+        if (!(initialSyncDone && syncedUserId == key) && !downloadAndApply(context, userId, profileId)) {
             Log.w(TAG, "⚠️ Subida pospuesta: no se pudo leer la nube todavía.")
             return false
         }
 
         return syncMutex.withLock {
+            // El perfil cambió antes de tomar el turno: lo local ya es de otro perfil.
+            if (profileId != ProfileManager.activeId || syncedUserId != key) return@withLock false
             try {
                 // Se parte del último documento de la nube para conservar proveedores
                 // que no existen en este dispositivo.
@@ -332,7 +347,7 @@ object CloudSyncManager {
                 val decryptedUrl = decryptData(ENCRYPTED_SYNC_URL)
                 if (decryptedUrl.isEmpty()) return@withLock false
 
-                val connection = URL("$decryptedUrl?u=$userId").openConnection() as HttpURLConnection
+                val connection = syncUrl(userId, profileId).openConnection() as HttpURLConnection
                 connection.requestMethod = "POST"
                 addSyncAuth(context, connection)
                 connection.setRequestProperty("Content-Type", "application/json")

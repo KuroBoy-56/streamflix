@@ -6,6 +6,11 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import com.streamflixreborn.streamflix.R
+import android.os.Bundle
+import com.streamflixreborn.streamflix.models.Category
+import com.streamflixreborn.streamflix.models.TvShow
+import com.streamflixreborn.streamflix.models.Video
+import com.streamflixreborn.streamflix.providers.PanelM3uProvider
 import com.streamflixreborn.streamflix.providers.Provider
 import com.streamflixreborn.streamflix.utils.AssignedProviders
 import com.streamflixreborn.streamflix.utils.UserPreferences
@@ -32,6 +37,57 @@ object LiveSession {
     fun exit() {
         UserPreferences.sessionProviderOverride = null
     }
+
+    // ---------------------------------------------------------------------------------------
+    // Cambio de canal desde el reproductor (TV estilo TiviMate / celular con panel lateral)
+    // ---------------------------------------------------------------------------------------
+
+    @Volatile private var categories: List<Category> = emptyList()
+    @Volatile private var categoriesProvider: String? = null
+
+    /** Categorías que se ven en "En Vivo" (para cambiar de canal sin salir del reproductor). */
+    fun remember(provider: Provider, list: List<Category>) {
+        categoriesProvider = provider.name
+        categories = list.filter { c -> c.list.any { it is TvShow } }
+    }
+
+    fun categories(provider: Provider?): List<Category> =
+        if (provider != null && provider.name == categoriesProvider) categories else emptyList()
+
+    /** Todos los canales de una categoría (las listas del panel se cargan completas). */
+    suspend fun channels(provider: Provider, category: Category): List<TvShow> {
+        val shown = category.list.filterIsInstance<TvShow>()
+        if (provider !is PanelM3uProvider) return shown
+        return runCatching { provider.groupShows(category.name) }.getOrNull()?.ifEmpty { null } ?: shown
+    }
+
+    fun categoryOf(provider: Provider?, channelId: String): Category? =
+        categories(provider).firstOrNull { c -> c.list.any { (it as? TvShow)?.id == channelId } }
+
+    /** Argumentos del reproductor para un canal (igual que al abrirlo desde la lista). */
+    fun playerArgs(show: TvShow): Bundle = Bundle().apply {
+        putString("id", show.id)
+        putString("title", show.title)
+        putString("subtitle", show.title)
+        putSerializable("videoType", videoType(show))
+    }
+
+    fun videoType(show: TvShow) = Video.Type.Episode(
+        id = show.id,
+        number = 1,
+        title = show.title,
+        poster = show.poster,
+        overview = show.overview,
+        tvShow = Video.Type.Episode.TvShow(
+            id = show.id,
+            title = show.title,
+            poster = show.poster,
+            banner = show.banner,
+            releaseDate = null,
+            imdbId = show.imdbId,
+        ),
+        season = Video.Type.Episode.Season(number = 1, title = "Live"),
+    )
 
     /** Crea los chips del selector de proveedores en vivo (si hay más de uno). */
     fun bindProviderChips(

@@ -271,6 +271,7 @@ class PlayerMobileFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         setupProviderSwitching()
+        setupLiveChannels()
         initializePlayer(false)
         initializeVideo()
         gestureHelper = PlayerGestureHelper(
@@ -546,6 +547,52 @@ class PlayerMobileFragment : Fragment() {
     }
 
     /** Ajustes > Proveedores: lista los proveedores del panel y busca el contenido en el elegido. */
+    private var liveOverlay: com.streamflixreborn.streamflix.ui.LiveChannelsOverlay? = null
+
+    /**
+     * Canales en vivo: con los controles visibles aparece a un lado, sobre el video y casi
+     * transparente, la lista de canales de la categoría actual para cambiar sin salir.
+     */
+    private fun setupLiveChannels() {
+        val provider = viewModel.activeProvider?.takeIf { it is IptvProvider } ?: return
+        if (args.videoType !is Video.Type.Episode) return
+        val overlay = com.streamflixreborn.streamflix.ui.LiveChannelsOverlay(
+            requireContext(), isTv = false, provider = provider, currentId = args.id,
+            scope = viewLifecycleOwner.lifecycleScope,
+        ) { show -> switchLiveChannel(show) }
+        if (!overlay.isAvailable) return
+        liveOverlay = overlay
+        overlay.onInteraction = { binding.pvPlayer.showController() }
+        overlay.view.elevation = 7f * resources.displayMetrics.density
+        (binding.root as ViewGroup).addView(overlay.view, androidx.constraintlayout.widget.ConstraintLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, 0
+        ).apply {
+            endToEnd = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
+            topToTop = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
+            bottomToBottom = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
+        })
+        binding.pvPlayer.setControllerVisibilityListener(androidx.media3.ui.PlayerView.ControllerVisibilityListener { visibility ->
+            if (visibility == View.VISIBLE && !binding.settings.isVisible) overlay.show() else overlay.hide()
+        })
+    }
+
+    private fun switchLiveChannel(show: com.streamflixreborn.streamflix.models.TvShow) {
+        liveOverlay?.hide()
+        releasePlayer()
+        isSetupDone = false
+        val nav = findNavController()
+        nav.navigate(
+            PlayerMobileFragmentDirections.actionPlayerMobileFragmentSelf(
+                id = show.id,
+                videoType = com.streamflixreborn.streamflix.fragments.live.LiveSession.videoType(show),
+                title = show.title,
+                subtitle = show.title,
+                preferredServerName = null,
+            ),
+            NavOptions.Builder().setPopUpTo(nav.currentDestination?.id ?: return, true).setLaunchSingleTop(false).build(),
+        )
+    }
+
     private fun setupProviderSwitching() {
         val current = UserPreferences.currentProvider
         val isLive = current is IptvProvider
@@ -616,6 +663,11 @@ class PlayerMobileFragment : Fragment() {
     }
 
     fun onBackPressed(): Boolean = when {
+        liveOverlay?.isShowing == true -> {
+            liveOverlay?.hide()
+            binding.pvPlayer.hideController()
+            true
+        }
         binding.pvPlayer.isManualZoomEnabled -> {
             binding.pvPlayer.exitManualZoomMode()
             true
