@@ -89,7 +89,14 @@ class StreamFlixApp : Application() {
         val isTv = packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
         val threshold = if (isTv) 10L else 50L
 
-        runSecurityChecks()
+        // Al abrir y luego cada 30 min: una línea vencida, bloqueada o eliminada se corta aunque
+        // la app quede abierta (TV encendida días).
+        applicationScope.launch {
+            while (true) {
+                runSecurityChecks()
+                kotlinx.coroutines.delay(30 * 60 * 1000L)
+            }
+        }
 
         applicationScope.launch(Dispatchers.IO) {
             AppDatabase.setup(appContext)
