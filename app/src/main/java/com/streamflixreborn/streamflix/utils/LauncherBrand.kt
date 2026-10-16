@@ -2,15 +2,8 @@ package com.streamflixreborn.streamflix.utils
 
 import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
-import androidx.core.content.pm.ShortcutInfoCompat
-import androidx.core.content.pm.ShortcutManagerCompat
-import androidx.core.graphics.drawable.IconCompat
-import com.streamflixreborn.streamflix.R
 import com.streamflixreborn.streamflix.activities.sync.SyncGatewayActivity
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 /**
  * Icono y nombre del lanzador según la red de la cuenta: en el manifiesto, ".Launcher" es el del
@@ -20,7 +13,6 @@ import kotlinx.coroutines.withContext
 object LauncherBrand {
     private const val PREFS = "SecureGatewayPrefs"
     private const val KEY_PENDING = "launcher_pending_app_id"
-    private const val KEY_SHORTCUT = "launcher_shortcut_app_id"
 
     private class Alias(val appId: Int, val component: ComponentName, val manifestEnabled: Boolean)
 
@@ -77,48 +69,5 @@ object LauncherBrand {
                 pm.setComponentEnabledSetting(it.component, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
             }
         }.onFailure { it.printStackTrace() }
-    }
-
-    // ---------------------------------------------------------------------------------------
-    // Celular: Android no deja usar una imagen descargada como icono de la app, pero sí un
-    // acceso directo en la pantalla de inicio con el logo y el nombre que el administrador puso
-    // en "Logo App" del panel. El sistema pide confirmarlo ("Agregar a pantalla de inicio").
-    // ---------------------------------------------------------------------------------------
-
-    private fun isTv(context: Context) = context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
-
-    /** Falta ofrecer el acceso directo con la marca de esta red (solo celular y con logo en el panel). */
-    fun shortcutPending(context: Context, appId: Int): Boolean =
-        appId != 0 && !isTv(context) &&
-            BrandAssets.url(context, BrandAssets.Kind.LOGO).isNotEmpty() &&
-            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(KEY_SHORTCUT, -1) != appId &&
-            ShortcutManagerCompat.isRequestPinShortcutSupported(context)
-
-    private suspend fun shortcut(context: Context, appId: Int): ShortcutInfoCompat? {
-        val logo = withContext(Dispatchers.IO) { BrandAssets.bitmap(context, BrandAssets.Kind.LOGO, 192) } ?: return null
-        val name = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("brand_name", "").orEmpty()
-            .ifBlank { context.getString(R.string.app_name) }
-        return ShortcutInfoCompat.Builder(context, "brand_$appId")
-            .setShortLabel(name)
-            .setLongLabel(name)
-            .setIcon(IconCompat.createWithBitmap(logo))
-            .setIntent(Intent(context, SyncGatewayActivity::class.java).setAction(Intent.ACTION_MAIN))
-            .build()
-    }
-
-    /** Pide al sistema agregar el acceso directo. Devuelve true si se mostró la confirmación. */
-    suspend fun requestShortcut(context: Context, appId: Int): Boolean {
-        val info = shortcut(context, appId) ?: return false
-        val shown = runCatching { ShortcutManagerCompat.requestPinShortcut(context, info, null) }.getOrDefault(false)
-        if (shown) context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putInt(KEY_SHORTCUT, appId).apply()
-        return shown
-    }
-
-    /** Si el administrador cambia el logo o el nombre en el panel, el acceso directo se actualiza. */
-    suspend fun updateShortcut(context: Context) {
-        val appId = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(KEY_SHORTCUT, -1)
-        if (appId <= 0 || appId != UserPreferences.savedAppId) return
-        val info = shortcut(context, appId) ?: return
-        runCatching { ShortcutManagerCompat.updateShortcuts(context, listOf(info)) }
     }
 }

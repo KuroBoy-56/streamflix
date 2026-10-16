@@ -60,20 +60,6 @@ object BrandAssets {
         return true
     }
 
-    /** Imagen de marca como bitmap (para el acceso directo). Llamar fuera del hilo principal. */
-    fun bitmap(context: Context, kind: Kind, size: Int): android.graphics.Bitmap? {
-        val url = url(context, kind)
-        if (url.isEmpty()) return null
-        return runCatching {
-            Glide.with(context.applicationContext).asBitmap()
-                .load(model(context, kind, url))
-                .signature(ObjectKey(url))
-                .centerInside()
-                .submit(size, size)
-                .get()
-        }.getOrNull()
-    }
-
     /** Fondo de inicio de sesión según el equipo (TV horizontal, celular vertical). */
     fun loginBackground(context: Context, isTv: Boolean): Kind? {
         val tv = url(context, Kind.BG_TV).isNotEmpty()
