@@ -205,6 +205,7 @@ object CloudSyncManager {
             changed = true
         }
         BrandAssets.refresh(context)
+        if (changed) com.streamflixreborn.streamflix.utils.LauncherBrand.updateShortcut(context)
         return changed
     }
 

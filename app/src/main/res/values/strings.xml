@@ -645,6 +645,7 @@
     <string name="brand_change_title">Your distributor\'s brand</string>
     <string name="brand_change_message">The app icon and name will change to your distributor\'s brand. You will see the change when you leave the app.</string>
     <string name="brand_change_ok">Got it</string>
+    <string name="brand_shortcut_message">The icon and name of your distributor\'s brand will be added to your home screen. Accept the next message to add it.</string>
     <string name="login_server_unreachable">Server unreachable: %1$s</string>
     <string name="login_connection_error">Connection error: check your internet</string>
     <string name="login_access_denied">Access denied</string>

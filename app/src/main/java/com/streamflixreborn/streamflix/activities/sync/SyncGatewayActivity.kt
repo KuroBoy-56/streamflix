@@ -302,7 +302,10 @@ class SyncGatewayActivity : AppCompatActivity() {
                             AssignedProviders.normalizeCurrentProvider(this@SyncGatewayActivity)
 
                             runCatching { showBrandImages(packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)) }
-                            lifecycleScope.launch { com.streamflixreborn.streamflix.utils.BrandAssets.refresh(applicationContext) }
+                            lifecycleScope.launch {
+                                com.streamflixreborn.streamflix.utils.BrandAssets.refresh(applicationContext)
+                                com.streamflixreborn.streamflix.utils.LauncherBrand.updateShortcut(applicationContext)
+                            }
 
                             saveSecureCredentials(alpha, beta)
 
@@ -354,28 +357,61 @@ class SyncGatewayActivity : AppCompatActivity() {
 
     /**
      * Primera vez en una red con marca blanca: se avisa que el icono y el nombre cambiarán a la
-     * marca del distribuidor; con "Entendido" se programa el cambio (al salir de la app).
+     * marca del distribuidor (lo que configuró en "Logo App"). Con "Entendido": en TV se programa
+     * el icono del manifiesto (.Admin<APP ID>) y en celular se pide agregar el acceso directo con
+     * su logo y nombre (el sistema lo confirma). La app entra al cerrarse ese aviso.
      */
     private fun confirmBrandThenRoute(appId: Int) {
         val brand = com.streamflixreborn.streamflix.utils.LauncherBrand
-        if (!brand.needsChange(this, appId)) {
-            routeToMainInterface()
-            return
-        }
-        if (appId == 0) {
-            brand.schedule(this, 0) // vuelve al icono del dueño sin preguntar
+        val alias = brand.needsChange(this, appId)
+        val shortcut = brand.shortcutPending(this, appId)
+        if (appId == 0 || (!alias && !shortcut)) {
+            if (alias) brand.schedule(this, appId) // vuelve al icono del dueño sin preguntar
             routeToMainInterface()
             return
         }
         android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
             .setTitle(R.string.brand_change_title)
-            .setMessage(R.string.brand_change_message)
+            .setMessage(if (shortcut) R.string.brand_shortcut_message else R.string.brand_change_message)
             .setCancelable(false)
             .setPositiveButton(R.string.brand_change_ok) { _, _ ->
-                brand.schedule(this, appId)
-                routeToMainInterface()
+                if (alias) brand.schedule(this, appId)
+                if (!shortcut) {
+                    routeToMainInterface()
+                    return@setPositiveButton
+                }
+                lifecycleScope.launch {
+                    if (!brand.requestShortcut(this@SyncGatewayActivity, appId)) {
+                        routeToMainInterface()
+                        return@launch
+                    }
+                    // Se entra cuando el usuario responde al aviso del sistema (onResume) o, si el
+                    // aviso no apareció encima, a los 2 s.
+                    routeAfterSystemPrompt = true
+                    kotlinx.coroutines.delay(2000)
+                    if (routeAfterSystemPrompt && !pausedForSystemPrompt) routeOnce()
+                }
             }
             .show()
+    }
+
+    @Volatile private var routeAfterSystemPrompt = false
+    @Volatile private var pausedForSystemPrompt = false
+
+    private fun routeOnce() {
+        if (!routeAfterSystemPrompt) return
+        routeAfterSystemPrompt = false
+        routeToMainInterface()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (routeAfterSystemPrompt) pausedForSystemPrompt = true
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (routeAfterSystemPrompt && pausedForSystemPrompt) routeOnce()
     }
 
     private fun enterWithCachedSession(): Boolean {

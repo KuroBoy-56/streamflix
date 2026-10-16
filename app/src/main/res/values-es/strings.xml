@@ -560,6 +560,7 @@
     <string name="brand_change_title">Marca de tu distribuidor</string>
     <string name="brand_change_message">El icono y el nombre de la aplicación cambiarán a la marca de tu distribuidor. Verás el cambio al salir de la app.</string>
     <string name="brand_change_ok">Entendido</string>
+    <string name="brand_shortcut_message">Se agregará a tu pantalla de inicio el icono y el nombre de la marca de tu distribuidor. Acepta el siguiente aviso para agregarlo.</string>
     <string name="login_server_unreachable">Servidor inalcanzable: %1$s</string>
     <string name="login_connection_error">Error de conexión: verifica tu internet</string>
     <string name="login_access_denied">Acceso denegado</string>
