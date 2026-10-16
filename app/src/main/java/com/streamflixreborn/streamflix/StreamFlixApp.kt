@@ -70,11 +70,16 @@ class StreamFlixApp : Application() {
         verifyAppSignature()
 
         registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
+            private var started = 0
             override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) = Unit
-            override fun onActivityStarted(activity: Activity) = Unit
+            override fun onActivityStarted(activity: Activity) { started++ }
             override fun onActivityResumed(activity: Activity) { currentActivity = activity }
             override fun onActivityPaused(activity: Activity) { if (currentActivity === activity) currentActivity = null }
-            override fun onActivityStopped(activity: Activity) = Unit
+            override fun onActivityStopped(activity: Activity) {
+                started = (started - 1).coerceAtLeast(0)
+                // App en segundo plano: ahora sí se cambia el icono/nombre a la marca del distribuidor.
+                if (started == 0) com.streamflixreborn.streamflix.utils.LauncherBrand.applyPending(this@StreamFlixApp)
+            }
             override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) = Unit
             override fun onActivityDestroyed(activity: Activity) { if (currentActivity === activity) currentActivity = null }
         })

@@ -642,6 +642,9 @@
     <string name="login_empty_fields">Fields cannot be empty</string>
     <string name="login_no_servers">Access denied: you have no servers configured</string>
     <string name="login_update_pending">Mandatory update pending...</string>
+    <string name="brand_change_title">Your distributor\'s brand</string>
+    <string name="brand_change_message">The app icon and name will change to your distributor\'s brand. You will see the change when you leave the app.</string>
+    <string name="brand_change_ok">Got it</string>
     <string name="login_server_unreachable">Server unreachable: %1$s</string>
     <string name="login_connection_error">Connection error: check your internet</string>
     <string name="login_access_denied">Access denied</string>

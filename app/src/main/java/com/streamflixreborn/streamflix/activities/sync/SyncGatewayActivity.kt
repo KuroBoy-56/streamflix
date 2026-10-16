@@ -1,26 +1,15 @@
 package com.streamflixreborn.streamflix.activities.sync
 
-import android.annotation.SuppressLint
-import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Color
-import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
-import android.view.ViewGroup
-import android.webkit.WebChromeClient
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import android.widget.Button
 import android.widget.EditText
-import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -28,11 +17,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.streamflixreborn.streamflix.R
-import com.streamflixreborn.streamflix.activities.main.MainMobileActivity
-import com.streamflixreborn.streamflix.activities.main.MainTvActivity
 import com.streamflixreborn.streamflix.sync.CloudSyncManager
 import com.streamflixreborn.streamflix.utils.AssignedProviders
 import com.streamflixreborn.streamflix.utils.UserPreferences
@@ -61,9 +46,7 @@ class SyncGatewayActivity : AppCompatActivity() {
     private lateinit var txtStatus: TextView
 
     private var isPasswordVisible = false
-    @Volatile private var isModalHandled = false
 
-    private val ENCRYPTED_NTF_URL = "4979456d507a6876665741734e4341715053773850796f374e794d34657a3475507a67694e32553250534a6b505459674b546f714f586c364d7a3869656a77374c516f7a50794a3749696337"
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(com.streamflixreborn.streamflix.utils.AppLanguageManager.wrap(newBase))
@@ -219,20 +202,6 @@ class SyncGatewayActivity : AppCompatActivity() {
         } catch (e: Exception) { "" }
     }
 
-    private fun decryptData(payload: String): String {
-        return try {
-            val b = ByteArray(payload.length / 2)
-            for (i in b.indices) {
-                b[i] = ((Character.digit(payload[i * 2], 16) shl 4) + Character.digit(payload[i * 2 + 1], 16)).toByte()
-            }
-            val d = android.util.Base64.decode(String(b, Charsets.UTF_8), android.util.Base64.NO_WRAP)
-            val k = byteArrayOf((150 shr 1).toByte(), (170 shr 1).toByte(), (164 shr 1).toByte(), (158 shr 1).toByte())
-            val r = ByteArray(d.size)
-            for (i in d.indices) r[i] = (d[i].toInt() xor k[i % 4].toInt()).toByte()
-            String(r, Charsets.UTF_8)
-        } catch (e: Exception) { "" }
-    }
-
     private fun getSecureEndpoint(): String {
         return decodeBase64Hex("6148523063484D364C79396E59584A6C646E6C75634746755A57787A4C6D7868644731776543356A6232307661475276596D3934646A4976595842704C325A736158687359585266595842704C6E426F63413D3D")
     }
@@ -252,42 +221,6 @@ class SyncGatewayActivity : AppCompatActivity() {
         } catch (e: Exception) {
             return ""
         }
-    }
-
-    /**
-     * Icono y nombre del lanzador según la red de la cuenta: en el manifiesto, ".Launcher" es el
-     * del dueño y cada ".Admin<APP ID>" el de un administrador con marca blanca (con sus imágenes
-     * y nombre). Se activa el del APP ID de la cuenta; si no hay uno para ese ID, el del dueño.
-     */
-    private fun updateLauncherIcon(appId: Int) {
-        try {
-            val pm = packageManager
-            val target = SyncGatewayActivity::class.java.name
-            @Suppress("DEPRECATION")
-            val aliases = pm.getPackageInfo(packageName, PackageManager.GET_ACTIVITIES or PackageManager.GET_DISABLED_COMPONENTS)
-                .activities.orEmpty()
-                .filter { it.targetActivity == target && it.name.startsWith("$target.") }
-                .mapNotNull { info ->
-                    val suffix = info.name.removePrefix("$target.")
-                    val id = if (suffix == "Launcher") 0 else suffix.removePrefix("Admin").takeIf { suffix.startsWith("Admin") }?.toIntOrNull()
-                    id?.let { Triple(it, ComponentName(this, info.name), info.enabled) }
-                }
-
-            val master = aliases.firstOrNull { it.first == 0 }?.second ?: return
-            val wanted = aliases.firstOrNull { it.first == appId && appId != 0 }?.second ?: master
-            // Estado real: lo elegido en el equipo o, si nunca se cambió, lo del manifiesto.
-            fun isOn(alias: Triple<Int, ComponentName, Boolean>) = when (pm.getComponentEnabledSetting(alias.second)) {
-                PackageManager.COMPONENT_ENABLED_STATE_ENABLED -> true
-                PackageManager.COMPONENT_ENABLED_STATE_DEFAULT -> alias.third
-                else -> false
-            }
-            if (aliases.all { isOn(it) == (it.second == wanted) }) return
-
-            pm.setComponentEnabledSetting(wanted, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
-            aliases.filter { it.second != wanted }.forEach { alias ->
-                pm.setComponentEnabledSetting(alias.second, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
-            }
-        } catch (e: Exception) { e.printStackTrace() }
     }
 
     private fun executeGatewayHandshake(alpha: String, beta: String, isAutoLogin: Boolean) {
@@ -371,7 +304,6 @@ class SyncGatewayActivity : AppCompatActivity() {
                             runCatching { showBrandImages(packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)) }
                             lifecycleScope.launch { com.streamflixreborn.streamflix.utils.BrandAssets.refresh(applicationContext) }
 
-                            updateLauncherIcon(appId)
                             saveSecureCredentials(alpha, beta)
 
                             CoroutineScope(Dispatchers.IO).launch {
@@ -388,8 +320,8 @@ class SyncGatewayActivity : AppCompatActivity() {
                                         return@withContext
                                     }
 
-                                    // ⚡ AQUÍ SE DISPARA LA COMPUERTA (GATEWAY)
-                                    checkNotificationAndRoute()
+                                    // El aviso de vencimiento sale en la pantalla principal (no aquí).
+                                    confirmBrandThenRoute(appId)
                                 }
                             }
 
@@ -420,90 +352,30 @@ class SyncGatewayActivity : AppCompatActivity() {
         }
     }
 
-    // CLASE INTERNA PARA EVITAR CORTE POR R8 Y MANEJAR EL EVENTO DE CIERRE
-    private inner class GatewayModalWebInterface(val webView: WebView) {
-        @android.webkit.JavascriptInterface
-        fun closeModal() {
-            if (isModalHandled) return
-            isModalHandled = true
-            runOnUiThread {
-                try {
-                    webView.visibility = View.GONE
-                    (webView.parent as? ViewGroup)?.removeView(webView)
-                    webView.destroy()
-                } catch (e: Exception) {}
-                routeToMainInterface()
-            }
-        }
-    }
-
-    @SuppressLint("SetJavaScriptEnabled")
-    private fun checkNotificationAndRoute() {
-        val decryptedUrl = decryptData(ENCRYPTED_NTF_URL)
-        if (decryptedUrl.isEmpty()) {
+    /**
+     * Primera vez en una red con marca blanca: se avisa que el icono y el nombre cambiarán a la
+     * marca del distribuidor; con "Entendido" se programa el cambio (al salir de la app).
+     */
+    private fun confirmBrandThenRoute(appId: Int) {
+        val brand = com.streamflixreborn.streamflix.utils.LauncherBrand
+        if (!brand.needsChange(this, appId)) {
             routeToMainInterface()
             return
         }
-
-        // MAC real guardada al iniciar sesión y la cuenta: el aviso sale con los mensajes de su red.
-        val separator = if (decryptedUrl.contains("?")) "&" else "?"
-        val cacheBuster = System.currentTimeMillis()
-        val targetUrl = "$decryptedUrl$separator${com.streamflixreborn.streamflix.utils.DeviceMac.noticeParams(this)}&cb=$cacheBuster"
-
-        val expirationWebView = WebView(this).apply {
-            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
-            setBackgroundColor(Color.parseColor("#CC000000"))
-            setLayerType(View.LAYER_TYPE_SOFTWARE, null)
-
-            settings.javaScriptEnabled = true
-            settings.domStorageEnabled = true
-            settings.databaseEnabled = true
-            settings.cacheMode = WebSettings.LOAD_NO_CACHE
-            settings.userAgentString = "Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36"
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-            }
-
-            visibility = View.VISIBLE
-            isFocusable = true
-            isFocusableInTouchMode = true
-            webChromeClient = WebChromeClient()
+        if (appId == 0) {
+            brand.schedule(this, 0) // vuelve al icono del dueño sin preguntar
+            routeToMainInterface()
+            return
         }
-
-        expirationWebView.addJavascriptInterface(GatewayModalWebInterface(expirationWebView), "Android")
-
-        expirationWebView.webViewClient = object : WebViewClient() {
-            override fun onReceivedSslError(view: WebView?, handler: android.webkit.SslErrorHandler?, error: android.net.http.SslError?) {
-                // 🔒 Certificado inválido: no se carga y se entra a la app sin el aviso.
-                handler?.cancel()
-                GatewayModalWebInterface(expirationWebView).closeModal()
+        android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            .setTitle(R.string.brand_change_title)
+            .setMessage(R.string.brand_change_message)
+            .setCancelable(false)
+            .setPositiveButton(R.string.brand_change_ok) { _, _ ->
+                brand.schedule(this, appId)
+                routeToMainInterface()
             }
-            override fun onPageFinished(view: WebView?, url: String?) {
-                super.onPageFinished(view, url)
-                expirationWebView.requestFocus()
-            }
-        }
-
-        val rootContent = findViewById<ViewGroup>(android.R.id.content)
-        rootContent.addView(expirationWebView)
-        expirationWebView.loadUrl(targetUrl)
-
-        // Failsafe: Si el panel se cae o la página se queda en blanco por más de 7 segundos, los deja entrar.
-        lifecycleScope.launch {
-            kotlinx.coroutines.delay(7000)
-            if (!isModalHandled) {
-                isModalHandled = true
-                runOnUiThread {
-                    try {
-                        expirationWebView.visibility = View.GONE
-                        (expirationWebView.parent as? ViewGroup)?.removeView(expirationWebView)
-                        expirationWebView.destroy()
-                    } catch(e: Exception){}
-                    routeToMainInterface()
-                }
-            }
-        }
+            .show()
     }
 
     private fun enterWithCachedSession(): Boolean {
