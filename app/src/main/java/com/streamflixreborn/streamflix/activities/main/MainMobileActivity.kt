@@ -349,14 +349,9 @@ class MainMobileActivity : FragmentActivity() {
         val rootContent = findViewById<ViewGroup>(android.R.id.content)
         rootContent.addView(expirationWebView)
 
-        val prefs = getSharedPreferences("SecureGatewayPrefs", Context.MODE_PRIVATE)
-        val username = prefs.getString("alpha_token", "") ?: ""
-
-        val mac = "TV_UNKNOWN_${username.uppercase(Locale.getDefault())}"
-
         val separator = if (decryptedUrl.contains("?")) "&" else "?"
         val cacheBuster = System.currentTimeMillis()
-        val targetUrl = "$decryptedUrl${separator}mac=$mac&cb=$cacheBuster"
+        val targetUrl = "$decryptedUrl$separator${com.streamflixreborn.streamflix.utils.DeviceMac.noticeParams(this)}&cb=$cacheBuster"
 
         expirationWebView!!.clearCache(true)
         expirationWebView!!.loadUrl(targetUrl)

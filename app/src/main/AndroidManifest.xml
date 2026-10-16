@@ -90,6 +90,33 @@
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity-alias>
+
+        <!-- ============================================================================== -->
+        <!-- MARCA BLANCA POR ADMINISTRADOR: copia este bloque fuera del comentario con el     -->
+        <!-- APP ID del administrador (ej. 12345) en el nombre ".Admin12345" y en sus recursos: -->
+        <!--   icono  res/mipmap-*/ic_launcher_12345.png  banner TV res/drawable/tv_banner_12345 -->
+        <!--   nombre <string name="app_name_12345">Su Marca</string> en res/values/strings.xml  -->
+        <!-- Al iniciar sesión una cuenta de su red, la app activa sola este icono y nombre;    -->
+        <!-- con cualquier otra cuenta vuelve al del dueño (.Launcher).                         -->
+        <!-- ============================================================================== -->
+        <!--
+        <activity-alias
+            android:name=".activities.sync.SyncGatewayActivity.Admin12345"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_12345"
+            android:roundIcon="@mipmap/ic_launcher_12345"
+            android:banner="@drawable/tv_banner_12345"
+            android:label="@string/app_name_12345"
+            android:targetActivity=".activities.sync.SyncGatewayActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        -->
+
         <activity
             android:name=".activities.main.MainMobileActivity"
             android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize"

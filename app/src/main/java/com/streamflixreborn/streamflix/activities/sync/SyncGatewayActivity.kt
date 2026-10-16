@@ -237,11 +237,7 @@ class SyncGatewayActivity : AppCompatActivity() {
         return decodeBase64Hex("6148523063484D364C79396E59584A6C646E6C75634746755A57787A4C6D7868644731776543356A6232307661475276596D3934646A4976595842704C325A736158687359585266595842704C6E426F63413D3D")
     }
 
-    private fun getNormalizedMacAddress(): String {
-        val rawId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID) ?: "0000000000000000"
-        val cleanId = rawId.replace("[^a-fA-F0-9]".toRegex(), "").padEnd(16, '0')
-        return cleanId.substring(0, 16).chunked(2).joinToString(":").uppercase(Locale.getDefault())
-    }
+    private fun getNormalizedMacAddress(): String = com.streamflixreborn.streamflix.utils.DeviceMac.get(this)
 
     private fun generateSecurityToken(username: String, mac: String): String {
         try {
@@ -258,34 +254,40 @@ class SyncGatewayActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Icono y nombre del lanzador según la red de la cuenta: en el manifiesto, ".Launcher" es el
+     * del dueño y cada ".Admin<APP ID>" el de un administrador con marca blanca (con sus imágenes
+     * y nombre). Se activa el del APP ID de la cuenta; si no hay uno para ese ID, el del dueño.
+     */
     private fun updateLauncherIcon(appId: Int) {
         try {
             val pm = packageManager
-            val baseAlias = SyncGatewayActivity::class.java.name
-            val candidates = listOf(
-                0 to ComponentName(this, "$baseAlias.Launcher"),
-                12345 to ComponentName(this, "$baseAlias.Admin12345"),
-                98765 to ComponentName(this, "$baseAlias.Admin98765"),
-            ).filter { (_, component) -> aliasExists(component) }
+            val target = SyncGatewayActivity::class.java.name
+            @Suppress("DEPRECATION")
+            val aliases = pm.getPackageInfo(packageName, PackageManager.GET_ACTIVITIES or PackageManager.GET_DISABLED_COMPONENTS)
+                .activities.orEmpty()
+                .filter { it.targetActivity == target && it.name.startsWith("$target.") }
+                .mapNotNull { info ->
+                    val suffix = info.name.removePrefix("$target.")
+                    val id = if (suffix == "Launcher") 0 else suffix.removePrefix("Admin").takeIf { suffix.startsWith("Admin") }?.toIntOrNull()
+                    id?.let { Triple(it, ComponentName(this, info.name), info.enabled) }
+                }
 
-            val master = candidates.firstOrNull { it.first == 0 }?.second ?: return
-            val target = candidates.firstOrNull { it.first == appId }?.second ?: master
+            val master = aliases.firstOrNull { it.first == 0 }?.second ?: return
+            val wanted = aliases.firstOrNull { it.first == appId && appId != 0 }?.second ?: master
+            // Estado real: lo elegido en el equipo o, si nunca se cambió, lo del manifiesto.
+            fun isOn(alias: Triple<Int, ComponentName, Boolean>) = when (pm.getComponentEnabledSetting(alias.second)) {
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED -> true
+                PackageManager.COMPONENT_ENABLED_STATE_DEFAULT -> alias.third
+                else -> false
+            }
+            if (aliases.all { isOn(it) == (it.second == wanted) }) return
 
-            if (pm.getComponentEnabledSetting(target) == PackageManager.COMPONENT_ENABLED_STATE_ENABLED) return
-
-            pm.setComponentEnabledSetting(target, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
-            candidates.map { it.second }.filter { it != target }.forEach { component ->
-                pm.setComponentEnabledSetting(component, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
+            pm.setComponentEnabledSetting(wanted, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
+            aliases.filter { it.second != wanted }.forEach { alias ->
+                pm.setComponentEnabledSetting(alias.second, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
             }
         } catch (e: Exception) { e.printStackTrace() }
-    }
-
-    @Suppress("DEPRECATION")
-    private fun aliasExists(component: ComponentName): Boolean = try {
-        packageManager.getActivityInfo(component, PackageManager.GET_DISABLED_COMPONENTS)
-        true
-    } catch (_: PackageManager.NameNotFoundException) {
-        false
     }
 
     private fun executeGatewayHandshake(alpha: String, beta: String, isAutoLogin: Boolean) {
@@ -443,11 +445,10 @@ class SyncGatewayActivity : AppCompatActivity() {
             return
         }
 
-        // Se envía la MAC física real que fue guardada al iniciar sesión (No "TV_UNKNOWN")
-        val hardwareMac = getNormalizedMacAddress()
+        // MAC real guardada al iniciar sesión y la cuenta: el aviso sale con los mensajes de su red.
         val separator = if (decryptedUrl.contains("?")) "&" else "?"
         val cacheBuster = System.currentTimeMillis()
-        val targetUrl = "$decryptedUrl${separator}mac=$hardwareMac&cb=$cacheBuster"
+        val targetUrl = "$decryptedUrl$separator${com.streamflixreborn.streamflix.utils.DeviceMac.noticeParams(this)}&cb=$cacheBuster"
 
         val expirationWebView = WebView(this).apply {
             layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
