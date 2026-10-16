@@ -293,6 +293,8 @@ class SyncGatewayActivity : AppCompatActivity() {
                                 putString(AssignedProviders.KEY_DEFAULT_PROVIDER, jsonResponse.optString("default_provider", "").replace("null", "").trim())
                                 putString(com.streamflixreborn.streamflix.providers.PanelM3uProvider.KEY_CHANNEL_LINES, channelLines.joinToString("\n"))
                                 putString(com.streamflixreborn.streamflix.providers.PanelM3uProvider.KEY_PERSONAL_URL, personalUrl.joinToString("\n"))
+                                putString(com.streamflixreborn.streamflix.providers.PanelM3uProvider.KEY_DEFAULT_LINE, jsonResponse.optString("default_channel_line", "").replace("null", "").trim())
+                                putInt(CloudSyncManager.KEY_CHANNEL_LINES_FROM, jsonResponse.optInt("channel_lines_from", 0))
                                 putString("settings_note", jsonResponse.optString("settings_note", "").replace("null", "").trim())
                                 commit()
                             }

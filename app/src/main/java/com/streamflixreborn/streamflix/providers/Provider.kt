@@ -128,9 +128,8 @@ interface Provider {
             VavooProvider("fr") to ProviderSupport(movies = false, tvShows = true),
             VavooProvider("es") to ProviderSupport(movies = false, tvShows = true),
             VavooProvider("pl") to ProviderSupport(movies = false, tvShows = true),
-            // Listas M3U configuradas desde el panel (solo aparecen si tienen URL).
-            PanelChannelsProvider to ProviderSupport(movies = false, tvShows = true),
-            PersonalProvider to ProviderSupport(movies = false, tvShows = true)
+            // Listas M3U del panel unidas en "Live" (solo aparece si hay alguna URL).
+            PanelLiveProvider to ProviderSupport(movies = false, tvShows = true)
         )
 
         // Helper functions to check support

@@ -3,9 +3,8 @@ package com.streamflixreborn.streamflix.utils
 import android.content.Context
 import com.streamflixreborn.streamflix.StreamFlixApp
 import com.streamflixreborn.streamflix.providers.IptvProvider
-import com.streamflixreborn.streamflix.providers.PanelChannelsProvider
+import com.streamflixreborn.streamflix.providers.PanelLiveProvider
 import com.streamflixreborn.streamflix.providers.PanelM3uProvider
-import com.streamflixreborn.streamflix.providers.PersonalProvider
 import com.streamflixreborn.streamflix.providers.Provider
 
 /**
@@ -77,9 +76,12 @@ object AssignedProviders {
     fun hasPanelAssignment(context: Context? = null): Boolean =
         names(context).isNotEmpty() || panelM3u(context).isNotEmpty()
 
-    /** "Canales" (líneas del panel) y "Personal Provider" (URL del usuario), si tienen URL. */
+    /** "Live": líneas de canales del panel y URL personal del usuario, si hay alguna URL. */
     fun panelM3u(context: Context? = null): List<Provider> =
-        listOf(PanelChannelsProvider, PersonalProvider).filter { it.isConfigured(context) }
+        listOf(PanelLiveProvider).filter { it.isConfigured(context) }
+
+    /** Canales de los proveedores de la app (sección "FlixLive"). */
+    fun appLive(context: Context? = null): List<Provider> = live(context).filterNot { it is PanelM3uProvider }
 
     fun all(context: Context? = null): List<Provider> {
         val names = names(context)

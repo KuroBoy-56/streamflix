@@ -25,16 +25,19 @@ import java.text.Normalizer
 import java.util.concurrent.TimeUnit
 
 /**
- * Canales en vivo desde listas M3U configuradas en el panel.
- * - [PanelChannelsProvider]: "líneas de canales" del distribuidor (Ajustes del panel).
- * - [PersonalProvider]: URL personal asignada a cada usuario al crearlo.
+ * Canales en vivo de las listas M3U del panel, unidas en una sola sección ("Live"):
+ * - Las "líneas de canales" del distribuidor (Logo App) y la URL personal del usuario.
+ * - La línea por defecto (elegida en el panel para el usuario) manda: sus canales y categorías
+ *   son la base. Las demás líneas solo suman los canales que la base no tiene, colocados en la
+ *   categoría que corresponde (misma marca, mismo tipo de grupo o deducida por el nombre).
+ * - Un canal que está en varias líneas se reproduce de la línea por defecto y, si falla, el
+ *   reproductor pasa solo a la misma señal en otra línea.
+ * - Cada canal lleva su país (tvg-country, tvg-id, prefijo "MX:" o el grupo) para filtrar.
  *
- * Las listas se filtran: se quitan entradas sin URL válida, duplicados, canales para adultos
- * y grupos vacíos; luego se agrupan por categoría (group-title).
+ * Se quitan entradas sin URL válida, duplicados y canales para adultos.
  */
 abstract class PanelM3uProvider(
     override val name: String,
-    private val prefsKey: String,
 ) : IptvProvider {
 
     override val baseUrl = ""
@@ -48,7 +51,11 @@ abstract class PanelM3uProvider(
         val group: String,
         val userAgent: String?,
         val referer: String?,
+        val country: String = "",
     )
+
+    /** Carpeta del lado izquierdo de "En Vivo" (categoría o país) con su cantidad de canales. */
+    data class Folder(val name: String, val count: Int)
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
@@ -61,15 +68,16 @@ abstract class PanelM3uProvider(
     @Volatile private var cacheKey: String = ""
     @Volatile private var cacheTime = 0L
 
-    /** URLs de listas configuradas (una por línea en el panel). */
+    /** URLs de las listas: primero la línea por defecto del usuario, luego las demás y la personal. */
     fun sources(context: Context? = null): List<String> {
         val ctx = context ?: runCatching { StreamFlixApp.instance }.getOrNull() ?: return emptyList()
-        return ctx.getSharedPreferences(AssignedProviders.PREFS_NAME, Context.MODE_PRIVATE)
-            .getString(prefsKey, "").orEmpty()
-            .lines()
+        val prefs = ctx.getSharedPreferences(AssignedProviders.PREFS_NAME, Context.MODE_PRIVATE)
+        val urls = (prefs.getString(KEY_CHANNEL_LINES, "").orEmpty().lines() + prefs.getString(KEY_PERSONAL_URL, "").orEmpty().lines())
             .map { it.trim() }
             .filter { it.startsWith("http://", true) || it.startsWith("https://", true) }
             .distinct()
+        val preferred = prefs.getString(KEY_DEFAULT_LINE, "").orEmpty().trim()
+        return if (preferred in urls) listOf(preferred) + (urls - preferred) else urls
     }
 
     fun isConfigured(context: Context? = null) = sources(context).isNotEmpty()
@@ -80,23 +88,64 @@ abstract class PanelM3uProvider(
         val now = System.currentTimeMillis()
         cache?.let { if (key == cacheKey && now - cacheTime < CACHE_MS) return it }
 
-        val loaded = coroutineScope {
-            urls.map { url -> async(Dispatchers.IO) { fetch(url) } }.awaitAll().flatten()
+        // Una lista por línea, en orden (la primera es la de por defecto).
+        val lines = coroutineScope {
+            urls.map { url -> async(Dispatchers.IO) { clean(fetch(url)) } }.awaitAll()
         }
-        val filtered = filter(loaded)
-        if (filtered.isNotEmpty() || cache == null || key != cacheKey) {
-            alternates = loaded
-                .filter { it.url.startsWith("http", true) && it.name.isNotBlank() }
-                .filterNot { ch -> ADULT.containsMatchIn(normalize(ch.name)) || ADULT.containsMatchIn(normalize(ch.group)) }
+        val merged = merge(lines)
+        if (merged.isNotEmpty() || cache == null || key != cacheKey) {
+            alternates = lines.flatten()
                 .distinctBy { it.url }
                 .groupBy { channelKey(it.name) }
-                .filter { (key, list) -> key.isNotEmpty() && list.size > 1 }
-            cache = filtered
+                .filter { (k, list) -> k.isNotEmpty() && list.size > 1 }
+            cache = merged
             cacheKey = key
             cacheTime = now
         }
         return cache.orEmpty()
     }
+
+    internal fun clean(list: List<Channel>): List<Channel> = list
+        .filter { it.url.startsWith("http", true) && it.name.isNotBlank() }
+        .filterNot { ch -> ADULT.containsMatchIn(normalize(ch.name)) || ADULT.containsMatchIn(normalize(ch.group)) }
+        .map { it.copy(name = it.name.replace(Regex("\\s+"), " ").trim(), group = cleanGroup(it.group, it.name)) }
+        .distinctBy { it.url }
+
+    /**
+     * La línea por defecto es la base; cada línea siguiente suma solo los canales que no están
+     * (p. ej. "ESPN 7" si la base no lo tiene), en la categoría que les corresponde.
+     */
+    internal fun merge(lines: List<List<Channel>>): List<Channel> {
+        val result = mutableListOf<Channel>()
+        val seen = HashSet<String>()
+        fun add(ch: Channel) {
+            val k = channelKey(ch.name)
+            if (k.isNotEmpty() && seen.add(k)) result += ch
+        }
+        lines.firstOrNull().orEmpty().forEach(::add)
+
+        // Marca -> categoría de la base ("espn" -> "ESPN" o "Deportes"), si tiene 2+ canales.
+        val brandGroups = result.groupBy { brand(it.name) }
+            .filterKeys { it.length >= 2 }
+            .mapValues { (_, list) -> list.groupingBy { it.group }.eachCount().maxByOrNull { it.value }?.takeIf { it.value >= 2 }?.key }
+        val baseGroups = result.map { it.group }.distinct()
+
+        lines.drop(1).forEach { line ->
+            line.forEach { ch ->
+                val group = brandGroups[brand(ch.name)]
+                    ?: baseGroups.firstOrNull { it.equals(ch.group, ignoreCase = true) }
+                    ?: ch.group
+                add(ch.copy(group = group))
+            }
+        }
+
+        // Los grupos con muy pocos canales se juntan en "Otros" para no llenar de carpetas.
+        val small = result.groupingBy { it.group }.eachCount().filterValues { it < MIN_GROUP }.keys
+        return result.map { if (it.group in small) it.copy(group = OTHERS) else it }
+    }
+
+    /** Primera palabra del nombre: "ESPN 2 HD" -> "espn", "Fox Sports 3" -> "fox". */
+    private fun brand(name: String) = normalize(name).split(Regex("[^a-z0-9]+")).firstOrNull { it.isNotEmpty() }.orEmpty()
 
     private suspend fun fetch(url: String): List<Channel> = withContext(Dispatchers.IO) {
         runCatching {
@@ -111,9 +160,10 @@ abstract class PanelM3uProvider(
         }.onFailure { Log.w(TAG, "$name: $url -> ${it.message}") }.getOrDefault(emptyList())
     }
 
-    private fun parseM3u(raw: String): List<Channel> {
+    internal fun parseM3u(raw: String): List<Channel> {
         val out = mutableListOf<Channel>()
         var name = ""; var logo = ""; var group = ""; var ua: String? = null; var referer: String? = null
+        var tvgCountry = ""; var tvgId = ""
         for (line in raw.lineSequence()) {
             val t = line.trim()
             when {
@@ -123,13 +173,15 @@ abstract class PanelM3uProvider(
                     group = ATTR_GROUP.find(t)?.groupValues?.get(1).orEmpty()
                     ua = ATTR_UA.find(t)?.groupValues?.get(1)
                     referer = null
+                    tvgCountry = ATTR_COUNTRY.find(t)?.groupValues?.get(1).orEmpty()
+                    tvgId = ATTR_ID.find(t)?.groupValues?.get(1).orEmpty()
                 }
                 t.startsWith("#EXTGRP:", true) -> if (group.isBlank()) group = t.substringAfter(":").trim()
                 t.startsWith("#EXTVLCOPT:http-user-agent=", true) -> ua = t.substringAfter("=").trim()
                 t.startsWith("#EXTVLCOPT:http-referrer=", true) -> referer = t.substringAfter("=").trim()
                 t.startsWith("http", true) -> {
-                    if (name.isNotBlank()) out += Channel(name, t, logo, group, ua, referer)
-                    name = ""; logo = ""; group = ""; ua = null; referer = null
+                    if (name.isNotBlank()) out += withCountry(Channel(name, t, logo, group, ua, referer), tvgCountry, tvgId)
+                    name = ""; logo = ""; group = ""; ua = null; referer = null; tvgCountry = ""; tvgId = ""
                 }
             }
         }
@@ -142,25 +194,42 @@ abstract class PanelM3uProvider(
         val url = Regex("https?://\\S+").find(t)?.value ?: return@mapNotNull null
         val title = t.substringBefore(url).trim().trimEnd(',', '|', ';').trim()
             .ifBlank { url.substringAfterLast('/').substringBefore('?').substringBeforeLast('.') }
-        Channel(title, url, "", "", null, null)
+        withCountry(Channel(title, url, "", "", null, null), "", "")
     }
 
-    private fun filter(list: List<Channel>): List<Channel> = list
-        .filter { it.url.startsWith("http", true) && it.name.isNotBlank() }
-        .filterNot { ch -> ADULT.containsMatchIn(normalize(ch.name)) || ADULT.containsMatchIn(normalize(ch.group)) }
-        .map { it.copy(name = it.name.replace(Regex("\\s+"), " ").trim(), group = cleanGroup(it.group)) }
-        .distinctBy { it.url }
-        .distinctBy { normalize(it.name) + "|" + normalize(it.group) }
-        .let { channels ->
-            // Los grupos con muy pocos canales se juntan en "Otros" para no llenar de filas.
-            val small = channels.groupingBy { it.group }.eachCount().filterValues { it < MIN_GROUP }.keys
-            channels.map { if (it.group in small) it.copy(group = OTHERS) else it }
+    /** País del canal y nombre sin el prefijo de país ("MX: Canal 5" -> "Canal 5", México). */
+    private fun withCountry(ch: Channel, tvgCountry: String, tvgId: String): Channel {
+        var name = ch.name
+        var code = tvgCountry.split(',', ';', ' ').map { it.trim().lowercase() }.firstOrNull { it in COUNTRIES }
+            ?: Regex("\\.([a-z]{2})(@.*)?$").find(tvgId.lowercase())?.groupValues?.get(1)?.takeIf { it in COUNTRIES }
+        PREFIX.find(name)?.let { m ->
+            val c = alias(m.groupValues[1])
+            if (c in COUNTRIES) {
+                if (code == null) code = c
+                name = name.substring(m.range.last + 1).trim().ifEmpty { name }
+            }
         }
+        if (code == null) code = SUFFIX.find(name)?.groupValues?.get(1)?.let(::alias)?.takeIf { it in COUNTRIES }
+        if (code == null) {
+            val g = normalize(ch.group)
+            code = COUNTRY_WORDS.entries.firstOrNull { (word, _) -> Regex("\\b${Regex.escape(word)}\\b").containsMatchIn(g) }?.value
+                ?: PREFIX.find(ch.group)?.groupValues?.get(1)?.let(::alias)?.takeIf { it in COUNTRIES }
+        }
+        return ch.copy(name = name, country = code?.let(::countryLabel).orEmpty())
+    }
 
-    /** "Animation;Kids" -> "Animación"; "Undefined"/vacío -> "Otros". */
-    private fun cleanGroup(raw: String): String {
-        val first = raw.split(';', '|').map { it.trim() }.firstOrNull { it.isNotBlank() } ?: return OTHERS
-        return GROUP_NAMES[first.lowercase()] ?: first.replaceFirstChar { it.titlecase() }
+    /**
+     * "Animation;Kids" -> "Animación", "MX | Sports" -> "Deportes". Si el grupo está vacío, es
+     * solo un país o "Undefined", la categoría se deduce del nombre (ESPN -> Deportes).
+     */
+    private fun cleanGroup(raw: String, channelName: String): String {
+        val parts = raw.split(';', '|', '/', ':').map { it.trim() }.filter { it.isNotBlank() }
+            .filterNot { p -> val n = normalize(p); n in COUNTRY_WORDS || alias(n) in COUNTRIES }
+        val first = parts.firstOrNull()
+        val named = first?.let { GROUP_NAMES[normalize(it)] ?: it.replaceFirstChar { c -> c.titlecase() } }
+        if (named != null && named != OTHERS) return named
+        val n = " " + normalize(channelName) + " "
+        return KEYWORDS.entries.firstOrNull { (_, words) -> words.any { n.contains(it) } }?.key ?: OTHERS
     }
 
     private fun encode(ch: Channel): String = Base64.encodeToString(
@@ -201,6 +270,18 @@ abstract class PanelM3uProvider(
 
     /** Todos los canales de una categoría (para cambiar de canal desde el reproductor). */
     suspend fun groupShows(group: String): List<TvShow> = channels().filter { it.group == group }.map { it.toShow() }
+
+    /** Carpetas por categoría (como se agrupan en "En Vivo"). */
+    suspend fun categoryFolders(): List<Folder> = groups(channels()).map { (group, list) -> Folder(group, list.size) }
+
+    /** Carpetas por país (solo canales con país detectado), de más a menos canales. */
+    suspend fun countryFolders(): List<Folder> = channels()
+        .filter { it.country.isNotEmpty() }
+        .groupingBy { it.country }.eachCount()
+        .map { (country, count) -> Folder(country, count) }
+        .sortedByDescending { it.count }
+
+    suspend fun countryShows(country: String): List<TvShow> = channels().filter { it.country == country }.map { it.toShow() }
 
     override suspend fun getGenre(id: String, page: Int): Genre {
         val list = channels().filter { it.group == id }
@@ -271,10 +352,56 @@ abstract class PanelM3uProvider(
             "comedy" to "Comedia", "cooking" to "Cocina", "family" to "Familia", "travel" to "Viajes",
             "outdoor" to "Aire libre", "business" to "Negocios", "classic" to "Clásicos", "science" to "Ciencia",
             "weather" to "Clima", "shop" to "Compras", "auto" to "Motor", "relax" to "Relax", "public" to "Públicos",
+            "sport" to "Deportes", "deportes" to "Deportes", "deporte" to "Deportes", "futbol" to "Deportes",
+            "noticias" to "Noticias", "infantil" to "Infantil", "infantiles" to "Infantil", "ninos" to "Infantil",
+            "cartoons" to "Infantil", "peliculas" to "Películas", "cine" to "Películas", "musica" to "Música",
+            "documentales" to "Documentales", "documentaries" to "Documentales", "entretenimiento" to "Entretenimiento",
         )
         private val ATTR_LOGO = Regex("""tvg-logo="([^"]*)"""", RegexOption.IGNORE_CASE)
         private val ATTR_GROUP = Regex("""group-title="([^"]*)"""", RegexOption.IGNORE_CASE)
         private val ATTR_UA = Regex("""http-user-agent="([^"]*)"""", RegexOption.IGNORE_CASE)
+        private val ATTR_COUNTRY = Regex("""tvg-country="([^"]*)"""", RegexOption.IGNORE_CASE)
+        private val ATTR_ID = Regex("""tvg-id="([^"]*)"""", RegexOption.IGNORE_CASE)
+        /** "MX: ", "|ES| ", "[AR] ", "USA - " al inicio del nombre o del grupo. */
+        private val PREFIX = Regex("""^\s*[\[(|]?\s*([A-Za-z]{2,3})\s*[\])|:\-]+\s*""")
+        /** "Canal 5 (MX)" al final del nombre. */
+        private val SUFFIX = Regex("""\(([A-Za-z]{2,3})\)\s*$""")
+
+        private val COUNTRIES = mapOf(
+            "mx" to "México", "ar" to "Argentina", "co" to "Colombia", "cl" to "Chile", "pe" to "Perú",
+            "ve" to "Venezuela", "ec" to "Ecuador", "uy" to "Uruguay", "py" to "Paraguay", "bo" to "Bolivia",
+            "cr" to "Costa Rica", "pa" to "Panamá", "gt" to "Guatemala", "hn" to "Honduras", "sv" to "El Salvador",
+            "ni" to "Nicaragua", "do" to "Rep. Dominicana", "pr" to "Puerto Rico", "cu" to "Cuba",
+            "us" to "Estados Unidos", "ca" to "Canadá", "es" to "España", "pt" to "Portugal", "br" to "Brasil",
+            "it" to "Italia", "fr" to "Francia", "de" to "Alemania", "gb" to "Reino Unido",
+        )
+        private fun alias(code: String) = when (val c = code.lowercase()) {
+            "usa" -> "us"; "uk" -> "gb"; "mex" -> "mx"; "arg" -> "ar"; "col" -> "co"; "chi" -> "cl"; "esp" -> "es"
+            else -> c
+        }
+        private val COUNTRY_WORDS = mapOf(
+            "mexico" to "mx", "argentina" to "ar", "colombia" to "co", "chile" to "cl", "peru" to "pe",
+            "venezuela" to "ve", "ecuador" to "ec", "uruguay" to "uy", "paraguay" to "py", "bolivia" to "bo",
+            "costa rica" to "cr", "panama" to "pa", "guatemala" to "gt", "honduras" to "hn", "el salvador" to "sv",
+            "nicaragua" to "ni", "dominicana" to "do", "puerto rico" to "pr", "cuba" to "cu",
+            "estados unidos" to "us", "usa" to "us", "canada" to "ca", "espana" to "es", "spain" to "es",
+            "portugal" to "pt", "brasil" to "br", "brazil" to "br", "italia" to "it", "italy" to "it",
+            "francia" to "fr", "france" to "fr", "alemania" to "de", "germany" to "de", "reino unido" to "gb",
+        )
+        /** "🇲🇽 México" (bandera a partir del código del país). */
+        private fun countryLabel(code: String): String {
+            val flag = code.uppercase().map { Character.toChars(0x1F1E6 + (it - 'A')).concatToString() }.joinToString("")
+            return "$flag ${COUNTRIES[code] ?: code.uppercase()}"
+        }
+        /** Categoría deducida del nombre cuando la lista no la trae. */
+        private val KEYWORDS = linkedMapOf(
+            "Deportes" to listOf(" espn", " fox sports", " tudn", " dazn", " bein", " sky sports", " tyc", " win sports", " gol ", " futbol", " nba", " nfl", " f1 ", " ufc", " wwe", " deport", " sport", " claro sports", " vix "),
+            "Noticias" to listOf(" cnn", " noticias", " news", " milenio", " n+", " euronews", " dw ", " bbc", " rt ", " 24h", " 24 horas"),
+            "Infantil" to listOf(" disney", " nick", " cartoon", " discovery kids", " baby", " kids", " infantil", " boomerang", " junior", " jr "),
+            "Películas" to listOf(" hbo", " cinemax", " tnt", " star ", " cine", " movie", " film", " golden", " space", " paramount", " universal", " warner", " amc", " sony"),
+            "Música" to listOf(" mtv", " music", " musica", " vh1", " telehit", " htv", " radio"),
+            "Documentales" to listOf(" discovery", " history", " nat geo", " national geographic", " animal planet", " a&e", " investigation"),
+        )
         private val ADULT = Regex("\\b(xxx|adult[oa]?s?|porno?|erotic[oa]?s?)\\b|18\\+|\\+18", RegexOption.IGNORE_CASE)
 
         private fun normalize(value: String) = Normalizer.normalize(value.lowercase(), Normalizer.Form.NFD)
@@ -283,9 +410,10 @@ abstract class PanelM3uProvider(
 
         const val KEY_CHANNEL_LINES = "panel_channel_lines"
         const val KEY_PERSONAL_URL = "personal_provider_url"
+        /** Línea de canales por defecto del usuario (elegida en el panel). */
+        const val KEY_DEFAULT_LINE = "panel_default_channel_line"
     }
 }
 
-object PanelChannelsProvider : PanelM3uProvider("Canales", PanelM3uProvider.KEY_CHANNEL_LINES)
-
-object PersonalProvider : PanelM3uProvider("Personal Provider", PanelM3uProvider.KEY_PERSONAL_URL)
+/** Sección "Live": líneas del panel + URL personal, unidas con la línea por defecto primero. */
+object PanelLiveProvider : PanelM3uProvider("Live")

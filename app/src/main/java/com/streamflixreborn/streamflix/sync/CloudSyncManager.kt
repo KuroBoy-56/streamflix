@@ -34,6 +34,8 @@ import java.net.URL
 
 object CloudSyncManager {
     private const val TAG = "BackendSync"
+    /** De quién son las líneas de canales: 0 dueño, APP ID del administrador o -1 ninguna. */
+    const val KEY_CHANNEL_LINES_FROM = "channel_lines_from"
     private val gson = Gson()
 
     private const val ENCRYPTED_SYNC_URL = "4979456d507a6876665741734e4341715053773850796f374e794d34657a3475507a67694e32553250534a6b505459674b546f714f586c364d7a3869656945324a54594e4f6a67774943737149544e684f7a3069"
@@ -181,15 +183,19 @@ object CloudSyncManager {
         fun lines(json: JSONObject?) = if (json?.has("channel_lines") == true) PanelChannelConfig.lines(json.opt("channel_lines")) else emptyList()
 
         val prefs = context.getSharedPreferences("SecureGatewayPrefs", Context.MODE_PRIVATE)
+        // Canales: cada administrador usa solo los suyos (el panel dice de quién son al iniciar sesión).
+        val channelLines = when (val from = prefs.getInt(KEY_CHANNEL_LINES_FROM, 0)) {
+            0 -> lines(master)
+            appId -> lines(own)
+            else -> if (from < 0) emptyList() else null
+        }
         val values = mapOf(
             "custom_background_url" to field("custom_background"),
             "custom_background_tv_url" to field("custom_background_tv"),
             "custom_splash_url" to field("custom_splash"),
             "brand_name" to field("app_name"),
             "settings_note" to field("settings_note"),
-            com.streamflixreborn.streamflix.providers.PanelM3uProvider.KEY_CHANNEL_LINES to
-                    lines(own).ifEmpty { lines(master) }.joinToString("\n"),
-        )
+        ) + listOfNotNull(channelLines?.let { com.streamflixreborn.streamflix.providers.PanelM3uProvider.KEY_CHANNEL_LINES to it.joinToString("\n") })
         var changed = false
         val editor = prefs.edit()
         values.forEach { (key, value) ->
