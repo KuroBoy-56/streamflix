@@ -87,10 +87,26 @@
                 android:textColor="#FFFFFF"
                 android:padding="16dp"
                 android:inputType="textPassword"
-                android:layout_marginBottom="24dp"
+                android:layout_marginBottom="10dp"
                 android:focusable="true"
                 android:hint="Ingresar contraseña"
                 android:textColorHint="#444444" />
+
+            <!-- MAC del equipo (ANDROID_ID en pares, igual que la registra el panel) -->
+            <TextView
+                android:id="@+id/txtDeviceMac"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="14dp"
+                android:gravity="center"
+                android:shadowColor="#FF000000"
+                android:shadowDx="0"
+                android:shadowDy="0"
+                android:shadowRadius="4"
+                android:textColor="#FFFFFF"
+                android:textIsSelectable="true"
+                android:textSize="14sp"
+                android:textStyle="bold" />
 
             <Button
                 android:id="@+id/btnSync"

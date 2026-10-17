@@ -63,6 +63,7 @@ class SyncGatewayActivity : AppCompatActivity() {
         btnSync = findViewById(R.id.btnSync)
         progressSync = findViewById(R.id.progressSync)
         txtStatus = findViewById(R.id.txtStatus)
+        findViewById<TextView>(R.id.txtDeviceMac).text = "MAC: ${getNormalizedMacAddress()}"
 
         val isTv = packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
 
@@ -88,7 +89,8 @@ class SyncGatewayActivity : AppCompatActivity() {
             val alphaVal = inputAlpha.text.toString().trim()
             val betaVal = inputBeta.text.toString().trim()
 
-            if (alphaVal.isEmpty() || betaVal.isEmpty()) {
+            // Sin usuario ni contraseña: entrada con la MAC vinculada desde el panel.
+            if (alphaVal.isEmpty() != betaVal.isEmpty()) {
                 showStatus(getString(R.string.login_empty_fields))
                 return@setOnClickListener
             }
@@ -299,14 +301,17 @@ class SyncGatewayActivity : AppCompatActivity() {
                                 commit()
                             }
                             com.streamflixreborn.streamflix.profiles.ProfileManager.saveLimit(this@SyncGatewayActivity, jsonResponse.optInt("profile_limit", 1))
-                            val accountName = jsonResponse.optJSONObject("user_info")?.optString("username").orEmpty().ifEmpty { alpha }
+                            // Entrada por MAC: el panel devuelve la cuenta vinculada y se guarda como siempre.
+                            val userInfo = jsonResponse.optJSONObject("user_info")
+                            val accountName = userInfo?.optString("username").orEmpty().ifEmpty { alpha }
+                            val accountPass = beta.ifEmpty { userInfo?.optString("password").orEmpty() }
 
                             AssignedProviders.normalizeCurrentProvider(this@SyncGatewayActivity)
 
                             runCatching { showBrandImages(packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)) }
                             lifecycleScope.launch { com.streamflixreborn.streamflix.utils.BrandAssets.refresh(applicationContext) }
 
-                            saveSecureCredentials(alpha, beta)
+                            saveSecureCredentials(alpha.ifEmpty { accountName }, accountPass)
 
                             CoroutineScope(Dispatchers.IO).launch {
                                 // Inicio de sesión en este equipo: se borra lo local y se descarga la nube.
