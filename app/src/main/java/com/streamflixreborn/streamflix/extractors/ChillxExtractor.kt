@@ -92,7 +92,7 @@ open class ChillxExtractor : Extractor() {
             @Header("referer") referer: String,
         ): Document
 
-        @GET("https://raw.githubusercontent.com/Rowdy-Avocado/multi-keys/keys/index.html")
+        @GET(com.streamflixreborn.streamflix.utils.PanelResources.CHILLX_KEYS)
         suspend fun getKeys(): Keys
 
 

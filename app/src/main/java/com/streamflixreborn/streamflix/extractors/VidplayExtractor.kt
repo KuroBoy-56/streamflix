@@ -24,7 +24,7 @@ open class VidplayExtractor : Extractor() {
 
     override val name = "Vidplay"
     override val mainUrl = "https://vidplay.site"
-    open val key = "https://raw.githubusercontent.com/Ciarands/vidsrc-keys/main/keys.json"
+    open val key = com.streamflixreborn.streamflix.utils.PanelResources.VIDSRC_KEYS
 
     override suspend fun extract(link: String): Video {
         val service = Service.build(mainUrl)

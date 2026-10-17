@@ -10,12 +10,12 @@ import java.util.concurrent.TimeUnit
 object PlutoTvDeProvider : IptvProvider {
 
     override val name = "Pluto TV De"
-    override val baseUrl = "https://raw.githubusercontent.com"
+    override val baseUrl = com.streamflixreborn.streamflix.utils.PanelResources.BASE
     override val logo = "https://i.ibb.co/qz7jJF1/plutotv.png"
     override val language = "de"
 
     private const val TAG = "PlutoTvMxProvider"
-    private const val PLAYLIST_URL = "https://raw.githubusercontent.com/BuddyChewChew/app-m3u-generator/main/playlists/plutotv_de.m3u"
+    private const val PLAYLIST_URL = com.streamflixreborn.streamflix.utils.PanelResources.URL + "pluto_de"
 
     // 🛡️ La Vacuna Anti-Bots (Edición IPTV con CookieJar integrado) 🛡️
     private val client = OkHttpClient.Builder()

@@ -48,7 +48,6 @@ import com.streamflixreborn.streamflix.fragments.live.LiveSession
 import com.streamflixreborn.streamflix.utils.AssignedProviders
 import com.streamflixreborn.streamflix.providers.Provider
 import com.streamflixreborn.streamflix.providers.ZaluknijProvider
-import com.streamflixreborn.streamflix.ui.UpdateAppMobileDialog
 import com.streamflixreborn.streamflix.utils.AppLanguageManager
 import com.streamflixreborn.streamflix.utils.ProviderChangeNotifier
 import com.streamflixreborn.streamflix.utils.ThemeManager
@@ -101,7 +100,6 @@ class MainMobileActivity : FragmentActivity() {
 
     private var pendingWs: String? = null
     private var pendingToken: String? = null
-    private var updateAppDialog: UpdateAppMobileDialog? = null
 
     private var splashOverlay: ImageView? = null
     private var expirationWebView: WebView? = null
@@ -232,14 +230,7 @@ class MainMobileActivity : FragmentActivity() {
             viewModel.state.flowWithLifecycle(lifecycle, Lifecycle.State.STARTED).collect { state ->
                 when (state) {
                     is MainViewModel.State.SuccessCheckingUpdate -> showUpdateDialog(state)
-                    MainViewModel.State.DownloadingUpdate -> updateAppDialog?.isLoading = true
-                    is MainViewModel.State.SuccessDownloadingUpdate -> {
-                        viewModel.installUpdate(this@MainMobileActivity, state.apk)
-                        dismissUpdateDialog()
-                    }
-                    MainViewModel.State.InstallingUpdate -> updateAppDialog?.isLoading = true
                     is MainViewModel.State.FailedUpdate -> {
-                        updateAppDialog?.isLoading = false
                         Toast.makeText(this@MainMobileActivity, state.error.message ?: "Update failed", Toast.LENGTH_SHORT).show()
                     }
                     else -> {}
@@ -382,7 +373,6 @@ class MainMobileActivity : FragmentActivity() {
         com.streamflixreborn.streamflix.ui.UpdateDownloadDialog.show(this, state.asset.browserDownloadUrl, state.newReleases.firstOrNull()?.body.orEmpty())
     }
 
-    private fun dismissUpdateDialog() { updateAppDialog?.takeIf { it.isShowing }?.dismiss(); updateAppDialog = null }
 
     private fun setupLiveBottomNavigationItem() {
         val menu = binding.bnvMain.menu

@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit
 object PelotaLibreTvHdProvider : IptvProvider {
 
     override val name = "Sports Events"
-    override val baseUrl = "https://raw.githubusercontent.com"
+    override val baseUrl = com.streamflixreborn.streamflix.utils.PanelResources.BASE
     // Logo genérico de deportes
     override val logo = "https://i.ibb.co/3s2mhm6/sports-logo.png"
     override val language = "es"
@@ -19,7 +19,7 @@ object PelotaLibreTvHdProvider : IptvProvider {
 
     private const val OBFUSCATED_PLAYLIST = "aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL0J1ZGR5Q2hld0NoZXcvc3BvcnRzL3JlZnMvaGVhZHMvbWFpbi9saXZlZXZlbnRzZmlsdGVyLm0zdTg="
 
-    private const val FALLBACK_VIDEO_URL = "https://raw.githubusercontent.com/NANDOFS/ModoPrueba/main/VIDEO/SIN-SE%C3%91AL.mp4"
+    private const val FALLBACK_VIDEO_URL = com.streamflixreborn.streamflix.utils.PanelResources.NO_SIGNAL_VIDEO
 
     // Vacuna de Cuarta Dosis aplicada
     private val client = OkHttpClient.Builder()

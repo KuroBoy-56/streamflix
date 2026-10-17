@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit
 object CineCityProvider : IptvProvider {
 
     override val name = "MAGISTV"
-    override val baseUrl = "https://raw.githubusercontent.com"
+    override val baseUrl = com.streamflixreborn.streamflix.utils.PanelResources.BASE
     override val logo = "https://i.ibb.co/39Ld2wbt/MAGISTV.png"
     override val language = "es"
 
@@ -18,7 +18,7 @@ object CineCityProvider : IptvProvider {
 
     private const val OBFUSCATED_PLAYLIST = "aHR0cHM6Ly9yYXcuZ2l0aHVidXNlcmNvbnRlbnQuY29tL0NJTkVDSVRZMjAyMy9jaW5lY2l0eS9jaW5lY2l0eS5uZXQvcHJpbmNpcGFsLm0zdQ=="
 
-    private const val FALLBACK_VIDEO_URL = "https://raw.githubusercontent.com/NANDOFS/ModoPrueba/main/VIDEO/SIN-SE%C3%91AL.mp4"
+    private const val FALLBACK_VIDEO_URL = com.streamflixreborn.streamflix.utils.PanelResources.NO_SIGNAL_VIDEO
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)

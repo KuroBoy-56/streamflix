@@ -21,7 +21,7 @@ class VidsrcToExtractor : Extractor() {
 
     override val name = "Vidsrc.to"
     override val mainUrl = "https://vidsrc.to"
-    val key = "https://raw.githubusercontent.com/Ciarands/vidsrc-keys/main/keys.json"
+    val key = com.streamflixreborn.streamflix.utils.PanelResources.VIDSRC_KEYS
 
     fun server(videoType: Video.Type): Video.Server {
         return Video.Server(

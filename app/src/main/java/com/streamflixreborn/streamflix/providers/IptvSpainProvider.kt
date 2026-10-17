@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit
 object IptvSpainProvider : IptvProvider {
 
     override val name = "IPTV Spain"
-    override val baseUrl = "https://iptv-org.github.io/iptv/languages/spa.m3u"
+    override val baseUrl = com.streamflixreborn.streamflix.utils.PanelResources.URL + "iptvorg_spa"
     override val logo = "https://i.ibb.co/SD7860Mv/IPTV-Spain-Canales.jpg"
     override val language = "es"
 

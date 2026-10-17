@@ -40,7 +40,6 @@ import com.streamflixreborn.streamflix.fragments.player.PlayerTvFragment
 import com.streamflixreborn.streamflix.fragments.home.HomeTvFragment
 import com.streamflixreborn.streamflix.fragments.live.LiveSession
 import com.streamflixreborn.streamflix.fragments.live.LiveTvFragment
-import com.streamflixreborn.streamflix.ui.UpdateAppTvDialog
 import com.streamflixreborn.streamflix.providers.IptvProvider
 import com.streamflixreborn.streamflix.providers.Provider
 import com.streamflixreborn.streamflix.providers.Cine24hProvider
@@ -63,7 +62,6 @@ class MainTvActivity : FragmentActivity() {
     private val binding get() = _binding!!
 
     private val viewModel by viewModels<MainViewModel>()
-    private lateinit var updateAppDialog: UpdateAppTvDialog
     private var isNavMenuExpanded = true
 
     private var expirationWebView: WebView? = null
@@ -268,12 +266,6 @@ class MainTvActivity : FragmentActivity() {
                     is MainViewModel.State.SuccessCheckingUpdate -> com.streamflixreborn.streamflix.ui.UpdateDownloadDialog.show(
                         this@MainTvActivity, state.asset.browserDownloadUrl, state.newReleases.firstOrNull()?.body.orEmpty(),
                     )
-                    MainViewModel.State.DownloadingUpdate -> if (::updateAppDialog.isInitialized) updateAppDialog.isLoading = true
-                    is MainViewModel.State.SuccessDownloadingUpdate -> {
-                        viewModel.installUpdate(this@MainTvActivity, state.apk)
-                        if (::updateAppDialog.isInitialized) updateAppDialog.hide()
-                    }
-                    MainViewModel.State.InstallingUpdate -> if (::updateAppDialog.isInitialized) updateAppDialog.isLoading = true
                     is MainViewModel.State.FailedUpdate -> {
                         Toast.makeText(this@MainTvActivity, state.error.message ?: "Update failed", Toast.LENGTH_SHORT).show()
                     }

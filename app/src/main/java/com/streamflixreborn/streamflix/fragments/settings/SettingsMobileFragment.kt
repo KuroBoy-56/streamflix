@@ -456,28 +456,6 @@ class SettingsMobileFragment : PreferenceFragmentCompat() {
             setOnPreferenceClickListener(null)
         }
 
-        findPreference<Preference>("p_settings_help")?.setOnPreferenceClickListener {
-            startActivity(
-                Intent(
-                    Intent.ACTION_VIEW,
-                    Uri.parse("https://github.com/streamflix-reborn2/streamflix")
-                )
-            )
-            true
-        }
-
-        findPreference<Preference>("p_settings_telegram")?.setOnPreferenceClickListener {
-            try {
-                val tgIntent = Intent(Intent.ACTION_VIEW, Uri.parse("tg://resolve?domain=streamflixreborn"))
-                startActivity(tgIntent)
-            } catch (e: Exception) {
-                Toast.makeText(requireContext(), "Telegram not found.", Toast.LENGTH_SHORT).show()
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/streamflixreborn"))
-                startActivity(intent)
-            }
-            true
-        }
-
         findPreference<Preference>("p_scan_resolver_qr")?.setOnPreferenceClickListener {
             scanResolverQrLauncher.launch(Intent(requireContext(), QrScannerActivity::class.java))
             true

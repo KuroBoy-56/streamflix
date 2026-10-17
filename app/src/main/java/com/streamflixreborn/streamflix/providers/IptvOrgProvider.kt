@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit
 object IptvOrgProvider : IptvProvider {
 
     override val name = "IPTV-All World"
-    override val baseUrl = "https://iptv-org.github.io/iptv"
+    override val baseUrl = com.streamflixreborn.streamflix.utils.PanelResources.BASE
     override val logo = "https://i.ibb.co/W1d0CxF/Logo-IPTV-All-World.jpg"
     override val language = "en"
 
@@ -86,7 +86,7 @@ object IptvOrgProvider : IptvProvider {
         if (cachedChannels != null && (now - lastFetchTime) < CACHE_DURATION) return cachedChannels!!
 
         return try {
-            val request = Request.Builder().url("$baseUrl/index.m3u").build()
+            val request = Request.Builder().url(com.streamflixreborn.streamflix.utils.PanelResources.URL + "iptvorg_all").build()
             val body = client.newCall(request).execute().body?.string() ?: return emptyList()
             val channels = parseM3U(body)
             cachedChannels = channels
