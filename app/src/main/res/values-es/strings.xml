@@ -522,6 +522,7 @@
     <string name="live_preview_pick">Elige un canal para verlo aquí</string>
     <string name="live_preview_error">Este canal no carga ahora. Prueba otro.</string>
     <string name="live_now">EN VIVO</string>
+    <string name="live_epg_next">Después</string>
     <string name="home_featured">Destacados</string>
     <string name="home_next_row">Siguiente: %1$s</string>
     <string name="see_all">Ver todo</string>

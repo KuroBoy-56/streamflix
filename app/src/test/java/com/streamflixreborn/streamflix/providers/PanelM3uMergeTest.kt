@@ -66,4 +66,21 @@ class PanelM3uMergeTest {
         val ch = p.clean(p.parseM3u("#EXTINF:-1,Fox Sports 2\nhttp://c/fs2")).single()
         assertEquals("Deportes", ch.group)
     }
+
+    @Test fun tvgIdIsKeptForEpg() {
+        val ch = p.clean(p.parseM3u("#EXTM3U url-tvg=\"http://epg/guide.xml.gz\"\n#EXTINF:-1 tvg-id=\"Canal5.mx\" group-title=\"General\",Canal 5\nhttp://c/5")).single()
+        assertEquals("Canal5.mx", ch.epgId)
+    }
+
+    @Test fun nowAndNextProgramme() {
+        val epg = com.streamflixreborn.streamflix.utils.LiveEpg
+        val list = listOf(
+            com.streamflixreborn.streamflix.utils.LiveEpg.Programme(0, 100, "A"),
+            com.streamflixreborn.streamflix.utils.LiveEpg.Programme(100, 200, "B"),
+            com.streamflixreborn.streamflix.utils.LiveEpg.Programme(200, 300, "C"),
+        )
+        assertEquals("B" to "C", epg.nowAndNext(list, 150).let { it.first?.title to it.second?.title })
+        assertEquals(null to "A", epg.nowAndNext(list, -5).let { it.first?.title to it.second?.title })
+        assertEquals(null to null, epg.nowAndNext(list, 400).let { it.first?.title to it.second?.title })
+    }
 }

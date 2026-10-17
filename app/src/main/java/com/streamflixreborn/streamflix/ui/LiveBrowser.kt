@@ -116,6 +116,19 @@ class LiveBrowser(
     private val previewTitle = TextView(context)
     private val previewInfo = TextView(context)
     private val previewHint = TextView(context)
+    // Guía de programación (solo TV): programa actual con su avance y el siguiente.
+    private val epgBox = LinearLayout(context)
+    private val epgNow = TextView(context)
+    private val epgBar = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal)
+    private val epgNext = TextView(context)
+    private var epgJob: Job? = null
+    private var epgList: List<com.streamflixreborn.streamflix.utils.LiveEpg.Programme> = emptyList()
+    private val epgTicker = object : Runnable {
+        override fun run() {
+            renderEpg()
+            view.postDelayed(this, 60_000)
+        }
+    }
     private val folderAdapter = FolderAdapter()
     private val channelAdapter = ChannelAdapter()
     private val previewColumn = LinearLayout(context)
@@ -273,6 +286,22 @@ class LiveBrowser(
         previewHint.apply { setTextColor(Color.parseColor("#80FFFFFF")); textSize = if (isTv) 14f else 12f; setPadding(0, dp(6), 0, 0) }
         previewColumn.addView(previewTitle)
         previewColumn.addView(previewInfo)
+        if (isTv) {
+            epgBox.orientation = LinearLayout.VERTICAL
+            epgBox.visibility = View.GONE
+            epgBox.setPadding(0, dp(10), 0, 0)
+            epgNow.apply { setTextColor(Color.WHITE); textSize = 16f; maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END }
+            epgBar.apply {
+                max = 1000
+                progressTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#E50914"))
+                progressBackgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#33FFFFFF"))
+            }
+            epgNext.apply { setTextColor(Color.parseColor("#B3FFFFFF")); textSize = 14f; maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END }
+            epgBox.addView(epgNow)
+            epgBox.addView(epgBar, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(4)).apply { setMargins(0, dp(6), 0, dp(6)) })
+            epgBox.addView(epgNext)
+            previewColumn.addView(epgBox)
+        }
         previewColumn.addView(previewHint)
         showPreviewIdle()
     }
@@ -498,6 +527,7 @@ class LiveBrowser(
             Glide.with(previewLogo).load(show.poster).into(previewLogo)
         }
         player?.stop()
+        loadEpg(show)
         previewJob?.cancel()
         previewJob = scope.launch {
             val servers = withContext(Dispatchers.IO) {
@@ -505,6 +535,48 @@ class LiveBrowser(
             }
             pendingServers = servers.toMutableList()
             playNextServer(show)
+        }
+    }
+
+    /** TV: guía del canal (si su lista trae EPG). Se oculta si no hay. */
+    private fun loadEpg(show: TvShow) {
+        if (!isTv) return
+        epgJob?.cancel()
+        view.removeCallbacks(epgTicker)
+        epgList = emptyList()
+        epgBox.visibility = View.GONE
+        val p = provider as? PanelM3uProvider ?: return
+        epgJob = scope.launch {
+            val list = runCatching { p.epgFor(show.id) }.getOrDefault(emptyList())
+            if (playing?.id != show.id) return@launch
+            epgList = list
+            epgTicker.run()
+        }
+    }
+
+    private fun renderEpg() {
+        val (now, next) = com.streamflixreborn.streamflix.utils.LiveEpg.nowAndNext(epgList)
+        if (now == null && next == null) {
+            epgBox.visibility = View.GONE
+            return
+        }
+        val clock = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+        if (now != null) {
+            epgNow.text = "${clock.format(now.start)} – ${clock.format(now.stop)}  ${now.title}"
+            val span = (now.stop - now.start).coerceAtLeast(1)
+            epgBar.progress = ((System.currentTimeMillis() - now.start) * 1000 / span).toInt().coerceIn(0, 1000)
+            epgBar.visibility = View.VISIBLE
+            epgNow.visibility = View.VISIBLE
+        } else {
+            epgBar.visibility = View.GONE
+            epgNow.visibility = View.GONE
+        }
+        epgNext.text = next?.let { "${context.getString(R.string.live_epg_next)}  ${clock.format(it.start)}  ${it.title}" }.orEmpty()
+        epgNext.visibility = if (next != null) View.VISIBLE else View.GONE
+        if (epgBox.visibility != View.VISIBLE) {
+            epgBox.alpha = 0f
+            epgBox.visibility = View.VISIBLE
+            epgBox.animate().alpha(1f).setDuration(250).start()
         }
     }
 
@@ -599,6 +671,8 @@ class LiveBrowser(
 
     fun release() {
         previewJob?.cancel()
+        epgJob?.cancel()
+        view.removeCallbacks(epgTicker)
         playerView.player = null
         player?.release()
         player = null

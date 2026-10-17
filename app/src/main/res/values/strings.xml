@@ -607,6 +607,7 @@
     <string name="live_preview_pick">Choose a channel to preview it</string>
     <string name="live_preview_error">This channel isn\'t loading right now. Try another one.</string>
     <string name="live_now">LIVE</string>
+    <string name="live_epg_next">Next</string>
     <string name="home_featured">Featured</string>
     <string name="home_next_row">Next: %1$s</string>
     <string name="see_all">See all</string>

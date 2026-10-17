@@ -57,6 +57,8 @@ abstract class PanelM3uProvider(
         val userAgent: String?,
         val referer: String?,
         val country: String = "",
+        /** tvg-id: canal en la guía de programación (EPG) de la lista. */
+        val epgId: String = "",
     )
 
     /** Carpeta del lado izquierdo de "En Vivo" (categoría o país) con su cantidad de canales. */
@@ -72,6 +74,9 @@ abstract class PanelM3uProvider(
     @Volatile private var alternates: Map<String, List<Channel>> = emptyMap()
     @Volatile private var cacheKey: String = ""
     @Volatile private var cacheTime = 0L
+    /** Guías de programación (url-tvg / x-tvg-url) que traen las listas. */
+    @Volatile private var epgSources: List<String> = emptyList()
+    private val parsedEpg = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 
     /** URLs de las listas: primero la línea por defecto del usuario, luego las demás y la personal. */
     fun sources(context: Context? = null): List<String> {
@@ -117,6 +122,7 @@ abstract class PanelM3uProvider(
 
     private suspend fun download(urls: List<String>, key: String): List<Channel> {
         // Una lista por línea, en orden (la primera es la de por defecto).
+        parsedEpg.clear()
         val lines = coroutineScope {
             urls.map { url -> async(Dispatchers.IO) { clean(fetch(url)) } }.awaitAll()
         }
@@ -130,6 +136,7 @@ abstract class PanelM3uProvider(
             cache = merged
             cacheKey = key
             cacheTime = System.currentTimeMillis()
+            epgSources = parsedEpg.toList()
             if (merged.isNotEmpty()) withContext(Dispatchers.IO) { writeDisk() }
         }
         return cache.orEmpty()
@@ -143,14 +150,15 @@ abstract class PanelM3uProvider(
     private fun diskFile(): File? = runCatching { File(StreamFlixApp.instance.filesDir, "live_cache_${name.lowercase()}.txt") }.getOrNull()
 
     private fun Channel.toLine(tag: String, extra: String = "") =
-        listOf(tag, extra, name, url, logo, group, userAgent.orEmpty(), referer.orEmpty(), country)
+        listOf(tag, extra, name, url, logo, group, userAgent.orEmpty(), referer.orEmpty(), country, epgId)
             .joinToString(SEP) { it.replace('\n', ' ').replace('\r', ' ') }
 
     private fun writeDisk() = runCatching {
         val file = diskFile() ?: return@runCatching
         val tmp = File(file.parentFile, file.name + ".tmp")
         tmp.bufferedWriter().use { out ->
-            out.write("v1$SEP$cacheTime$SEP${cacheKey.hashCode()}$SEP${cacheKey.length}\n")
+            out.write("v2$SEP$cacheTime$SEP${cacheKey.hashCode()}$SEP${cacheKey.length}\n")
+            epgSources.forEach { out.write("E$SEP$it\n") }
             cache.orEmpty().forEach { out.write(it.toLine("C")); out.write("\n") }
             alternates.forEach { (k, list) -> list.forEach { out.write(it.toLine("A", k)); out.write("\n") } }
         }
@@ -161,18 +169,20 @@ abstract class PanelM3uProvider(
         val file = diskFile()?.takeIf { it.isFile } ?: return null
         val channels = ArrayList<Channel>()
         val alts = HashMap<String, MutableList<Channel>>()
+        val epg = ArrayList<String>()
         var time = 0L
         file.bufferedReader().useLines { lines ->
             lines.forEachIndexed { i, line ->
                 val f = line.split(SEP)
                 if (i == 0) {
                     // Copia de otras líneas (el panel las cambió): no sirve.
-                    if (f.getOrNull(0) != "v1" || f.getOrNull(2) != key.hashCode().toString() || f.getOrNull(3) != key.length.toString()) return null
+                    if (f.getOrNull(0) != "v2" || f.getOrNull(2) != key.hashCode().toString() || f.getOrNull(3) != key.length.toString()) return null
                     time = f[1].toLongOrNull() ?: 0L
                     return@forEachIndexed
                 }
-                if (f.size < 9) return@forEachIndexed
-                val ch = Channel(f[2], f[3], f[4], f[5], f[6].ifEmpty { null }, f[7].ifEmpty { null }, f[8])
+                if (f[0] == "E") { f.getOrNull(1)?.let { epg += it }; return@forEachIndexed }
+                if (f.size < 10) return@forEachIndexed
+                val ch = Channel(f[2], f[3], f[4], f[5], f[6].ifEmpty { null }, f[7].ifEmpty { null }, f[8], f[9])
                 if (f[0] == "C") channels += ch else alts.getOrPut(f[1]) { mutableListOf() } += ch
             }
         }
@@ -181,6 +191,7 @@ abstract class PanelM3uProvider(
         alternates = alts
         cacheKey = key
         cacheTime = time
+        epgSources = epg
         channels
     }.getOrNull()
 
@@ -246,6 +257,9 @@ abstract class PanelM3uProvider(
         for (line in raw.lineSequence()) {
             val t = line.trim()
             when {
+                t.startsWith("#EXTM3U", true) -> ATTR_EPG.findAll(t).forEach { m ->
+                    m.groupValues[1].split(',').map { it.trim() }.filter { it.startsWith("http", true) }.forEach { parsedEpg += it }
+                }
                 t.startsWith("#EXTINF", true) -> {
                     name = t.substringAfterLast(",").trim()
                     logo = ATTR_LOGO.find(t)?.groupValues?.get(1).orEmpty()
@@ -259,7 +273,7 @@ abstract class PanelM3uProvider(
                 t.startsWith("#EXTVLCOPT:http-user-agent=", true) -> ua = t.substringAfter("=").trim()
                 t.startsWith("#EXTVLCOPT:http-referrer=", true) -> referer = t.substringAfter("=").trim()
                 t.startsWith("http", true) -> {
-                    if (name.isNotBlank()) out += withCountry(Channel(name, t, logo, group, ua, referer), tvgCountry, tvgId)
+                    if (name.isNotBlank()) out += withCountry(Channel(name, t, logo, group, ua, referer, epgId = tvgId.trim()), tvgCountry, tvgId)
                     name = ""; logo = ""; group = ""; ua = null; referer = null; tvgCountry = ""; tvgId = ""
                 }
             }
@@ -362,6 +376,15 @@ abstract class PanelM3uProvider(
 
     suspend fun countryShows(country: String): List<TvShow> = channels().filter { it.country == country }.map { it.toShow() }
 
+    /** Guía del canal (si la lista trae EPG y el canal su tvg-id). */
+    suspend fun epgFor(showId: String): List<com.streamflixreborn.streamflix.utils.LiveEpg.Programme> {
+        val all = channels()
+        val url = decode(showId)?.url ?: return emptyList()
+        val epgId = all.firstOrNull { it.url == url }?.epgId?.takeIf { it.isNotEmpty() } ?: return emptyList()
+        val ids = all.mapNotNullTo(HashSet()) { it.epgId.takeIf { id -> id.isNotEmpty() } }
+        return com.streamflixreborn.streamflix.utils.LiveEpg.programmes(epgSources, ids)[epgId].orEmpty()
+    }
+
     override suspend fun getGenre(id: String, page: Int): Genre {
         val list = channels().filter { it.group == id }
         return Genre(id = id, name = id, shows = list.drop((page - 1) * PAGE).take(PAGE).map { it.toShow() })
@@ -441,6 +464,7 @@ abstract class PanelM3uProvider(
         private val ATTR_UA = Regex("""http-user-agent="([^"]*)"""", RegexOption.IGNORE_CASE)
         private val ATTR_COUNTRY = Regex("""tvg-country="([^"]*)"""", RegexOption.IGNORE_CASE)
         private val ATTR_ID = Regex("""tvg-id="([^"]*)"""", RegexOption.IGNORE_CASE)
+        private val ATTR_EPG = Regex("""(?:url-tvg|x-tvg-url)="([^"]*)"""", RegexOption.IGNORE_CASE)
         /** "MX: ", "|ES| ", "[AR] ", "USA - " al inicio del nombre o del grupo. */
         private val PREFIX = Regex("""^\s*[\[(|]?\s*([A-Za-z]{2,3})\s*[\])|:\-]+\s*""")
         /** "Canal 5 (MX)" al final del nombre. */
