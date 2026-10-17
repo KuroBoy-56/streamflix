@@ -482,6 +482,8 @@ class MainTvActivity : FragmentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Ajustes muestra el avatar del perfil activo (cambia al cambiar de perfil).
+        com.streamflixreborn.streamflix.utils.ProfileAvatarIcon.apply(this, binding.navMain.menu.findItem(R.id.settings))
         viewModel.checkUpdate()
     }
 

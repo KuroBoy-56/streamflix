@@ -368,7 +368,12 @@ class MainMobileActivity : FragmentActivity() {
         super.onDestroy()
     }
 
-    override fun onResume() { super.onResume(); viewModel.checkUpdate() }
+    override fun onResume() {
+        super.onResume()
+        viewModel.checkUpdate()
+        // Ajustes muestra el avatar del perfil activo (cambia al cambiar de perfil).
+        com.streamflixreborn.streamflix.utils.ProfileAvatarIcon.apply(this, binding.bnvMain.menu.findItem(R.id.settings))
+    }
     private fun clearResolverState() { pendingWs = null; pendingToken = null }
 
     private fun showUpdateDialog(state: MainViewModel.State.SuccessCheckingUpdate) {

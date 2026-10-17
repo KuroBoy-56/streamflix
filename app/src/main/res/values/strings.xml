@@ -601,6 +601,12 @@
     <string name="main_menu_live">Live</string>
     <string name="live_select_provider">Live provider</string>
     <string name="live_empty">No live channels available</string>
+    <string name="live_mode_categories">Categories</string>
+    <string name="live_mode_countries">Countries</string>
+    <string name="live_preview_hint">Press again for full screen</string>
+    <string name="live_preview_pick">Choose a channel to preview it</string>
+    <string name="live_preview_error">This channel isn\'t loading right now. Try another one.</string>
+    <string name="live_now">LIVE</string>
     <string name="home_featured">Featured</string>
     <string name="home_next_row">Next: %1$s</string>
     <string name="see_all">See all</string>

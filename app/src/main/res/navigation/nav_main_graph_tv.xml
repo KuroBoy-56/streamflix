@@ -44,8 +44,7 @@
     <fragment
         android:id="@+id/live"
         android:name="com.streamflixreborn.streamflix.fragments.live.LiveTvFragment"
-        android:label="fragment_live_tv"
-        tools:layout="@layout/fragment_live_tv" />
+        android:label="fragment_live_tv" />
     <fragment
         android:id="@+id/favorites"
         android:name="com.streamflixreborn.streamflix.fragments.favorites.FavoritesTvFragment"

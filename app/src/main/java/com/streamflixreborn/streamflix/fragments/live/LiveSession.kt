@@ -80,6 +80,12 @@ object LiveSession {
         if (lastCategory?.name == category.name && lastChannels.isNotEmpty()) lastChannels
         else category.list.filterIsInstance<TvShow>()
 
+    // Lo último elegido en "En Vivo" (al volver del reproductor se retoma ahí, como TiviMate).
+    @Volatile var browserProvider: String? = null
+    @Volatile var browserCountries: Boolean = false
+    @Volatile var browserFolder: String? = null
+    @Volatile var browserChannelId: String? = null
+
     /** Argumentos del reproductor para un canal (igual que al abrirlo desde la lista). */
     fun playerArgs(show: TvShow): Bundle = Bundle().apply {
         putString("id", show.id)

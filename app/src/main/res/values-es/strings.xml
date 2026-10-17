@@ -516,6 +516,12 @@
     <string name="main_menu_live">En Vivo</string>
     <string name="live_select_provider">Proveedor en vivo</string>
     <string name="live_empty">No hay canales en vivo disponibles</string>
+    <string name="live_mode_categories">Categorías</string>
+    <string name="live_mode_countries">Países</string>
+    <string name="live_preview_hint">Pulsa otra vez para ver en pantalla completa</string>
+    <string name="live_preview_pick">Elige un canal para verlo aquí</string>
+    <string name="live_preview_error">Este canal no carga ahora. Prueba otro.</string>
+    <string name="live_now">EN VIVO</string>
     <string name="home_featured">Destacados</string>
     <string name="home_next_row">Siguiente: %1$s</string>
     <string name="see_all">Ver todo</string>
