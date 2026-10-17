@@ -296,9 +296,9 @@ class LiveBrowser(
         LiveSession.browserProvider = p.name
         renderTabs()
         folders = emptyList()
-        folderAdapter.notifyDataSetChanged()
+        folderList.safely { folderAdapter.notifyDataSetChanged() }
         channels = emptyList()
-        channelAdapter.notifyDataSetChanged()
+        channelList.safely { channelAdapter.notifyDataSetChanged() }
         channelTitle.text = ""
         channelMessage.visibility = View.GONE
         folderProgress.visibility = View.VISIBLE
@@ -377,7 +377,7 @@ class LiveBrowser(
             else -> categories.map { PanelM3uProvider.Folder(it.name, it.list.size) }
         }
         folderProgress.visibility = View.GONE
-        folderAdapter.notifyDataSetChanged()
+        folderList.safely { folderAdapter.notifyDataSetChanged() }
         if (folders.isEmpty()) {
             channelMessage.text = context.getString(R.string.live_empty)
             channelMessage.visibility = View.VISIBLE
@@ -395,8 +395,10 @@ class LiveBrowser(
         val old = folders.indexOf(folder)
         folder = f
         LiveSession.browserFolder = f.name
-        if (old >= 0) folderAdapter.notifyItemChanged(old)
-        folderAdapter.notifyItemChanged(folders.indexOf(f))
+        folderList.safely {
+            if (old >= 0) folderAdapter.notifyItemChanged(old)
+            folderAdapter.notifyItemChanged(folders.indexOf(f))
+        }
         channelTitle.text = f.name
         channelMessage.visibility = View.GONE
         channelJob?.cancel()
@@ -407,7 +409,7 @@ class LiveBrowser(
             }.getOrDefault(emptyList())
             if (folder != f) return@launch
             channels = list
-            channelAdapter.notifyDataSetChanged()
+            channelList.safely { channelAdapter.notifyDataSetChanged() }
             channelList.scrollToPosition(0)
             // Animación suave al cambiar de carpeta.
             channelList.alpha = 0f
@@ -452,8 +454,10 @@ class LiveBrowser(
         val previous = playing
         playing = show
         LiveSession.browserChannelId = show.id
-        channels.indexOfFirst { it.id == previous?.id }.takeIf { it >= 0 }?.let(channelAdapter::notifyItemChanged)
-        channels.indexOfFirst { it.id == show.id }.takeIf { it >= 0 }?.let(channelAdapter::notifyItemChanged)
+        channelList.safely {
+            channels.indexOfFirst { it.id == previous?.id }.takeIf { it >= 0 }?.let(channelAdapter::notifyItemChanged)
+            channels.indexOfFirst { it.id == show.id }.takeIf { it >= 0 }?.let(channelAdapter::notifyItemChanged)
+        }
         previewTitle.text = show.title
         previewInfo.text = folder?.name.orEmpty()
         previewHint.text = context.getString(R.string.live_preview_hint)
@@ -584,6 +588,11 @@ class LiveBrowser(
 
     private fun dp(value: Int) = (value * context.resources.displayMetrics.density).toInt()
 
+    /** RecyclerView no admite cambios mientras acomoda sus filas: en ese caso se hacen justo después. */
+    private fun RecyclerView.safely(block: () -> Unit) {
+        if (isComputingLayout) post { if (isAttachedToWindow) block() } else block()
+    }
+
     // ---------------------------------------------------------------------------------------
     // Listas
     // ---------------------------------------------------------------------------------------
@@ -628,7 +637,11 @@ class LiveBrowser(
             holder.root.isActivated = f == folder
             holder.root.setOnClickListener { if (f != folder) openFolder(f) else focusChannels() }
             // En TV, al pasar por una carpeta se muestran sus canales (como TiviMate).
-            holder.root.setOnFocusChangeListener { _, has -> if (has && isTv && f != folder) openFolder(f) }
+            // Fuera del acomodo de la lista (si no, RecyclerView cierra la app) y sin abrir cada
+            // carpeta por la que solo se pasa rápido.
+            holder.root.setOnFocusChangeListener { v, has ->
+                if (has && isTv) v.postDelayed({ if (v.hasFocus() && f != folder && v.isAttachedToWindow) openFolder(f) }, 150)
+            }
             holder.root.setOnKeyListener { _, keyCode, event ->
                 if (event.action == KeyEvent.ACTION_DOWN && keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) { focusChannels(); true } else false
             }
