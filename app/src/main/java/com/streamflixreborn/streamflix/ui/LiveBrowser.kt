@@ -138,7 +138,7 @@ class LiveBrowser(
         val content = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             clipChildren = false
-            setPadding(dp(if (isTv) 32 else 12), dp(if (isTv) 20 else 12), dp(if (isTv) 32 else 12), dp(if (isTv) 16 else 8))
+            setPadding(dp(if (isTv) 24 else 12), dp(if (isTv) 20 else 12), dp(if (isTv) 24 else 12), dp(if (isTv) 16 else 8))
         }
         view.addView(content, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
 
@@ -211,10 +211,11 @@ class LiveBrowser(
         val fill = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         if (threeColumns) {
             val body = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; clipChildren = false }
-            body.addView(folderColumn, LinearLayout.LayoutParams(dp(if (isTv) 250 else 200), ViewGroup.LayoutParams.MATCH_PARENT))
+            // TV: columnas un poco más angostas para que la vista previa sea más grande.
+            body.addView(folderColumn, LinearLayout.LayoutParams(dp(if (isTv) 220 else 200), ViewGroup.LayoutParams.MATCH_PARENT))
             body.addView(divider(), LinearLayout.LayoutParams(dp(1), ViewGroup.LayoutParams.MATCH_PARENT).apply { setMargins(dp(8), 0, dp(8), 0) })
-            body.addView(channelColumn, LinearLayout.LayoutParams(dp(if (isTv) 360 else 280), ViewGroup.LayoutParams.MATCH_PARENT))
-            body.addView(divider(), LinearLayout.LayoutParams(dp(1), ViewGroup.LayoutParams.MATCH_PARENT).apply { setMargins(dp(8), 0, dp(16), 0) })
+            body.addView(channelColumn, LinearLayout.LayoutParams(dp(if (isTv) 310 else 280), ViewGroup.LayoutParams.MATCH_PARENT))
+            body.addView(divider(), LinearLayout.LayoutParams(dp(1), ViewGroup.LayoutParams.MATCH_PARENT).apply { setMargins(dp(8), 0, dp(if (isTv) 12 else 16), 0) })
             body.addView(previewColumn, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
             bodyHolder.addView(body, fill)
         } else {

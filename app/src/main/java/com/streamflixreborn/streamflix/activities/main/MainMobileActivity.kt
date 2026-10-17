@@ -378,13 +378,8 @@ class MainMobileActivity : FragmentActivity() {
 
     private fun showUpdateDialog(state: MainViewModel.State.SuccessCheckingUpdate) {
         if (isFinishing || isDestroyed) return
-        dismissUpdateDialog()
-        androidx.appcompat.app.AlertDialog.Builder(this)
-            .setTitle(R.string.update_available_title)
-            .setMessage(getString(R.string.update_available_message, state.newReleases.firstOrNull()?.tagName.orEmpty()) + "\n\n${state.newReleases.firstOrNull()?.body.orEmpty()}")
-            .setCancelable(false)
-            .setPositiveButton(R.string.update_download) { _, _ -> viewModel.downloadUpdate(this@MainMobileActivity, state.asset) }
-            .setNegativeButton(R.string.profiles_cancel, null).show()
+        // Descarga dentro de la app con porcentaje (igual que en TV).
+        com.streamflixreborn.streamflix.ui.UpdateDownloadDialog.show(this, state.asset.browserDownloadUrl, state.newReleases.firstOrNull()?.body.orEmpty())
     }
 
     private fun dismissUpdateDialog() { updateAppDialog?.takeIf { it.isShowing }?.dismiss(); updateAppDialog = null }

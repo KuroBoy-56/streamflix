@@ -15,6 +15,11 @@ import com.streamflixreborn.streamflix.models.TvShow
 import com.streamflixreborn.streamflix.models.Video
 import com.streamflixreborn.streamflix.utils.AssignedProviders
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CoroutineScope
+import java.io.File
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -82,17 +87,41 @@ abstract class PanelM3uProvider(
 
     fun isConfigured(context: Context? = null) = sources(context).isNotEmpty()
 
+    /**
+     * Canales con caché: en memoria y en el equipo (sobrevive al cerrar la app). Si hay copia
+     * se devuelve al instante y, si tiene más de 30 min, se actualiza en segundo plano; solo la
+     * primera vez (o si cambian las líneas del panel) se espera a la descarga.
+     */
     private suspend fun channels(): List<Channel> {
         val urls = sources()
         val key = urls.joinToString("\n")
         val now = System.currentTimeMillis()
-        cache?.let { if (key == cacheKey && now - cacheTime < CACHE_MS) return it }
+        cache?.takeIf { key == cacheKey }?.let { mem ->
+            if (now - cacheTime >= CACHE_MS) refreshInBackground(urls, key)
+            return mem
+        }
+        withContext(Dispatchers.IO) { readDisk(key) }?.let { disk ->
+            if (now - cacheTime >= CACHE_MS) refreshInBackground(urls, key)
+            return disk
+        }
+        return download(urls, key)
+    }
 
+    private val refreshScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    @Volatile private var refreshJob: Job? = null
+
+    private fun refreshInBackground(urls: List<String>, key: String) {
+        if (refreshJob?.isActive == true) return
+        refreshJob = refreshScope.launch { runCatching { download(urls, key) } }
+    }
+
+    private suspend fun download(urls: List<String>, key: String): List<Channel> {
         // Una lista por línea, en orden (la primera es la de por defecto).
         val lines = coroutineScope {
             urls.map { url -> async(Dispatchers.IO) { clean(fetch(url)) } }.awaitAll()
         }
         val merged = merge(lines)
+        // Si todas las líneas fallan se conserva lo que había (no se borra la lista).
         if (merged.isNotEmpty() || cache == null || key != cacheKey) {
             alternates = lines.flatten()
                 .distinctBy { it.url }
@@ -100,10 +129,60 @@ abstract class PanelM3uProvider(
                 .filter { (k, list) -> k.isNotEmpty() && list.size > 1 }
             cache = merged
             cacheKey = key
-            cacheTime = now
+            cacheTime = System.currentTimeMillis()
+            if (merged.isNotEmpty()) withContext(Dispatchers.IO) { writeDisk() }
         }
         return cache.orEmpty()
     }
+
+    // ---------------------------------------------------------------------------------------
+    // Caché en el equipo: una línea por canal (campos separados por \u0001), rápido de leer
+    // aunque la lista tenga miles de canales.
+    // ---------------------------------------------------------------------------------------
+
+    private fun diskFile(): File? = runCatching { File(StreamFlixApp.instance.filesDir, "live_cache_${name.lowercase()}.txt") }.getOrNull()
+
+    private fun Channel.toLine(tag: String, extra: String = "") =
+        listOf(tag, extra, name, url, logo, group, userAgent.orEmpty(), referer.orEmpty(), country)
+            .joinToString(SEP) { it.replace('\n', ' ').replace('\r', ' ') }
+
+    private fun writeDisk() = runCatching {
+        val file = diskFile() ?: return@runCatching
+        val tmp = File(file.parentFile, file.name + ".tmp")
+        tmp.bufferedWriter().use { out ->
+            out.write("v1$SEP$cacheTime$SEP${cacheKey.hashCode()}$SEP${cacheKey.length}\n")
+            cache.orEmpty().forEach { out.write(it.toLine("C")); out.write("\n") }
+            alternates.forEach { (k, list) -> list.forEach { out.write(it.toLine("A", k)); out.write("\n") } }
+        }
+        tmp.renameTo(file)
+    }.onFailure { Log.w(TAG, "$name: no se pudo guardar la caché: ${it.message}") }
+
+    private fun readDisk(key: String): List<Channel>? = runCatching {
+        val file = diskFile()?.takeIf { it.isFile } ?: return null
+        val channels = ArrayList<Channel>()
+        val alts = HashMap<String, MutableList<Channel>>()
+        var time = 0L
+        file.bufferedReader().useLines { lines ->
+            lines.forEachIndexed { i, line ->
+                val f = line.split(SEP)
+                if (i == 0) {
+                    // Copia de otras líneas (el panel las cambió): no sirve.
+                    if (f.getOrNull(0) != "v1" || f.getOrNull(2) != key.hashCode().toString() || f.getOrNull(3) != key.length.toString()) return null
+                    time = f[1].toLongOrNull() ?: 0L
+                    return@forEachIndexed
+                }
+                if (f.size < 9) return@forEachIndexed
+                val ch = Channel(f[2], f[3], f[4], f[5], f[6].ifEmpty { null }, f[7].ifEmpty { null }, f[8])
+                if (f[0] == "C") channels += ch else alts.getOrPut(f[1]) { mutableListOf() } += ch
+            }
+        }
+        if (channels.isEmpty()) return null
+        cache = channels
+        alternates = alts
+        cacheKey = key
+        cacheTime = time
+        channels
+    }.getOrNull()
 
     internal fun clean(list: List<Channel>): List<Channel> = list
         .filter { it.url.startsWith("http", true) && it.name.isNotBlank() }

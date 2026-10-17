@@ -264,15 +264,10 @@ class MainTvActivity : FragmentActivity() {
         lifecycleScope.launch {
             viewModel.state.flowWithLifecycle(lifecycle, Lifecycle.State.STARTED).collect { state ->
                 when (state) {
-                    is MainViewModel.State.SuccessCheckingUpdate -> {
-                        @Suppress("UNCHECKED_CAST")
-                        updateAppDialog = UpdateAppTvDialog(this@MainTvActivity, state.newReleases as List<Nothing>).also {
-                            it.setOnUpdateClickListener { _ ->
-                                if (!it.isLoading) viewModel.downloadUpdate(this@MainTvActivity, state.asset)
-                            }
-                            it.show()
-                        }
-                    }
+                    // Mismo aviso que en celular: descarga dentro de la app con porcentaje.
+                    is MainViewModel.State.SuccessCheckingUpdate -> com.streamflixreborn.streamflix.ui.UpdateDownloadDialog.show(
+                        this@MainTvActivity, state.asset.browserDownloadUrl, state.newReleases.firstOrNull()?.body.orEmpty(),
+                    )
                     MainViewModel.State.DownloadingUpdate -> if (::updateAppDialog.isInitialized) updateAppDialog.isLoading = true
                     is MainViewModel.State.SuccessDownloadingUpdate -> {
                         viewModel.installUpdate(this@MainTvActivity, state.apk)
