@@ -562,7 +562,7 @@ class PlayerMobileFragment : Fragment() {
         ) { show -> switchLiveChannel(show) }
         if (!overlay.isAvailable) return
         liveOverlay = overlay
-        overlay.onInteraction = { binding.pvPlayer.showController() }
+        overlay.onInteraction = { _binding?.pvPlayer?.showController() }
         overlay.view.elevation = 7f * resources.displayMetrics.density
         (binding.root as ViewGroup).addView(overlay.view, androidx.constraintlayout.widget.ConstraintLayout.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT, 0
@@ -571,8 +571,11 @@ class PlayerMobileFragment : Fragment() {
             topToTop = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
             bottomToBottom = androidx.constraintlayout.widget.ConstraintLayout.LayoutParams.PARENT_ID
         })
+        // La animación de ocultar los controles puede terminar después de cerrar el reproductor
+        // (sin vista): en ese caso no se hace nada (antes cerraba la app).
         binding.pvPlayer.setControllerVisibilityListener(androidx.media3.ui.PlayerView.ControllerVisibilityListener { visibility ->
-            if (visibility == View.VISIBLE && !binding.settings.isVisible) overlay.show() else overlay.hide()
+            val b = _binding ?: return@ControllerVisibilityListener
+            if (visibility == View.VISIBLE && !b.settings.isVisible) overlay.show() else overlay.hide()
         })
     }
 
@@ -658,6 +661,7 @@ class PlayerMobileFragment : Fragment() {
         try {
             requireContext().unregisterReceiver(chooserReceiver)
         } catch (ignored: Exception) {}
+        _binding?.pvPlayer?.setControllerVisibilityListener(null as androidx.media3.ui.PlayerView.ControllerVisibilityListener?)
         _binding = null
         isSetupDone = false
     }
