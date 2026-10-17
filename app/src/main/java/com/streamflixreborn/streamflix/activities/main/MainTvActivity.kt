@@ -9,6 +9,7 @@ import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
@@ -454,6 +455,21 @@ class MainTvActivity : FragmentActivity() {
 
         expirationWebView!!.clearCache(true)
         expirationWebView!!.loadUrl(targetUrl)
+    }
+
+    /**
+     * Mientras el aviso de vencimiento está en pantalla, todas las teclas del control van a él: si
+     * el foco se movió antes de que apareciera (o lo tomó la pantalla de atrás), se le devuelve y
+     * siempre se puede llegar a su botón para cerrarlo.
+     */
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val modal = expirationWebView
+        if (modal != null && modal.visibility == View.VISIBLE && !isModalClosed) {
+            if (!modal.hasFocus()) modal.requestFocus()
+            modal.dispatchKeyEvent(event)
+            return true
+        }
+        return super.dispatchKeyEvent(event)
     }
 
     override fun onDestroy() {
