@@ -28,6 +28,7 @@ import com.streamflixreborn.streamflix.utils.ArtworkRepairScheduler
 import com.streamflixreborn.streamflix.utils.CacheUtils
 import com.streamflixreborn.streamflix.utils.DnsResolver
 import com.streamflixreborn.streamflix.utils.IsrgRootTrustProvider
+import com.streamflixreborn.streamflix.utils.InAppUpdater
 import com.streamflixreborn.streamflix.utils.UserPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -247,20 +248,85 @@ class StreamFlixApp : Application() {
         if (System.currentTimeMillis() - lastCheck > timeout) forceLogoutAndKill()
     }
 
+    /**
+     * Actualización obligatoria: se descarga dentro de la app con barra de porcentaje y al
+     * terminar se abre el instalador (antes abría el navegador).
+     */
+    @Volatile private var updateDialogShown = false
+
     private suspend fun showMandatoryUpdateDialog(downloadUrl: String, notes: String) {
         withContext(Dispatchers.Main) {
             kotlinx.coroutines.delay(1500)
+            if (updateDialogShown) return@withContext // la revisión de cada 30 min no repite el aviso
             val activity = currentActivity ?: return@withContext
-            AlertDialog.Builder(activity)
+            updateDialogShown = true
+            val pad = (20 * activity.resources.displayMetrics.density).toInt()
+            val message = android.widget.TextView(activity).apply {
+                text = activity.getString(R.string.update_required_message) + if (notes.isBlank()) "" else "\n\n$notes"
+                textSize = 15f
+            }
+            val progress = android.widget.ProgressBar(activity, null, android.R.attr.progressBarStyleHorizontal).apply {
+                max = 100
+                visibility = android.view.View.GONE
+            }
+            val status = android.widget.TextView(activity).apply {
+                textSize = 14f
+                visibility = android.view.View.GONE
+            }
+            val content = android.widget.LinearLayout(activity).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                setPadding(pad, pad / 2, pad, 0)
+                addView(message)
+                addView(progress, android.widget.LinearLayout.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, android.view.ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = pad })
+                addView(status)
+            }
+            val dialog = AlertDialog.Builder(activity)
                 .setTitle(R.string.update_required_title)
-                .setMessage(activity.getString(R.string.update_required_message) + "\n\n$notes")
+                .setView(content)
                 .setCancelable(false)
-                .setPositiveButton(R.string.update_download) { _, _ ->
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(downloadUrl))
-                    activity.startActivity(intent)
-                    android.os.Process.killProcess(android.os.Process.myPid())
+                .setPositiveButton(R.string.update_download, null)
+                .create()
+            var apk: java.io.File? = null
+            dialog.setOnShowListener {
+                val button = dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE)
+                button.setOnClickListener {
+                    // Ya descargado: solo se abre el instalador (p. ej. tras dar el permiso).
+                    apk?.let { file ->
+                        if (!InAppUpdater.installApkFile(activity.applicationContext, file)) status.setText(R.string.update_allow_install)
+                        return@setOnClickListener
+                    }
+                    button.isEnabled = false
+                    progress.visibility = android.view.View.VISIBLE
+                    progress.isIndeterminate = true
+                    status.visibility = android.view.View.VISIBLE
+                    status.text = activity.getString(R.string.update_downloading, 0)
+                    applicationScope.launch(Dispatchers.Main) {
+                        try {
+                            val file = InAppUpdater.downloadApk(activity, downloadUrl) { percent ->
+                                if (percent >= 0) {
+                                    progress.isIndeterminate = false
+                                    progress.progress = percent
+                                    status.text = activity.getString(R.string.update_downloading, percent)
+                                }
+                            }
+                            apk = file
+                            progress.isIndeterminate = false
+                            progress.progress = 100
+                            status.setText(R.string.update_ready)
+                            button.setText(R.string.update_install)
+                            button.isEnabled = true
+                            if (!InAppUpdater.installApkFile(activity.applicationContext, file)) status.setText(R.string.update_allow_install)
+                        } catch (e: Exception) {
+                            com.streamflixreborn.streamflix.utils.ErrorReporter.report("Update.Descarga", e.message, e)
+                            progress.visibility = android.view.View.GONE
+                            status.setText(R.string.update_failed)
+                            button.setText(R.string.update_retry)
+                            button.isEnabled = true
+                        }
+                    }
                 }
-                .show()
+            }
+            dialog.show()
         }
     }
 

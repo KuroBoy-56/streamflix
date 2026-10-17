@@ -582,6 +582,12 @@
     <string name="update_required_title">Actualización requerida</string>
     <string name="update_required_message">Hay una nueva versión obligatoria disponible.</string>
     <string name="update_download">Descargar</string>
+    <string name="update_downloading">Descargando actualización… %1$d%%</string>
+    <string name="update_ready">Descarga completa. Instalando…</string>
+    <string name="update_install">Instalar</string>
+    <string name="update_retry">Reintentar</string>
+    <string name="update_failed">No se pudo descargar la actualización. Revisa tu conexión e inténtalo de nuevo.</string>
+    <string name="update_allow_install">Permite instalar apps de esta fuente y luego pulsa Instalar.</string>
     <string name="settings_category_application">Aplicación</string>
     <string name="settings_panel_note_title">Aviso</string>
 </resources>

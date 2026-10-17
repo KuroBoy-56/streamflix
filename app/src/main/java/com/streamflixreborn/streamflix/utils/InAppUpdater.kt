@@ -3,6 +3,8 @@ package com.streamflixreborn.streamflix.utils
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import android.util.Base64
 import androidx.core.content.FileProvider
 import com.streamflixreborn.streamflix.BuildConfig
@@ -11,6 +13,10 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
+import java.util.concurrent.TimeUnit
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.math.max
@@ -115,39 +121,94 @@ object InAppUpdater {
         return if (update != null) listOf(update) else emptyList()
     }
 
-    suspend fun downloadApk(context: Context, asset: DummyAsset): File {
-        context.cacheDir.listFiles()
-            ?.filter { it.extension == "apk" }
-            ?.forEach { it.deleteOnExit() }
+    suspend fun downloadApk(context: Context, asset: DummyAsset): File =
+        downloadApk(context, asset.browserDownloadUrl) {}
 
-        val apk = withContext(Dispatchers.IO) {
-            File.createTempFile(
-                "${File(asset.name).nameWithoutExtension}-",
-                ".${File(asset.name).extension}"
-            )
+    /**
+     * Descarga el APK dentro de la app (sin navegador) informando el porcentaje.
+     * Si el enlace es una página de descarga (MediaFire u otra), se busca en ella el enlace
+     * directo al archivo.
+     */
+    suspend fun downloadApk(context: Context, url: String, onProgress: (Int) -> Unit): File = withContext(Dispatchers.IO) {
+        val client = OkHttpClient.Builder()
+            .followRedirects(true)
+            .followSslRedirects(true)
+            .connectTimeout(20, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .build()
+        var target = url.trim()
+        repeat(3) {
+            client.newCall(Request.Builder().url(target).header("User-Agent", USER_AGENT).build()).execute().use { response ->
+                if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
+                val body = response.body ?: throw IOException("Respuesta vacía")
+                if (body.contentType()?.subtype.equals("html", ignoreCase = true)) {
+                    val html = body.string()
+                    target = (APK_LINK.find(html) ?: MEDIAFIRE_LINK.find(html))?.groupValues?.get(1)?.replace("&amp;", "&")
+                        ?: throw IOException("El enlace de descarga no lleva a un APK")
+                    return@repeat
+                }
+                val dir = File(context.cacheDir, "updates").apply { mkdirs(); listFiles()?.forEach { it.delete() } }
+                val apk = File(dir, "update.apk")
+                val total = body.contentLength()
+                var done = 0L
+                var lastPercent = -1
+                body.byteStream().use { input ->
+                    FileOutputStream(apk).use { output ->
+                        val buffer = ByteArray(64 * 1024)
+                        while (true) {
+                            val read = input.read(buffer)
+                            if (read < 0) break
+                            output.write(buffer, 0, read)
+                            done += read
+                            val percent = if (total > 0) (done * 100 / total).toInt() else -1
+                            if (percent != lastPercent) {
+                                lastPercent = percent
+                                withContext(Dispatchers.Main) { onProgress(percent) }
+                            }
+                        }
+                    }
+                }
+                if (apk.length() == 0L) throw IOException("Descarga vacía")
+                return@withContext apk
+            }
         }
-
-        withContext(Dispatchers.IO) {
-            URL(asset.browserDownloadUrl).openStream()
-        }.use { input ->
-            FileOutputStream(apk).use { output -> input.copyTo(output) }
-        }
-
-        return apk
+        throw IOException("No se encontró el APK en el enlace")
     }
 
     fun installApk(context: Context, uri: Uri) {
-        val intent = Intent(Intent.ACTION_VIEW).also { intent ->
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) // Agregado para TV / Background
-            intent.putExtra(Intent.EXTRA_NOT_UNKNOWN_SOURCE, true)
-            intent.data = FileProvider.getUriForFile(
-                context,
-                BuildConfig.APPLICATION_ID + ".provider",
-                File(uri.path!!)
+        installApkFile(context, File(uri.path!!))
+    }
+
+    /**
+     * Abre el instalador de Android con el APK descargado. En Android 8+ sin permiso para
+     * instalar apps de esta fuente, abre ese ajuste y devuelve false (luego se vuelve a intentar).
+     */
+    fun installApkFile(context: Context, file: File): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !context.packageManager.canRequestPackageInstalls()) {
+            runCatching {
+                context.startActivity(
+                    Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}"))
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                )
+            }
+            return false
+        }
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(
+                FileProvider.getUriForFile(context, BuildConfig.APPLICATION_ID + ".provider", file),
+                "application/vnd.android.package-archive",
             )
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            putExtra(Intent.EXTRA_NOT_UNKNOWN_SOURCE, true)
         }
         context.startActivity(intent)
+        return true
     }
+
+    private const val USER_AGENT = "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+    /** Enlace directo a un .apk dentro de una página. */
+    private val APK_LINK = Regex("""href=["'](https?://[^"'\s]+?\.apk(?:\?[^"'\s]*)?)["']""", RegexOption.IGNORE_CASE)
+    /** Botón de descarga de MediaFire ("https://download....mediafire.com/..."). */
+    private val MEDIAFIRE_LINK = Regex("""href=["'](https?://download[^"'\s]*mediafire\.com/[^"'\s]+)["']""", RegexOption.IGNORE_CASE)
 }

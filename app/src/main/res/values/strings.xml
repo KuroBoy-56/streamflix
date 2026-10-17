@@ -667,6 +667,12 @@
     <string name="update_required_title">Update required</string>
     <string name="update_required_message">A new mandatory version is available.</string>
     <string name="update_download">Download</string>
+    <string name="update_downloading">Downloading update… %1$d%%</string>
+    <string name="update_ready">Download complete. Installing…</string>
+    <string name="update_install">Install</string>
+    <string name="update_retry">Retry</string>
+    <string name="update_failed">The update could not be downloaded. Check your connection and try again.</string>
+    <string name="update_allow_install">Allow installing apps from this source, then press Install.</string>
     <string name="settings_category_application">Application</string>
     <string name="settings_panel_note_title">Notice</string>
 </resources>
