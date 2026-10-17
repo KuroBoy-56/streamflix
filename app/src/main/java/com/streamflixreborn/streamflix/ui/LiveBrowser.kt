@@ -67,10 +67,22 @@ class LiveBrowser(
 ) {
     private val context: Context = fragment.requireContext()
     private val isTv = context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
-    private val wide = isTv || context.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    /** TV o pantalla horizontal: tres columnas. Se recalcula al girar el teléfono. */
+    private var wide = isTv || context.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
     private val scope get() = fragment.viewLifecycleOwner.lifecycleScope
 
-    val view = FrameLayout(context)
+    // Al volver del reproductor el teléfono puede seguir en horizontal un instante: al cambiar
+    // el tamaño se reacomodan las columnas (si no, la vista previa queda fuera de la pantalla).
+    val view: FrameLayout = object : FrameLayout(context) {
+        override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+            super.onSizeChanged(w, h, oldw, oldh)
+            val shouldBeWide = isTv || w > h
+            if (w > 0 && h > 0 && shouldBeWide != wide) post { arrange(shouldBeWide) }
+        }
+    }
+    private val folderColumn = FrameLayout(context)
+    private val channelColumn = LinearLayout(context)
+    private val bodyHolder = FrameLayout(context)
 
     private val panelProvider = AssignedProviders.panelM3u(context).firstOrNull()
     private val appProviders = AssignedProviders.appLive(context)
@@ -148,7 +160,6 @@ class LiveBrowser(
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(10) })
 
         // Carpetas
-        val folderColumn = FrameLayout(context)
         folderList.layoutManager = LinearLayoutManager(context)
         folderList.adapter = folderAdapter
         // Sin animación de cambio: con ella la fila enfocada se reemplaza y en TV se pierde el foco.
@@ -159,7 +170,7 @@ class LiveBrowser(
         folderColumn.addView(folderProgress, FrameLayout.LayoutParams(dp(36), dp(36), Gravity.CENTER))
 
         // Canales
-        val channelColumn = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+        channelColumn.orientation = LinearLayout.VERTICAL
         channelTitle.apply {
             setTextColor(Color.WHITE)
             textSize = if (isTv) 18f else 15f
@@ -186,21 +197,35 @@ class LiveBrowser(
         // Vista previa
         buildPreview()
 
-        if (wide) {
+        bodyHolder.clipChildren = false
+        content.addView(bodyHolder, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+        arrange(wide)
+    }
+
+    /** Coloca las columnas: tres en fila (TV / horizontal) o vista previa arriba (vertical). */
+    private fun arrange(threeColumns: Boolean) {
+        wide = threeColumns
+        listOf(folderColumn, channelColumn, previewColumn).forEach { (it.parent as? ViewGroup)?.removeView(it) }
+        bodyHolder.removeAllViews()
+        previewInfo.visibility = if (threeColumns) View.VISIBLE else View.GONE
+        val fill = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        if (threeColumns) {
             val body = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; clipChildren = false }
             body.addView(folderColumn, LinearLayout.LayoutParams(dp(if (isTv) 250 else 200), ViewGroup.LayoutParams.MATCH_PARENT))
             body.addView(divider(), LinearLayout.LayoutParams(dp(1), ViewGroup.LayoutParams.MATCH_PARENT).apply { setMargins(dp(8), 0, dp(8), 0) })
             body.addView(channelColumn, LinearLayout.LayoutParams(dp(if (isTv) 360 else 280), ViewGroup.LayoutParams.MATCH_PARENT))
             body.addView(divider(), LinearLayout.LayoutParams(dp(1), ViewGroup.LayoutParams.MATCH_PARENT).apply { setMargins(dp(8), 0, dp(16), 0) })
             body.addView(previewColumn, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
-            content.addView(body, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+            bodyHolder.addView(body, fill)
         } else {
-            content.addView(previewColumn, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(10) })
-            val body = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
-            body.addView(folderColumn, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 0.42f))
-            body.addView(divider(), LinearLayout.LayoutParams(dp(1), ViewGroup.LayoutParams.MATCH_PARENT).apply { setMargins(dp(6), 0, dp(6), 0) })
-            body.addView(channelColumn, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 0.58f))
-            content.addView(body, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+            val column = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL; clipChildren = false }
+            column.addView(previewColumn, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(10) })
+            val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
+            row.addView(folderColumn, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 0.42f))
+            row.addView(divider(), LinearLayout.LayoutParams(dp(1), ViewGroup.LayoutParams.MATCH_PARENT).apply { setMargins(dp(6), 0, dp(6), 0) })
+            row.addView(channelColumn, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 0.58f))
+            column.addView(row, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+            bodyHolder.addView(column, fill)
         }
     }
 
@@ -246,7 +271,7 @@ class LiveBrowser(
         previewInfo.apply { setTextColor(Color.parseColor("#B3FFFFFF")); textSize = if (isTv) 15f else 13f; maxLines = 1 }
         previewHint.apply { setTextColor(Color.parseColor("#80FFFFFF")); textSize = if (isTv) 14f else 12f; setPadding(0, dp(6), 0, 0) }
         previewColumn.addView(previewTitle)
-        if (wide) previewColumn.addView(previewInfo)
+        previewColumn.addView(previewInfo)
         previewColumn.addView(previewHint)
         showPreviewIdle()
     }
