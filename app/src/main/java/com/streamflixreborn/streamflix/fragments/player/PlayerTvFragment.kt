@@ -1325,7 +1325,8 @@ class PlayerTvFragment : Fragment() {
                     ?.toString()?.isNotEmpty()
                     ?: false
 
-                if (!isPlaying && hasUri) {
+                // Los canales en vivo no se guardan en "Continuar viendo".
+                if (!isPlaying && hasUri && UserPreferences.currentProvider !is IptvProvider) {
                     val videoType = args.videoType
                     val watchItem: WatchItem? = when (videoType) {
                         is Video.Type.Movie -> database.movieDao().getById(videoType.id)
@@ -1457,6 +1458,7 @@ class PlayerTvFragment : Fragment() {
     }
 
     private fun recordRecentlyWatchedStart() {
+        if (UserPreferences.currentProvider is IptvProvider) return // canales en vivo: sin historial
         val playedAtMillis = System.currentTimeMillis()
         when (val videoType = currentVideoTypeForUi()) {
             is Video.Type.Movie -> {

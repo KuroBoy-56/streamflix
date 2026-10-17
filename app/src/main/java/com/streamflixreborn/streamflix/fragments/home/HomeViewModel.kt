@@ -259,6 +259,7 @@ class HomeViewModel(database: AppDatabase) : ViewModel() {
                     Category(
                         name = Category.CONTINUE_WATCHING,
                         list = history.continueWatching
+                            .filterNot(::isLiveChannel)
                             .sortedByDescending {
                                 when (it) {
                                     is Episode -> it.watchHistory?.lastEngagementTimeUtcMillis
@@ -283,7 +284,7 @@ class HomeViewModel(database: AppDatabase) : ViewModel() {
 
                     Category(
                         name = Category.RECENTLY_WATCHED,
-                        list = history.recentlyWatched,
+                        list = history.recentlyWatched.filterNot(::isLiveChannel),
                     ),
 
                     // FAVORITES
@@ -547,4 +548,15 @@ class HomeViewModel(database: AppDatabase) : ViewModel() {
         private const val TMDB_SECTIONS_AT = "TMDB_SECTIONS_AT"
         private const val TMDB_SECTIONS_TTL_MS = 6 * 60 * 60 * 1000L
     }
+
+    /**
+     * Canal en vivo guardado por versiones anteriores: el "episodio" de un canal tiene el mismo id
+     * que su programa (o la temporada "Live"). No va en "Continuar viendo" ni en vistos.
+     */
+    private fun isLiveChannel(item: AppAdapter.Item): Boolean = when (item) {
+        is Episode -> item.id == item.tvShow?.id || item.season?.title == "Live"
+        is TvShow -> item.lastPlayedEpisodeId == item.id
+        else -> false
+    }
+
 }
