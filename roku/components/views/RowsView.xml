@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Inicio, Películas y Series (HomeTvFragment / MoviesTvFragment / TvShowsTvFragment):
+     portada del elemento enfocado y filas que cargan más al llegar al final. -->
+<component name="RowsView" extends="Group">
+  <interface>
+    <field id="params" type="assocarray"/>
+    <field id="action" type="assocarray" alwaysNotify="true"/>
+    <field id="result" type="assocarray" alwaysNotify="true"/>
+    <field id="resumed" type="boolean" alwaysNotify="true" onChange="onResumed"/>
+    <field id="active" type="boolean" onChange="onActive"/>
+  </interface>
+  <script type="text/brightscript" uri="pkg:/source/Utils.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Tasks.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Nodes.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/UserData.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Screen.brs"/>
+  <script type="text/brightscript" uri="pkg:/components/views/RowsView.brs"/>
+  <children>
+    <Poster id="backdrop" width="1920" height="720" loadDisplayMode="scaleToZoom" loadWidth="1280" loadHeight="720"/>
+    <Poster width="1920" height="720" uri="pkg:/images/hero_scrim.png"/>
+    <Label id="heroTitle" translation="[140,170]" width="1100" font="font:LargeBoldSystemFont" color="0xFFFFFFFF"/>
+    <Label id="heroMeta" translation="[140,240]" width="1100" font="font:SmallSystemFont" color="0xE5E5E5FF"/>
+    <Label id="heroOverview" translation="[140,290]" width="1000" height="200" wrap="true" maxLines="5" font="font:SmallSystemFont" color="0xCFCFCFFF"/>
+    <RowList id="rows" translation="[130,560]" itemComponentName="PosterItem" numRows="2" itemSize="[1790,420]" rowItemSize="[[200,340]]" rowItemSpacing="[[22,0]]" itemSpacing="[0,24]" showRowLabel="[true]" rowLabelOffset="[[0,12]]" rowLabelColor="0xFFFFFFFF" rowLabelFont="font:MediumBoldSystemFont" rowFocusAnimationStyle="floatingFocus" vertFocusAnimationStyle="fixedFocus"/>
+    <BusySpinner id="spinner" translation="[912,700]" visible="false"/>
+    <Label id="message" translation="[200,700]" width="1520" horizAlign="center" wrap="true" font="font:MediumSystemFont" color="0xFFFFFFFF" visible="false"/>
+  </children>
+</component>

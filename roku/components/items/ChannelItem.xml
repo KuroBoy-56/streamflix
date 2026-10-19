@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component name="ChannelItem" extends="Group">
+  <interface>
+    <field id="itemContent" type="node" onChange="onContent"/>
+    <field id="focusPercent" type="float" onChange="onFocusPercent"/>
+    <field id="index" type="integer" onChange="onContent"/>
+  </interface>
+  <script type="text/brightscript" uri="pkg:/components/items/ChannelItem.brs"/>
+  <children>
+    <Rectangle id="bg" width="620" height="84" color="0x1A1D2900"/>
+    <Label id="number" translation="[12,0]" width="70" height="84" vertAlign="center" font="font:SmallSystemFont" color="0x8A8A8AFF"/>
+    <Rectangle translation="[86,10]" width="96" height="64" color="0xFFFFFF14"/>
+    <Poster id="logo" translation="[90,12]" width="88" height="60" loadDisplayMode="scaleToFit"/>
+    <Label id="name" translation="[200,0]" width="410" height="84" vertAlign="center" font="font:SmallSystemFont" color="0xE5E5E5FF"/>
+  </children>
+</component>

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Inicio de sesión con el panel (SyncGatewayActivity): usuario/contraseña o MAC vinculada. -->
+<component name="LoginScreen" extends="Group">
+  <interface>
+    <field id="params" type="assocarray" onChange="onParams"/>
+    <field id="action" type="assocarray" alwaysNotify="true"/>
+    <field id="result" type="assocarray" alwaysNotify="true" onChange="onResult"/>
+    <field id="resumed" type="boolean" alwaysNotify="true"/>
+  </interface>
+  <script type="text/brightscript" uri="pkg:/source/Utils.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Tasks.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Screen.brs"/>
+  <script type="text/brightscript" uri="pkg:/components/screens/LoginScreen.brs"/>
+  <children>
+    <Poster id="background" width="1920" height="1080" loadDisplayMode="scaleToZoom"/>
+    <Rectangle id="panel" width="700" height="1080" translation="[1160,0]" color="0x000000AA">
+      <Poster id="logo" translation="[200,110]" width="300" height="140" loadDisplayMode="scaleToFit"/>
+      <Label id="heading" translation="[60,290]" width="580" horizAlign="center" font="font:LargeBoldSystemFont" color="0xFFFFFFFF" text="Iniciar sesión"/>
+      <ButtonGroup id="form" translation="[60,380]" minWidth="580" maxWidth="580" itemSpacings="[24]"/>
+      <BusySpinner id="spinner" translation="[302,720]" visible="false" spinInterval="1"/>
+      <Label id="status" translation="[60,720]" width="580" height="160" wrap="true" horizAlign="center" font="font:SmallSystemFont" color="0xFF5252FF"/>
+      <Label id="mac" translation="[60,950]" width="580" horizAlign="center" font="font:SmallSystemFont" color="0xBBBBBBFF"/>
+      <Label id="hint" translation="[60,990]" width="580" horizAlign="center" wrap="true" font="font:SmallestSystemFont" color="0x8A8A8AFF" text="Sin usuario ni contraseña se entra con la MAC vinculada en el panel."/>
+    </Rectangle>
+  </children>
+</component>

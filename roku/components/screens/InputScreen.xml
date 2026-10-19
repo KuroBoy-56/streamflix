@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Teclado en pantalla (texto, contraseña o PIN). Responde con { type: "result", tag, text }. -->
+<component name="InputScreen" extends="Group">
+  <interface>
+    <field id="params" type="assocarray" onChange="onParams"/>
+    <field id="action" type="assocarray" alwaysNotify="true"/>
+    <field id="result" type="assocarray" alwaysNotify="true"/>
+    <field id="resumed" type="boolean" alwaysNotify="true"/>
+  </interface>
+  <script type="text/brightscript" uri="pkg:/source/Utils.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Screen.brs"/>
+  <script type="text/brightscript" uri="pkg:/components/screens/InputScreen.brs"/>
+  <children>
+    <Rectangle width="1920" height="1080" color="0x0F111AF2"/>
+    <Label id="title" translation="[0,90]" width="1920" horizAlign="center" font="font:LargeBoldSystemFont" color="0xFFFFFFFF"/>
+    <Keyboard id="keyboard" translation="[392,200]" visible="false"/>
+    <PinPad id="pinpad" translation="[660,200]" visible="false" pinLength="4" secureMode="true"/>
+    <ButtonGroup id="buttons" translation="[660,880]" layoutDirection="horiz" itemSpacings="[40]" minWidth="280"/>
+    <Label id="hint" translation="[0,1000]" width="1920" horizAlign="center" font="font:SmallSystemFont" color="0x9A9A9AFF" text="Baja con el control para Aceptar. El botón ▶ también acepta."/>
+  </children>
+</component>

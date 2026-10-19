@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tarjeta de película, serie, persona o canal (filas y cuadrículas). -->
+<component name="PosterItem" extends="Group">
+  <interface>
+    <field id="itemContent" type="node" onChange="onContent"/>
+    <field id="width" type="float" onChange="onLayout"/>
+    <field id="height" type="float" onChange="onLayout"/>
+    <field id="focusPercent" type="float" onChange="onFocusPercent"/>
+  </interface>
+  <script type="text/brightscript" uri="pkg:/components/items/PosterItem.brs"/>
+  <children>
+    <Rectangle id="frame" color="0x1C1F2BFF"/>
+    <Label id="fallback" color="0xC8C8C8FF" font="font:SmallSystemFont" horizAlign="center" vertAlign="center" wrap="true" maxLines="3"/>
+    <Poster id="poster" loadDisplayMode="scaleToZoom"/>
+    <Rectangle id="progressBg" color="0x00000099" height="8" visible="false"/>
+    <Rectangle id="progress" color="0xE50914FF" height="8" visible="false"/>
+    <Label id="title" color="0xFFFFFFFF" font="font:SmallestSystemFont" horizAlign="center" opacity="0.75"/>
+  </children>
+</component>

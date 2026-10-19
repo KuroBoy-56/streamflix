@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pantalla principal (MainTvActivity): menú lateral y secciones. -->
+<component name="HomeScreen" extends="Group">
+  <interface>
+    <field id="params" type="assocarray" onChange="onParams"/>
+    <field id="action" type="assocarray" alwaysNotify="true"/>
+    <field id="result" type="assocarray" alwaysNotify="true" onChange="onResult"/>
+    <field id="resumed" type="boolean" alwaysNotify="true" onChange="onResumed"/>
+  </interface>
+  <script type="text/brightscript" uri="pkg:/source/Utils.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Screen.brs"/>
+  <script type="text/brightscript" uri="pkg:/components/screens/HomeScreen.brs"/>
+  <children>
+    <Group id="views"/>
+    <Rectangle id="navBar" width="90" height="1080" color="0x00000080">
+      <Poster id="navMini" translation="[15,40]" width="60" height="60" loadDisplayMode="scaleToFit"/>
+      <Label id="navHint" translation="[0,1000]" width="90" horizAlign="center" font="font:SmallestSystemFont" color="0x8A8A8AFF" text="◀ Menú"/>
+    </Rectangle>
+    <Rectangle id="nav" width="380" height="1080" color="0x0B0D14F2" visible="false">
+      <Poster id="navLogo" translation="[40,40]" width="300" height="110" loadDisplayMode="scaleToFit"/>
+      <LabelList id="menu" translation="[40,220]" itemSize="[300,72]" itemSpacing="[0,8]" color="0xBBBBBBFF" focusedColor="0xFFFFFFFF" focusBitmapUri="pkg:/images/red.png" focusFootprintBitmapUri="pkg:/images/red.png"/>
+      <Poster id="avatar" translation="[40,940]" width="64" height="64" loadDisplayMode="scaleToZoom"/>
+      <Label id="profileName" translation="[120,955]" width="240" font="font:SmallSystemFont" color="0xFFFFFFFF"/>
+    </Rectangle>
+  </children>
+</component>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Reproductor (PlayerTvFragment): películas, episodios (con siguiente episodio) y canales
+     en vivo (cambio de canal con arriba/abajo y respaldo automático a otra línea). -->
+<component name="PlayerScreen" extends="Group">
+  <interface>
+    <field id="params" type="assocarray" onChange="onParams"/>
+    <field id="action" type="assocarray" alwaysNotify="true"/>
+    <field id="result" type="assocarray" alwaysNotify="true"/>
+    <field id="resumed" type="boolean" alwaysNotify="true"/>
+  </interface>
+  <script type="text/brightscript" uri="pkg:/source/Utils.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Tasks.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/UserData.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Playback.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Screen.brs"/>
+  <script type="text/brightscript" uri="pkg:/components/screens/PlayerScreen.brs"/>
+  <children>
+    <Rectangle width="1920" height="1080" color="0x000000FF"/>
+    <Video id="video" width="1920" height="1080"/>
+    <Group id="osd" visible="false">
+      <Rectangle translation="[0,820]" width="1920" height="260" color="0x000000B0"/>
+      <Poster id="osdLogo" translation="[100,860]" width="200" height="130" loadDisplayMode="scaleToFit"/>
+      <Label id="osdNumber" translation="[340,860]" font="font:SmallSystemFont" color="0xB0B0B0FF"/>
+      <Label id="osdTitle" translation="[340,900]" width="1400" font="font:LargeBoldSystemFont" color="0xFFFFFFFF"/>
+      <Label id="osdHint" translation="[340,970]" width="1400" font="font:SmallestSystemFont" color="0x9A9A9AFF" text="▲ ▼ cambiar de canal"/>
+    </Group>
+    <BusySpinner id="spinner" translation="[912,492]" visible="false"/>
+    <Label id="status" translation="[160,620]" width="1600" horizAlign="center" wrap="true" font="font:MediumSystemFont" color="0xFFFFFFFF"/>
+    <Timer id="osdTimer" duration="4" repeat="false"/>
+  </children>
+</component>
