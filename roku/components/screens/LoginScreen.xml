@@ -22,19 +22,13 @@
     <Label translation="[1180,325]" width="600" horizAlign="center" font="font:LargeBoldSystemFont" color="0xFFFFFFFF" text="Bienvenido"/>
     <Label translation="[1180,385]" width="600" horizAlign="center" font="font:SmallSystemFont" color="0x9AA0B4FF" text="Inicia sesión para continuar"/>
 
-    <Poster translation="[1190,460]" width="580" height="88" uri="pkg:/images/field.9.png"/>
-    <Poster translation="[1190,570]" width="580" height="88" uri="pkg:/images/field.9.png"/>
-    <Poster translation="[1190,680]" width="580" height="88" uri="pkg:/images/field_focus.9.png" opacity="0.45"/>
-    <ButtonGroup id="form" translation="[1190,460]" minWidth="580" maxWidth="580" buttonHeight="88" itemSpacings="[22]"
-        focusBitmapUri="pkg:/images/field_focus.9.png" focusFootprintBitmapUri="pkg:/images/field.9.png"
-        iconUri="" focusedIconUri="" textColor="0xD8DCE8FF" focusedTextColor="0xFFFFFFFF"
-        textFont="font:MediumSystemFont" focusedTextFont="font:MediumBoldSystemFont"/>
+    <MarkupList id="form" translation="[1190,460]" itemComponentName="PillItem" itemSize="[580,88]" itemSpacing="[0,22]" numRows="3" drawFocusFeedback="false" vertFocusAnimationStyle="floatingFocus"/>
 
-    <BusySpinner id="spinner" translation="[1432,795]" visible="false" spinInterval="1"/>
-    <Label id="status" translation="[1180,790]" width="600" height="90" wrap="true" horizAlign="center" vertAlign="center" font="font:SmallSystemFont" color="0xFF6B6BFF"/>
+    <BusySpinner id="spinner" translation="[1432,790]" visible="false" spinInterval="1"/>
+    <Label id="status" translation="[1180,790]" width="600" height="80" wrap="true" horizAlign="center" vertAlign="center" font="font:SmallSystemFont" color="0xFF6B6BFF"/>
 
-    <Poster translation="[1270,890]" width="420" height="52" uri="pkg:/images/chip.9.png"/>
-    <Label id="mac" translation="[1270,890]" width="420" height="52" horizAlign="center" vertAlign="center" font="font:SmallSystemFont" color="0xE5E5E5FF"/>
-    <Label translation="[1170,950]" width="620" horizAlign="center" wrap="true" font="font:SmallestSystemFont" color="0x7E8496FF" text="Sin usuario ni contraseña se entra con la MAC vinculada en el panel."/>
+    <Poster translation="[1200,880]" width="560" height="52" uri="pkg:/images/chip.9.png"/>
+    <Label id="mac" translation="[1200,880]" width="560" height="52" horizAlign="center" vertAlign="center" font="font:SmallestSystemFont" color="0xE5E5E5FF"/>
+    <Label translation="[1180,942]" width="600" horizAlign="center" font="font:SmallestSystemFont" color="0x7E8496FF" text="Campos vacíos: entra con la MAC vinculada"/>
   </children>
 </component>

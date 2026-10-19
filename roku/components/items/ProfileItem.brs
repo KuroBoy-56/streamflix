@@ -1,4 +1,5 @@
 sub init()
+    m.tile = m.top.findNode("tile")
     m.ring = m.top.findNode("ring")
     m.name = m.top.findNode("name")
 end sub
@@ -14,11 +15,7 @@ end sub
 
 sub onFocusPercent()
     p = m.top.focusPercent
-    if p > 0.5 then
-        m.ring.color = "0xFFFFFFFF"
-        m.name.color = "0xFFFFFFFF"
-    else
-        m.ring.color = "0xFFFFFF00"
-        m.name.color = "0xBBBBBBFF"
-    end if
+    if not m.top.gridHasFocus then p = 0
+    m.ring.opacity = p
+    if p > 0.5 then m.name.color = "0xFFFFFFFF" else m.name.color = "0xBBBBBBFF"
 end sub

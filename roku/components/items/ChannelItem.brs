@@ -7,7 +7,6 @@ sub onContent()
     if c = invalid then return
     m.top.findNode("name").text = c.title
     m.top.findNode("logo").uri = c.HDPosterUrl
-    m.top.findNode("number").text = (m.top.index + 1).ToStr()
 end sub
 
 sub onFocusPercent()

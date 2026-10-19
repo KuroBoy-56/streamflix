@@ -14,9 +14,9 @@
     <Group id="views"/>
     <Rectangle id="navBar" width="90" height="1080" color="0x00000080">
       <Poster id="navMini" translation="[15,40]" width="60" height="60" loadDisplayMode="scaleToFit"/>
-      <Label id="navHint" translation="[0,1000]" width="90" horizAlign="center" font="font:SmallestSystemFont" color="0x8A8A8AFF" text="◀ Menú"/>
     </Rectangle>
-    <Rectangle id="nav" width="380" height="1080" color="0x0B0D14F2" visible="false">
+    <Rectangle id="nav" width="380" height="1080" color="0x0B0D14FF" visible="false">
+      <Poster translation="[380,0]" width="60" height="1080" uri="pkg:/images/shadow_right.png"/>
       <Poster id="navLogo" translation="[40,40]" width="300" height="110" loadDisplayMode="scaleToFit"/>
       <MarkupList id="menu" translation="[40,220]" numRows="9" itemSize="[300,72]" itemSpacing="[0,8]" itemComponentName="MenuItem" drawFocusFeedback="false" vertFocusAnimationStyle="floatingFocus"/>
       <Poster id="avatar" translation="[40,940]" width="64" height="64" loadDisplayMode="scaleToZoom"/>

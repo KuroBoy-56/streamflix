@@ -10,5 +10,8 @@
   <script type="text/brightscript" uri="pkg:/source/Api.brs"/>
   <script type="text/brightscript" uri="pkg:/source/Catalog.brs"/>
   <script type="text/brightscript" uri="pkg:/source/Live.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Playback.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Sources.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Extract.brs"/>
   <script type="text/brightscript" uri="pkg:/components/ApiTask.brs"/>
 </component>

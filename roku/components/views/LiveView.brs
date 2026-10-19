@@ -223,7 +223,7 @@ sub StopPreview()
     m.preview.control = "stop"
     m.previewIndex = -1
     hint = m.top.findNode("previewHint")
-    hint.text = "OK: vista previa · OK otra vez o ▶: pantalla completa"
+    hint.text = "OK: vista previa aquí" + Chr(10) + "OK otra vez o ▶: pantalla completa"
     hint.visible = true
 end sub
 

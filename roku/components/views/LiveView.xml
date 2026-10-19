@@ -20,7 +20,7 @@
     <MarkupList id="channels" translation="[540,150]" itemComponentName="ChannelItem" itemSize="[620,84]" itemSpacing="[0,4]" numRows="10" drawFocusFeedback="false"/>
     <Rectangle translation="[1190,150]" width="640" height="360" color="0x000000FF"/>
     <Video id="preview" translation="[1190,150]" width="640" height="360" enableUI="false"/>
-    <Label id="previewHint" translation="[1190,300]" width="640" horizAlign="center" font="font:SmallSystemFont" color="0x8A8A8AFF" text="OK: vista previa · OK otra vez o ▶: pantalla completa"/>
+    <Label id="previewHint" translation="[1220,280]" width="580" height="100" horizAlign="center" vertAlign="center" wrap="true" font="font:SmallSystemFont" color="0x8A8A8AFF" text="OK: vista previa aquí&#10;OK otra vez o ▶: pantalla completa"/>
     <Label id="channelName" translation="[1190,530]" width="640" font="font:MediumBoldSystemFont" color="0xFFFFFFFF"/>
     <Label id="channelMeta" translation="[1190,575]" width="640" font="font:SmallestSystemFont" color="0xB0B0B0FF"/>
     <Label id="nowTitle" translation="[1190,625]" width="640" font="font:SmallBoldSystemFont" color="0xFFFFFFFF"/>

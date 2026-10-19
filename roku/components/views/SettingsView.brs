@@ -22,7 +22,7 @@ sub Build()
         if title = "" then title = "Aviso"
         m.items.Push({ id: "note", title: title })
     end if
-    m.items.Push({ id: "audio", title: "Idioma del audio: " + AudioLabel() })
+    m.items.Push({ id: "audio", title: "Audio: " + AudioLabel() })
     if RegRead("profile_limit", "1").ToInt() >= 2 then m.items.Push({ id: "profile", title: "Cambiar de perfil" })
     m.items.Push({ id: "sync", title: "Sincronizar ahora" })
     if RegRead("live_enabled") = "true" then m.items.Push({ id: "channels", title: "Actualizar canales" })

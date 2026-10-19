@@ -15,7 +15,7 @@
     <Label id="title" translation="[0,90]" width="1920" horizAlign="center" font="font:LargeBoldSystemFont" color="0xFFFFFFFF"/>
     <Keyboard id="keyboard" translation="[392,200]" visible="false"/>
     <PinPad id="pinpad" translation="[660,200]" visible="false" pinLength="4" secureMode="true"/>
-    <ButtonGroup id="buttons" translation="[660,880]" layoutDirection="horiz" itemSpacings="[40]" minWidth="280" focusBitmapUri="pkg:/images/field_focus.9.png" iconUri="" focusedIconUri=""/>
+    <MarkupGrid id="buttons" translation="[668,880]" itemComponentName="PillItem" drawFocusFeedback="false" numRows="1" numColumns="2" itemSize="[280,80]" itemSpacing="[24,0]"/>
     <Label id="hint" translation="[0,1000]" width="1920" horizAlign="center" font="font:SmallSystemFont" color="0x9A9A9AFF" text="Baja con el control para Aceptar. El botón ▶ también acepta."/>
   </children>
 </component>

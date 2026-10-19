@@ -2,8 +2,8 @@ sub init()
     m.keyboard = m.top.findNode("keyboard")
     m.pinpad = m.top.findNode("pinpad")
     m.buttons = m.top.findNode("buttons")
-    m.buttons.buttons = ["Aceptar", "Cancelar"]
-    m.buttons.observeField("buttonSelected", "onButton")
+    SetPills(m.buttons, ["Aceptar", "Cancelar"], "", 0)
+    m.buttons.observeField("itemSelected", "onButton")
     InitScreen(m.keyboard)
 end sub
 
@@ -36,7 +36,7 @@ sub Finish(accepted as boolean)
 end sub
 
 sub onButton()
-    Finish(m.buttons.buttonSelected = 0)
+    Finish(m.buttons.itemSelected = 0)
 end sub
 
 function onKeyEvent(key as string, press as boolean) as boolean

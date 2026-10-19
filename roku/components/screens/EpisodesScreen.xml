@@ -20,6 +20,6 @@
     <MarkupList id="episodes" translation="[540,170]" itemComponentName="EpisodeItem" itemSize="[1240,190]" itemSpacing="[0,16]" numRows="4" drawFocusFeedback="false"/>
     <BusySpinner id="spinner" translation="[1110,450]" visible="false"/>
     <Label id="message" translation="[540,450]" width="1240" horizAlign="center" wrap="true" font="font:MediumSystemFont" color="0xBBBBBBFF"/>
-    <Label translation="[540,1010]" width="1240" horizAlign="center" font="font:SmallestSystemFont" color="0x8A8A8AFF" text="OK: reproducir   ✱: marcar como visto / no visto"/>
+    <Label translation="[540,1010]" width="1240" horizAlign="center" font="font:SmallestSystemFont" color="0x8A8A8AFF" text="OK: reproducir   Botón *: marcar visto / no visto"/>
   </children>
 </component>

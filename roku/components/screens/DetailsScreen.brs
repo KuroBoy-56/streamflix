@@ -1,7 +1,7 @@
 sub init()
     m.buttons = m.top.findNode("buttons")
     m.rows = m.top.findNode("rows")
-    m.buttons.observeField("buttonSelected", "onButton")
+    m.buttons.observeField("itemSelected", "onButton")
     m.rows.observeField("rowItemSelected", "onRowSelected")
     m.details = invalid
     m.actions = []
@@ -62,7 +62,7 @@ sub RenderButtons()
     if m.item.mediaType = "movie" then
         resume = UD_ResumeSeconds("movies", id)
         if resume > 30 then
-            labels.Push("Continuar (" + FormatClock(resume) + ")")
+            labels.Push("Continuar · " + FormatClock(resume))
             m.actions.Push("resume")
             labels.Push("Desde el inicio")
             m.actions.Push("play")
@@ -79,13 +79,14 @@ sub RenderButtons()
         labels.Push("Ver episodios")
         m.actions.Push("episodes")
     end if
-    if UD_IsFavorite(m.item.mediaType, id) then labels.Push("Quitar de favoritos") else labels.Push("Agregar a favoritos")
+    if UD_IsFavorite(m.item.mediaType, id) then labels.Push("Quitar de Mi lista") else labels.Push("Agregar a Mi lista")
     m.actions.Push("favorite")
     if m.item.mediaType = "movie" then
-        if UD_IsWatched("movies", id) then labels.Push("Marcar como no visto") else labels.Push("Marcar como visto")
+        if UD_IsWatched("movies", id) then labels.Push("Marcar no visto") else labels.Push("Marcar visto")
         m.actions.Push("watched")
     end if
-    SetButtons(m.buttons, labels, m.buttons.buttonFocused)
+    m.buttons.numColumns = labels.Count()
+    SetPills(m.buttons, labels, "", 0)
 end sub
 
 sub onResumed()
@@ -93,7 +94,7 @@ sub onResumed()
 end sub
 
 sub onButton()
-    act = m.actions[m.buttons.buttonSelected]
+    act = m.actions[m.buttons.itemSelected]
     if act = "play" then
         Play(0)
     else if act = "resume" then

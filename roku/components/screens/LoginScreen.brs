@@ -5,7 +5,7 @@ sub init()
     m.spinner.poster.uri = "pkg:/images/spinner.png"
     m.spinner.poster.width = 96
     m.spinner.poster.height = 96
-    m.form.observeField("buttonSelected", "onFormSelected")
+    m.form.observeField("itemSelected", "onFormSelected")
     m.user = ""
     m.pass = ""
     m.loading = false
@@ -40,12 +40,12 @@ sub RenderForm()
     if userText = "" then userText = "—"
     passText = "—"
     if m.pass <> "" then passText = String(Len(m.pass), "•")
-    SetButtons(m.form, ["Usuario:  " + userText, "Contraseña:  " + passText, "Iniciar sesión"], m.form.buttonFocused)
+    SetPills(m.form, ["Usuario:  " + userText, "Contraseña:  " + passText, "Iniciar sesión"], "left", 2)
 end sub
 
 sub onFormSelected()
     if m.loading then return
-    index = m.form.buttonSelected
+    index = m.form.itemSelected
     if index = 0 then
         AskInput("Usuario", m.user, "user")
     else if index = 1 then
@@ -66,9 +66,8 @@ sub onResult()
     if r.tag = "user" then m.user = AsStr(r.text).Trim()
     if r.tag = "pass" then m.pass = AsStr(r.text).Trim()
     RenderForm()
-    if r.tag = "user" then m.form.focusButton = 1
-    if r.tag = "pass" then m.form.focusButton = 2
-    m.form.setFocus(true)
+    if r.tag = "user" then m.form.jumpToItem = 1
+    if r.tag = "pass" then m.form.jumpToItem = 2
 end sub
 
 sub DoLogin(auto as boolean)

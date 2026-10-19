@@ -19,11 +19,17 @@ sub FocusSoft(node as object)
     if m.top.isInFocusChain() then node.setFocus(true)
 end sub
 
-' Cambiar los botones de un ButtonGroup recrea sus nodos y el enfocado desaparece: sin
-' devolverle el foco el control deja de responder (se veía al volver del reproductor).
-sub SetButtons(group as object, labels as object, focusIndex as integer)
-    hadFocus = group.isInFocusChain()
-    group.buttons = labels
-    if focusIndex > 0 and focusIndex < labels.Count() then group.focusButton = focusIndex
-    if hadFocus then group.setFocus(true)
+
+' Opciones de una lista/cuadrícula de PillItem. Cambiar el contenido no quita el foco.
+sub SetPills(list as object, labels as object, style = "" as string, primaryIndex = -1 as integer)
+    focused = list.itemFocused
+    content = CreateObject("roSGNode", "ContentNode")
+    for i = 0 to labels.Count() - 1
+        item = content.createChild("ContentNode")
+        item.title = labels[i]
+        item.ShortDescriptionLine1 = style
+        if i = primaryIndex then item.ShortDescriptionLine2 = "primary"
+    end for
+    list.content = content
+    if focused > 0 and focused < labels.Count() then list.jumpToItem = focused
 end sub

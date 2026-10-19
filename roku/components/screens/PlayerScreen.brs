@@ -49,31 +49,67 @@ function PlaybackTitle() as string
     return m.p.item.title + " · T" + AsStr(m.p.season.number) + ":E" + AsStr(m.p.episode.number) + " " + m.p.episode.title
 end function
 
+' Búsqueda automática (como Android): se arma la lista de servidores en el idioma de
+' Ajustes y se prueba uno por uno; si un video falla se pasa al siguiente en el mismo punto.
 sub ResolveAndPlay()
     m.video.control = "stop"
-    m.audioChosen = false
     m.lastSaved = 0
-    Busy("Buscando servidor...")
+    m.servers = invalid
+    m.serverIndex = -1
+    m.resumeAt = 0
+    if m.p.startAt <> invalid then m.resumeAt = m.p.startAt
+    Busy("Buscando servidores...")
+    RunTask("servers", BaseParams(), "onServers")
+end sub
+
+function BaseParams() as object
     params = { mediaType: m.p.mediaType, id: m.p.item.itemId }
     if m.p.mediaType = "tv" then
         params.season = m.p.season.number
         params.episode = m.p.episode.number
     end if
-    RunTask("resolve", params, "onResolved")
+    return params
+end function
+
+sub onServers(event as object)
+    res = TaskResult(event)
+    if res = invalid or m.closing then return
+    m.servers = res.servers
+    if m.servers = invalid then m.servers = []
+    TryServer(0)
 end sub
 
-sub onResolved(event as object)
+sub TryServer(index as integer)
+    m.video.control = "stop"
+    if index >= m.servers.Count() then
+        Busy("")
+        m.status.text = "No se encontró un servidor que funcione para este título." + Chr(10) + "Pulsa Atrás para volver."
+        ReportError("Reproduccion.Servidores", PlaybackTitle() + ": " + m.servers.Count().ToStr() + " servidores probados")
+        return
+    end if
+    m.serverIndex = index
+    server = m.servers[index]
+    Busy("Servidor " + (index + 1).ToStr() + " de " + m.servers.Count().ToStr() + ": " + server.name)
+    params = BaseParams()
+    params.url = server.url
+    params.referer = server.referer
+    RunTask("extract", params, "onExtracted")
+end sub
+
+sub onExtracted(event as object)
     res = TaskResult(event)
     if res = invalid or m.closing then return
     if res.ok <> true then
-        Busy("")
-        m.status.text = AsStr(res.error) + Chr(10) + "Pulsa Atrás para volver."
-        ReportError("Reproduccion.Servidor", PlaybackTitle() + ": " + AsStr(res.error))
+        TryServer(m.serverIndex + 1)
         return
     end if
+    server = m.servers[m.serverIndex]
     Busy("Cargando video...")
     content = StreamContent(res.url, res.headers, PlaybackTitle(), false)
-    if m.p.startAt <> invalid and m.p.startAt > 0 then content.PlayStart = m.p.startAt
+    if AsStr(res.format) <> "" then content.streamFormat = res.format
+    if m.resumeAt > 0 then content.PlayStart = m.resumeAt
+    ' Los servidores de los sitios ya vienen en su idioma: solo VixSrc elige audio/subtítulos.
+    m.audioChosen = server.lang <> "multi"
     m.video.content = content
     m.video.control = "play"
     FocusOn(m.video)
@@ -217,6 +253,12 @@ sub onState()
         m.spinner.visible = true
         m.spinner.control = "start"
     else if state = "error" then
+        if m.p.mediaType <> "channel" and m.servers <> invalid then
+            ' El servidor no reprodujo: el siguiente, desde donde iba.
+            if m.video.position > 5 then m.resumeAt = Int(m.video.position)
+            TryServer(m.serverIndex + 1)
+            return
+        end if
         if m.p.mediaType = "channel" and m.sourceIndex + 1 < m.sources.Count() then
             ' Misma señal en otra línea.
             m.sourceIndex = m.sourceIndex + 1

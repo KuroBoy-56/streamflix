@@ -22,7 +22,8 @@
     <Label id="heroTitle" translation="[140,230]" width="1100" font="font:LargeBoldSystemFont" color="0xFFFFFFFF"/>
     <Label id="heroMeta" translation="[140,300]" width="1100" font="font:SmallSystemFont" color="0xE5E5E5FF"/>
     <Label id="heroOverview" translation="[140,350]" width="1000" height="160" wrap="true" maxLines="4" font="font:SmallSystemFont" color="0xCFCFCFFF"/>
-    <RowList id="rows" translation="[130,610]" itemComponentName="PosterItem" numRows="2" itemSize="[1790,420]" rowItemSize="[[200,340]]" rowItemSpacing="[[22,0]]" itemSpacing="[0,24]" showRowLabel="[true]" rowLabelOffset="[[0,12]]" rowLabelColor="0xFFFFFFFF" rowLabelFont="font:MediumBoldSystemFont" rowFocusAnimationStyle="floatingFocus" vertFocusAnimationStyle="fixedFocus"/>
+    <RowList id="rows" translation="[130,610]" itemComponentName="PosterItem" drawFocusFeedback="false" numRows="2" itemSize="[1790,420]" rowItemSize="[[200,340]]" rowItemSpacing="[[22,0]]" itemSpacing="[0,24]" showRowLabel="[true]" rowLabelOffset="[[0,12]]" rowLabelColor="0xFFFFFFFF" rowLabelFont="font:MediumBoldSystemFont" rowFocusAnimationStyle="floatingFocus" vertFocusAnimationStyle="fixedFocus"/>
+    <Poster translation="[1760,560]" width="160" height="520" uri="pkg:/images/fade_right.png"/>
     <BusySpinner id="spinner" translation="[912,700]" visible="false"/>
     <Label id="message" translation="[200,700]" width="1520" horizAlign="center" wrap="true" font="font:MediumSystemFont" color="0xFFFFFFFF" visible="false"/>
   </children>

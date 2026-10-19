@@ -22,8 +22,8 @@
     <Label id="meta" translation="[480,280]" width="1300" font="font:SmallSystemFont" color="0xE5E5E5FF"/>
     <Label id="tagline" translation="[480,322]" width="1300" font="font:SmallSystemFont" color="0xB0B0B0FF"/>
     <Label id="overview" translation="[480,365]" width="1300" height="170" wrap="true" maxLines="4" font="font:SmallSystemFont" color="0xD8D8D8FF"/>
-    <ButtonGroup id="buttons" translation="[480,560]" layoutDirection="horiz" itemSpacings="[20]" minWidth="250" focusBitmapUri="pkg:/images/field_focus.9.png" iconUri="" focusedIconUri=""/>
-    <RowList id="rows" translation="[130,680]" itemComponentName="PosterItem" numRows="1" itemSize="[1790,400]" rowItemSize="[[180,310]]" rowItemSpacing="[[22,0]]" showRowLabel="[true]" rowLabelOffset="[[0,10]]" rowLabelColor="0xFFFFFFFF" rowLabelFont="font:MediumBoldSystemFont" rowFocusAnimationStyle="floatingFocus" vertFocusAnimationStyle="fixedFocus"/>
+    <MarkupGrid id="buttons" translation="[480,560]" itemComponentName="PillItem" drawFocusFeedback="false" numRows="1" numColumns="4" itemSize="[320,80]" itemSpacing="[20,0]"/>
+    <RowList id="rows" translation="[130,680]" itemComponentName="PosterItem" drawFocusFeedback="false" numRows="1" itemSize="[1790,400]" rowItemSize="[[180,310]]" rowItemSpacing="[[22,0]]" showRowLabel="[true]" rowLabelOffset="[[0,10]]" rowLabelColor="0xFFFFFFFF" rowLabelFont="font:MediumBoldSystemFont" rowFocusAnimationStyle="floatingFocus" vertFocusAnimationStyle="fixedFocus"/>
     <Label id="message" translation="[480,660]" width="1300" wrap="true" font="font:SmallSystemFont" color="0xFF5252FF"/>
   </children>
 </component>

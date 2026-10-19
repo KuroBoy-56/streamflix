@@ -19,7 +19,7 @@
     <Poster id="photo" translation="[130,60]" width="150" height="225" loadDisplayMode="scaleToZoom"/>
     <Label id="title" translation="[130,60]" width="1650" font="font:LargeBoldSystemFont" color="0xFFFFFFFF"/>
     <Label id="overview" translation="[310,130]" width="1480" height="150" wrap="true" maxLines="4" font="font:SmallSystemFont" color="0xCFCFCFFF"/>
-    <MarkupGrid id="grid" translation="[130,180]" itemComponentName="PosterItem" itemSize="[200,340]" itemSpacing="[22,30]" numColumns="8" numRows="3"/>
+    <MarkupGrid id="grid" translation="[130,180]" itemComponentName="PosterItem" drawFocusFeedback="false" itemSize="[200,340]" itemSpacing="[22,30]" numColumns="8" numRows="3"/>
     <BusySpinner id="spinner" translation="[912,500]" visible="false"/>
     <Label id="message" translation="[200,500]" width="1520" horizAlign="center" wrap="true" font="font:MediumSystemFont" color="0xBBBBBBFF" visible="false"/>
   </children>

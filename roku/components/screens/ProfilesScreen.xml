@@ -16,6 +16,6 @@
     <Label id="title" translation="[0,220]" width="1920" horizAlign="center" font="font:LargeBoldSystemFont" color="0xFFFFFFFF" text="¿Quién está viendo?"/>
     <MarkupGrid id="grid" itemComponentName="ProfileItem" itemSize="[232,320]" itemSpacing="[48,0]" numRows="1" numColumns="6" translation="[0,380]" drawFocusFeedback="false"/>
     <Label id="status" translation="[0,760]" width="1920" horizAlign="center" font="font:MediumSystemFont" color="0xFF5252FF"/>
-    <Label id="hint" translation="[0,960]" width="1920" horizAlign="center" font="font:SmallSystemFont" color="0x8A8A8AFF" text="OK: entrar   ✱: editar perfil"/>
+    <Label id="hint" translation="[0,960]" width="1920" horizAlign="center" font="font:SmallSystemFont" color="0x8A8A8AFF" text="OK: entrar   Botón *: editar perfil"/>
   </children>
 </component>
