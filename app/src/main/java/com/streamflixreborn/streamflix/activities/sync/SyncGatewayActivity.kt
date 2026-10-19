@@ -54,6 +54,12 @@ class SyncGatewayActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Celular en vertical y TV en horizontal (igual que la pantalla principal que se abrirá).
+        requestedOrientation = if (com.streamflixreborn.streamflix.profiles.ProfilesActivity.isTvLayout(this)) {
+            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        } else {
+            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
+        }
         setContentView(R.layout.activity_sync_gateway)
 
         bgGateway = findViewById(R.id.bgGateway)

@@ -60,14 +60,16 @@ class ProfilesActivity : AppCompatActivity() {
 
         private const val EXTRA_FROM_APP = "from_app"
 
+        /** Versión TV (horizontal) o celular (vertical): la fija la compilación o, si no, el equipo. */
+        fun isTvLayout(context: Context): Boolean = when (BuildConfig.APP_LAYOUT) {
+            "tv" -> true
+            "mobile" -> false
+            else -> context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
+        }
+
         fun openMain(context: Context) {
-            val useTv = when (BuildConfig.APP_LAYOUT) {
-                "tv" -> true
-                "mobile" -> false
-                else -> context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
-            }
             context.startActivity(
-                Intent(context, if (useTv) MainTvActivity::class.java else MainMobileActivity::class.java)
+                Intent(context, if (isTvLayout(context)) MainTvActivity::class.java else MainMobileActivity::class.java)
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
             )
         }

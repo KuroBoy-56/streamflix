@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Orientación fija por pantalla (celular vertical, TV horizontal) sin exigirla al equipo. -->
+    <uses-feature
+        android:name="android.hardware.screen.portrait"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.screen.landscape"
+        android:required="false" />
     <uses-feature
         android:name="android.hardware.touchscreen"
         android:required="false" />
@@ -119,6 +126,7 @@
 
         <activity
             android:name=".activities.main.MainMobileActivity"
+            android:screenOrientation="userPortrait"
             android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize"
             android:exported="true"
             android:supportsPictureInPicture="true"
@@ -149,6 +157,7 @@
 
         <activity
             android:name=".activities.main.MainTvActivity"
+            android:screenOrientation="sensorLandscape"
             android:exported="true"
             android:theme="@style/AppTheme.Tv">
         </activity>
