@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
-    <string name="app_name">VOD Pro</string>
+    <string name="app_name">VOD Sports</string>
 
     <string name="loading_error_title">An error occurred</string>
     <string name="loading_error_retry">Retry</string>
@@ -601,7 +601,7 @@
     <string name="main_menu_live">Live</string>
     <string name="live_select_provider">Live provider</string>
     <string name="live_empty">No live channels available</string>
-    <string name="live_mode_categories">Categories</string>
+    <string name="live_mode_categories">Channels</string>
     <string name="live_mode_countries">Countries</string>
     <string name="live_preview_hint">Press again for full screen</string>
     <string name="live_preview_pick">Choose a channel to preview it</string>

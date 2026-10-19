@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-	<string name="app_name">VOD Pro</string>
+	<string name="app_name">VOD Sports</string>
 
 	<string name="loading_error_title">حدث خطأ</string>
 	<string name="loading_error_retry">إعادة المحاولة</string>

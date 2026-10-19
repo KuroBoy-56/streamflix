@@ -38,8 +38,8 @@ object CloudSyncManager {
     const val KEY_CHANNEL_LINES_FROM = "channel_lines_from"
     private val gson = Gson()
 
-    private const val ENCRYPTED_SYNC_URL = "4979456d507a6876665741734e4341715053773850796f374e794d34657a3475507a67694e32553250534a6b505459674b546f714f586c364d7a3869656945324a54594e4f6a67774943737149544e684f7a3069"
-    private const val ENCRYPTED_JSON_FOLDER_URL = "4979456d507a6876665741734e4341715053773850796f374e794d34657a3475507a67694e32553250534a6b505459674b546f714f586c364d53416c4d7a736f4644772f4b413d3d"
+    private const val ENCRYPTED_SYNC_URL = "" // Edición Sports: sin nube
+    private const val ENCRYPTED_JSON_FOLDER_URL = "" // Edición Sports: sin marca del panel
 
     @Volatile
     var isApplyingRemote: Boolean = false
@@ -111,12 +111,9 @@ object CloudSyncManager {
         }
     }
 
-    private fun getActiveUserId(context: Context): String? {
-        val prefs = context.applicationContext.getSharedPreferences("SecureGatewayPrefs", Context.MODE_PRIVATE)
-        val alphaToken = prefs.getString("alpha_token", null)
-        if (alphaToken.isNullOrEmpty()) return null
-        return alphaToken.replace("[^a-zA-Z0-9]".toRegex(), "_")
-    }
+    /** Edición Sports: sin nube ni perfiles (todo queda en el equipo), así ninguna sincronización arranca. */
+    @Suppress("UNUSED_PARAMETER", "FunctionOnlyReturningConstant")
+    private fun getActiveUserId(context: Context): String? = null
 
     /** Usuario + perfil: cada perfil tiene su propia nube. */
     private fun syncKey(userId: String, profileId: String) = "$userId-$profileId"

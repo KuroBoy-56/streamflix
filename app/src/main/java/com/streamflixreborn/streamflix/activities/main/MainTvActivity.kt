@@ -134,7 +134,6 @@ class MainTvActivity : FragmentActivity() {
             kotlinx.coroutines.delay(if (customSplash.isNotEmpty()) 2300 else 500)
             binding.ivSplashOverlay.visibility = View.GONE
             (binding.ivSplashOverlay.parent as? ViewGroup)?.removeView(binding.ivSplashOverlay)
-            setupExpirationWarningWebView()
         }
 
         val navHostFragment = supportFragmentManager.findFragmentById(binding.navMainFragment.id) as NavHostFragment

@@ -32,26 +32,8 @@ class MainViewModel : ViewModel() {
         data class FailedUpdate(val error: Exception) : State()
     }
 
-    fun checkUpdate() = viewModelScope.launch(Dispatchers.IO) {
-        if (!UserPreferences.updateCheckEnabled) return@launch
-        _state.emit(State.CheckingUpdate)
-
-        try {
-            // Usamos el contexto global de tu StreamFlixApp para no romper MainActivity
-            val context = StreamFlixApp.instance.applicationContext
-            val newReleases = InAppUpdater.getNewReleases(context)
-            if (newReleases.isEmpty()) return@launch
-
-            // Simplemente buscamos el archivo .apk que enviamos desde el InAppUpdater
-            val asset = newReleases.first().assets.firstOrNull { it.name.endsWith(".apk") }
-                ?: throw Exception("Can't find update APK")
-
-            _state.emit(State.SuccessCheckingUpdate(newReleases, asset))
-        } catch (e: Exception) {
-            Log.e("MainViewModel", "checkUpdate: ", e)
-            _state.emit(State.FailedUpdate(e))
-        }
-    }
+    /** Edición Sports: sin actualizaciones desde el panel (el APK se distribuye aparte). */
+    fun checkUpdate() = Unit
 
     fun downloadUpdate(
         context: Context,

@@ -41,7 +41,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
-class TmdbProvider(override val language: String) : Provider {
+open class TmdbProvider(override val language: String) : Provider {
     override val baseUrl: String
         get() = ""
 

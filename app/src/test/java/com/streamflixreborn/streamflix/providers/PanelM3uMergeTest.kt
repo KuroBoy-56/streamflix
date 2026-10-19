@@ -32,8 +32,10 @@ class PanelM3uMergeTest {
         http://b/espn7
         #EXTINF:-1 tvg-id="Canal5.mx" group-title="",Canal 5
         http://b/c5
-        #EXTINF:-1 group-title="MX | Noticias",MX: Foro TV
-        http://b/foro
+        #EXTINF:-1 tvg-id="Tudn.mx" group-title="",TUDN
+        http://b/tudn
+        #EXTINF:-1 group-title="MX | Deportes",MX: Afizzionados
+        http://b/afi
         #EXTINF:-1 group-title="XXX",Adult
         http://b/x
     """.trimIndent()
@@ -46,30 +48,41 @@ class PanelM3uMergeTest {
         assertEquals("http://a/espn2", espn2[0].url)
     }
 
-    @Test fun missingChannelGoesToItsBrandCategory() {
+    @Test fun missingChannelGoesToItsBrandFolder() {
         val espn7 = merged().single { it.name == "ESPN 7" }
-        assertEquals("Deportes", espn7.group)
+        assertEquals("ESPN", espn7.group)
+    }
+
+    @Test fun onlySportsChannelsAreKept() {
+        val names = merged().map { it.name }
+        assertTrue("CNN" !in names && "Milenio" !in names && "Canal 5" !in names)
     }
 
     @Test fun countryPrefixIsDetectedAndRemoved() {
-        val foro = merged().single { it.name == "Foro TV" }
-        assertEquals("Noticias", foro.group)
-        assertTrue(foro.country.endsWith("México"))
-        assertTrue(merged().single { it.name == "Canal 5" }.country.endsWith("México"))
+        val afi = merged().single { it.name == "Afizzionados" }
+        assertTrue(afi.country.endsWith("México"))
+        assertTrue(merged().single { it.name == "TUDN" }.country.endsWith("México"))
     }
 
     @Test fun adultChannelsAreDropped() {
         assertTrue(merged().none { it.name == "Adult" })
     }
 
-    @Test fun groupInferredFromNameWhenMissing() {
-        val ch = p.clean(p.parseM3u("#EXTINF:-1,Fox Sports 2\nhttp://c/fs2")).single()
-        assertEquals("Deportes", ch.group)
+    @Test fun brandFolderFromName() {
+        fun group(name: String, group: String = "") =
+            p.clean(p.parseM3u("#EXTINF:-1 group-title=\"$group\",$name\nhttp://c/x")).single().group
+        assertEquals("Fox Sports", group("Fox Sports 2"))
+        assertEquals("DAZN", group("DAZN 1 HD", "Deportes"))
+        assertEquals("Sky Sports", group("Sky Sports Premier League"))
+        assertEquals("NBA", group("NBA TV"))
+        assertEquals("TyC Sports", group("TyC Sports"))
+        assertEquals("Otros deportes", group("Afizzionados", "Deportes"))
+        assertEquals("ESPN", group("Canal 7", "ESPN Premium"))
     }
 
     @Test fun tvgIdIsKeptForEpg() {
-        val ch = p.clean(p.parseM3u("#EXTM3U url-tvg=\"http://epg/guide.xml.gz\"\n#EXTINF:-1 tvg-id=\"Canal5.mx\" group-title=\"General\",Canal 5\nhttp://c/5")).single()
-        assertEquals("Canal5.mx", ch.epgId)
+        val ch = p.clean(p.parseM3u("#EXTM3U url-tvg=\"http://epg/guide.xml.gz\"\n#EXTINF:-1 tvg-id=\"ESPN.mx\" group-title=\"General\",ESPN\nhttp://c/5")).single()
+        assertEquals("ESPN.mx", ch.epgId)
     }
 
     @Test fun nowAndNextProgramme() {

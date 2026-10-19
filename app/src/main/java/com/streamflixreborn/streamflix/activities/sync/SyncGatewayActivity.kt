@@ -89,8 +89,8 @@ class SyncGatewayActivity : AppCompatActivity() {
             val alphaVal = inputAlpha.text.toString().trim()
             val betaVal = inputBeta.text.toString().trim()
 
-            // Sin usuario ni contraseña: entrada con la MAC vinculada desde el panel.
-            if (alphaVal.isEmpty() != betaVal.isEmpty()) {
+            // Edición Sports: siempre usuario y contraseña.
+            if (alphaVal.isEmpty() || betaVal.isEmpty()) {
                 showStatus(getString(R.string.login_empty_fields))
                 return@setOnClickListener
             }
@@ -193,20 +193,7 @@ class SyncGatewayActivity : AppCompatActivity() {
         inputBeta.setSelection(inputBeta.text.length)
     }
 
-    // OFUSCACIÓN EMPRESARIAL PARA DECODIFICAR LAS URLs
-    private fun decodeBase64Hex(payload: String): String {
-        return try {
-            val b = ByteArray(payload.length / 2)
-            for (i in b.indices) {
-                b[i] = ((Character.digit(payload[i * 2], 16) shl 4) + Character.digit(payload[i * 2 + 1], 16)).toByte()
-            }
-            String(android.util.Base64.decode(String(b, Charsets.UTF_8), android.util.Base64.NO_WRAP), Charsets.UTF_8)
-        } catch (e: Exception) { "" }
-    }
-
-    private fun getSecureEndpoint(): String {
-        return decodeBase64Hex("6148523063484D364C79396E59584A6C646E6C75634746755A57787A4C6D7868644731776543356A6232307661475276596D3934646A4976595842704C325A736158687359585266595842704C6E426F63413D3D")
-    }
+    private fun getSecureEndpoint(): String = com.streamflixreborn.streamflix.utils.PanelConfig.api("flixlat_api.php")
 
     private fun getNormalizedMacAddress(): String = com.streamflixreborn.streamflix.utils.DeviceMac.get(this)
 
@@ -248,90 +235,23 @@ class SyncGatewayActivity : AppCompatActivity() {
 
                     withContext(Dispatchers.Main) {
                         if (jsonResponse.has("user_info") && jsonResponse.getJSONObject("user_info").optInt("auth", 0) == 1) {
-
-                            val serversArray = jsonResponse.optJSONArray("assigned_servers")
-                            val namesList = mutableListOf<String>()
-
-                            if (serversArray != null) {
-                                for (i in 0 until serversArray.length()) {
-                                    val sName = serversArray.getJSONObject(i).optString("name", "")
-                                    if (sName.isNotEmpty()) namesList.add(sName)
-                                }
-                            }
-
                             val channelLines = com.streamflixreborn.streamflix.sync.PanelChannelConfig.lines(jsonResponse.opt("channel_lines"))
                             val personalUrl = com.streamflixreborn.streamflix.sync.PanelChannelConfig.lines(jsonResponse.opt("personal_provider_url"))
-
-                            if (namesList.isEmpty() && channelLines.isEmpty() && personalUrl.isEmpty()) {
-                                showStatus(getString(R.string.login_no_servers))
-                                setLoadingState(false)
-                                if (isAutoLogin) clearSecureCredentials()
-                                return@withContext
-                            }
-
-                            val customLogoUrl = jsonResponse.optString("custom_logo", "").replace("null", "").trim()
-                            val customBgMobileUrl = jsonResponse.optString("custom_background", "").replace("null", "").trim()
-                            val customBgTvUrl = jsonResponse.optString("custom_background_tv", "").replace("null", "").trim()
-                            val customSplashUrl = jsonResponse.optString("custom_splash", "").replace("null", "").trim()
                             val tmdbApiKey = jsonResponse.optString("tmdb_api_key", "").replace("null", "").trim()
-                            val appId = jsonResponse.optInt("app_id", 0)
-
-                            UserPreferences.customLogoUrl = customLogoUrl
-                            UserPreferences.savedAppId = appId
-
                             if (tmdbApiKey.isNotEmpty()) {
                                 UserPreferences.tmdbApiKey = tmdbApiKey
                                 UserPreferences.enableTmdb = true
-                            } else {
-                                UserPreferences.enableTmdb = false
                             }
 
                             getSharedPreferences("SecureGatewayPrefs", Context.MODE_PRIVATE).edit().apply {
-                                putString("custom_background_url", customBgMobileUrl)
-                                putString("custom_background_tv_url", customBgTvUrl)
-                                putString("custom_splash_url", customSplashUrl)
-                                putString(AssignedProviders.KEY_ASSIGNED_SERVERS, namesList.joinToString(","))
-                                putString("brand_name", jsonResponse.optString("app_name", "").replace("null", "").trim())
-                                putString(AssignedProviders.KEY_DEFAULT_PROVIDER, jsonResponse.optString("default_provider", "").replace("null", "").trim())
                                 putString(com.streamflixreborn.streamflix.providers.PanelM3uProvider.KEY_CHANNEL_LINES, channelLines.joinToString("\n"))
                                 putString(com.streamflixreborn.streamflix.providers.PanelM3uProvider.KEY_PERSONAL_URL, personalUrl.joinToString("\n"))
                                 putString(com.streamflixreborn.streamflix.providers.PanelM3uProvider.KEY_DEFAULT_LINE, jsonResponse.optString("default_channel_line", "").replace("null", "").trim())
                                 putInt(CloudSyncManager.KEY_CHANNEL_LINES_FROM, jsonResponse.optInt("channel_lines_from", 0))
-                                putString("settings_note", jsonResponse.optString("settings_note", "").replace("null", "").trim())
                                 commit()
                             }
-                            com.streamflixreborn.streamflix.profiles.ProfileManager.saveLimit(this@SyncGatewayActivity, jsonResponse.optInt("profile_limit", 1))
-                            // Entrada por MAC: el panel devuelve la cuenta vinculada y se guarda como siempre.
-                            val userInfo = jsonResponse.optJSONObject("user_info")
-                            val accountName = userInfo?.optString("username").orEmpty().ifEmpty { alpha }
-                            val accountPass = beta.ifEmpty { userInfo?.optString("password").orEmpty() }
-
-                            AssignedProviders.normalizeCurrentProvider(this@SyncGatewayActivity)
-
-                            runCatching { showBrandImages(packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)) }
-                            lifecycleScope.launch { com.streamflixreborn.streamflix.utils.BrandAssets.refresh(applicationContext) }
-
-                            saveSecureCredentials(alpha.ifEmpty { accountName }, accountPass)
-
-                            CoroutineScope(Dispatchers.IO).launch {
-                                // Inicio de sesión en este equipo: se borra lo local y se descarga la nube.
-                                com.streamflixreborn.streamflix.profiles.ProfileManager.claimDevice(
-                                    this@SyncGatewayActivity, accountName, freshLogin = !isAutoLogin,
-                                )
-                                CloudSyncManager.initialize(this@SyncGatewayActivity)
-                                kotlinx.coroutines.delay(1800)
-                                withContext(Dispatchers.Main) {
-                                    if (com.streamflixreborn.streamflix.StreamFlixApp.isUpdateRequired) {
-                                        setLoadingState(false)
-                                        showStatus(getString(R.string.login_update_pending))
-                                        return@withContext
-                                    }
-
-                                    // El aviso de vencimiento sale en la pantalla principal (no aquí).
-                                    confirmBrandThenRoute(appId)
-                                }
-                            }
-
+                            saveSecureCredentials(alpha, beta)
+                            routeToMainInterface()
                         } else {
                             val errorMsg = jsonResponse.optJSONObject("user_info")?.optString("message")?.takeIf { it.isNotBlank() } ?: getString(R.string.login_access_denied)
                             showStatus(errorMsg)
@@ -341,7 +261,6 @@ class SyncGatewayActivity : AppCompatActivity() {
                     }
                 } else {
                     val code = connection.responseCode
-                    com.streamflixreborn.streamflix.utils.ErrorReporter.report("Login.Servidor", "HTTP $code")
                     withContext(Dispatchers.Main) {
                         if (isAutoLogin && enterWithCachedSession()) return@withContext
                         showStatus(getString(R.string.login_server_unreachable, code.toString()))
@@ -349,7 +268,6 @@ class SyncGatewayActivity : AppCompatActivity() {
                     }
                 }
             } catch (e: Exception) {
-                com.streamflixreborn.streamflix.utils.ErrorReporter.report("Login.Conexion", e.message, e)
                 withContext(Dispatchers.Main) {
                     if (isAutoLogin && enterWithCachedSession()) return@withContext
                     showStatus(getString(R.string.login_connection_error))
@@ -359,35 +277,8 @@ class SyncGatewayActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Primera vez en una red con marca blanca: se avisa que el icono y el nombre cambiarán a la
-     * marca del distribuidor; con "Entendido" se programa el cambio (al salir de la app).
-     */
-    private fun confirmBrandThenRoute(appId: Int) {
-        val brand = com.streamflixreborn.streamflix.utils.LauncherBrand
-        if (!brand.needsChange(this, appId)) {
-            routeToMainInterface()
-            return
-        }
-        if (appId == 0) {
-            brand.schedule(this, 0) // vuelve al icono del dueño sin preguntar
-            routeToMainInterface()
-            return
-        }
-        android.app.AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-            .setTitle(R.string.brand_change_title)
-            .setMessage(R.string.brand_change_message)
-            .setCancelable(false)
-            .setPositiveButton(R.string.brand_change_ok) { _, _ ->
-                brand.schedule(this, appId)
-                routeToMainInterface()
-            }
-            .show()
-    }
 
     private fun enterWithCachedSession(): Boolean {
-        if (!AssignedProviders.hasPanelAssignment(this)) return false
-        AssignedProviders.normalizeCurrentProvider(this)
         routeToMainInterface()
         return true
     }
@@ -406,23 +297,10 @@ class SyncGatewayActivity : AppCompatActivity() {
         prefs.edit().clear().apply()
     }
 
-    /**
-     * Cuenta con 2 o más dispositivos: "¿Quién está viendo?". Con 1 dispositivo se entra
-     * directo con el perfil principal.
-     */
+    /** Edición Sports: sin perfiles ni nube, directo a la app. */
     private fun routeToMainInterface() {
-        val profiles = com.streamflixreborn.streamflix.profiles.ProfileManager
-        if (profiles.limit(this) >= 2) {
-            com.streamflixreborn.streamflix.profiles.ProfilesActivity.start(this)
-            finish()
-            return
-        }
-        lifecycleScope.launch {
-            profiles.switchTo(this@SyncGatewayActivity, profiles.MAIN_ID)
-            CloudSyncManager.initialize(this@SyncGatewayActivity)
-            com.streamflixreborn.streamflix.profiles.ProfilesActivity.openMain(this@SyncGatewayActivity)
-            finish()
-        }
+        com.streamflixreborn.streamflix.profiles.ProfilesActivity.openMain(this)
+        finish()
     }
 
     private fun showBrandImages(isTv: Boolean) {

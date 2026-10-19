@@ -195,10 +195,13 @@ abstract class PanelM3uProvider(
         channels
     }.getOrNull()
 
+    /** Edición Sports: solo canales deportivos, cada uno en la carpeta de su marca (ESPN, DAZN...). */
     internal fun clean(list: List<Channel>): List<Channel> = list
         .filter { it.url.startsWith("http", true) && it.name.isNotBlank() }
         .filterNot { ch -> ADULT.containsMatchIn(normalize(ch.name)) || ADULT.containsMatchIn(normalize(ch.group)) }
-        .map { it.copy(name = it.name.replace(Regex("\\s+"), " ").trim(), group = cleanGroup(it.group, it.name)) }
+        .map { it.copy(name = it.name.replace(Regex("\\s+"), " ").trim()) }
+        .filter { isSportsChannel(it.name, it.group) }
+        .map { it.copy(group = sportsBrand(it.name, it.group)) }
         .distinctBy { it.url }
 
     /**
@@ -311,19 +314,6 @@ abstract class PanelM3uProvider(
         return ch.copy(name = name, country = code?.let(::countryLabel).orEmpty())
     }
 
-    /**
-     * "Animation;Kids" -> "Animación", "MX | Sports" -> "Deportes". Si el grupo está vacío, es
-     * solo un país o "Undefined", la categoría se deduce del nombre (ESPN -> Deportes).
-     */
-    private fun cleanGroup(raw: String, channelName: String): String {
-        val parts = raw.split(';', '|', '/', ':').map { it.trim() }.filter { it.isNotBlank() }
-            .filterNot { p -> val n = normalize(p); n in COUNTRY_WORDS || alias(n) in COUNTRIES }
-        val first = parts.firstOrNull()
-        val named = first?.let { GROUP_NAMES[normalize(it)] ?: it.replaceFirstChar { c -> c.titlecase() } }
-        if (named != null && named != OTHERS) return named
-        val n = " " + normalize(channelName) + " "
-        return KEYWORDS.entries.firstOrNull { (_, words) -> words.any { n.contains(it) } }?.key ?: OTHERS
-    }
 
     private fun encode(ch: Channel): String = Base64.encodeToString(
         listOf(ch.url, ch.name, ch.logo, ch.userAgent.orEmpty(), ch.referer.orEmpty()).joinToString(SEP).toByteArray(),
@@ -444,21 +434,8 @@ abstract class PanelM3uProvider(
         private const val HOME_ROW = 30
         private const val PAGE = 60
         private const val SEP = "\u0001"
-        private const val OTHERS = "Otros"
+        private const val OTHERS = "Otros deportes"
         private const val MIN_GROUP = 3
-        private val GROUP_NAMES = mapOf(
-            "undefined" to OTHERS, "general" to "General", "news" to "Noticias", "sports" to "Deportes",
-            "movies" to "Películas", "series" to "Series", "music" to "Música", "entertainment" to "Entretenimiento",
-            "kids" to "Infantil", "animation" to "Animación", "documentary" to "Documentales", "religious" to "Religión",
-            "education" to "Educación", "culture" to "Cultura", "legislative" to "Gobierno", "lifestyle" to "Estilo de vida",
-            "comedy" to "Comedia", "cooking" to "Cocina", "family" to "Familia", "travel" to "Viajes",
-            "outdoor" to "Aire libre", "business" to "Negocios", "classic" to "Clásicos", "science" to "Ciencia",
-            "weather" to "Clima", "shop" to "Compras", "auto" to "Motor", "relax" to "Relax", "public" to "Públicos",
-            "sport" to "Deportes", "deportes" to "Deportes", "deporte" to "Deportes", "futbol" to "Deportes",
-            "noticias" to "Noticias", "infantil" to "Infantil", "infantiles" to "Infantil", "ninos" to "Infantil",
-            "cartoons" to "Infantil", "peliculas" to "Películas", "cine" to "Películas", "musica" to "Música",
-            "documentales" to "Documentales", "documentaries" to "Documentales", "entretenimiento" to "Entretenimiento",
-        )
         private val ATTR_LOGO = Regex("""tvg-logo="([^"]*)"""", RegexOption.IGNORE_CASE)
         private val ATTR_GROUP = Regex("""group-title="([^"]*)"""", RegexOption.IGNORE_CASE)
         private val ATTR_UA = Regex("""http-user-agent="([^"]*)"""", RegexOption.IGNORE_CASE)
@@ -496,15 +473,56 @@ abstract class PanelM3uProvider(
             val flag = code.uppercase().map { Character.toChars(0x1F1E6 + (it - 'A')).concatToString() }.joinToString("")
             return "$flag ${COUNTRIES[code] ?: code.uppercase()}"
         }
-        /** Categoría deducida del nombre cuando la lista no la trae. */
-        private val KEYWORDS = linkedMapOf(
-            "Deportes" to listOf(" espn", " fox sports", " tudn", " dazn", " bein", " sky sports", " tyc", " win sports", " gol ", " futbol", " nba", " nfl", " f1 ", " ufc", " wwe", " deport", " sport", " claro sports", " vix "),
-            "Noticias" to listOf(" cnn", " noticias", " news", " milenio", " n+", " euronews", " dw ", " bbc", " rt ", " 24h", " 24 horas"),
-            "Infantil" to listOf(" disney", " nick", " cartoon", " discovery kids", " baby", " kids", " infantil", " boomerang", " junior", " jr "),
-            "Películas" to listOf(" hbo", " cinemax", " tnt", " star ", " cine", " movie", " film", " golden", " space", " paramount", " universal", " warner", " amc", " sony"),
-            "Música" to listOf(" mtv", " music", " musica", " vh1", " telehit", " htv", " radio"),
-            "Documentales" to listOf(" discovery", " history", " nat geo", " national geographic", " animal planet", " a&e", " investigation"),
+        /** Marcas deportivas: carpeta -> palabras del nombre o del grupo del canal (sin acentos, minúsculas). */
+        private val SPORTS_BRANDS = linkedMapOf(
+            "ESPN" to listOf("espn"),
+            "DAZN" to listOf("dazn"),
+            "Sky Sports" to listOf("sky sport"),
+            "beIN Sports" to listOf("bein"),
+            "Fox Sports" to listOf("fox sport", "fox deportes"),
+            "TUDN" to listOf("tudn"),
+            "TyC Sports" to listOf("tyc"),
+            "TNT Sports" to listOf("tnt sport"),
+            "Win Sports" to listOf("win sport", "win+"),
+            "Claro Sports" to listOf("claro sport"),
+            "DirecTV Sports" to listOf("directv sport", "dsports", "dsport"),
+            "Movistar Deportes" to listOf("movistar"),
+            "LaLiga TV" to listOf("laliga", "la liga"),
+            "Eurosport" to listOf("eurosport"),
+            "Canal+ Sport" to listOf("canal+ sport", "canal plus sport", "canal+ foot"),
+            "GolTV" to listOf("goltv", "gol tv"),
+            "SporTV" to listOf("sportv"),
+            "TSN y Sportsnet" to listOf("tsn", "sportsnet"),
+            "NBA" to listOf("nba"),
+            "NFL" to listOf("nfl"),
+            "MLB" to listOf("mlb"),
+            "NHL" to listOf("nhl"),
+            "Fórmula 1 y Motor" to listOf("f1", "formula 1", "motogp", "moto gp", "nascar", "motor", "racing"),
+            "UFC, Boxeo y Lucha" to listOf("ufc", "wwe", "aew", "boxing", "boxeo", "fight", "pelea", "ppv"),
+            "Golf y Tenis" to listOf("golf", "tennis", "tenis"),
         )
+        /** Palabras que delatan un canal o grupo deportivo aunque no sea de una marca conocida. */
+        private val SPORTS_WORDS = Regex(
+            "\\b(sports?|deportes?|deportiv[oa]s?|futbol|football|soccer|liga|league|copa|gol|olymp|olimp|basket|baloncesto|beisbol|baseball|hockey|rugby|cricket|volley|atletismo|ciclismo|vix|arena sport|polsat sport|setanta|premiere|super sport|supersport|star\\+|fanatiz)\\b",
+        )
+
+        private fun brandWords(text: String): String = " " + text.replace(Regex("[^a-z0-9+]+"), " ") + " "
+
+        /** Marca deportiva del canal (por nombre y luego por grupo), o null. */
+        private fun brandOf(text: String): String? {
+            val t = brandWords(normalize(text))
+            return SPORTS_BRANDS.entries.firstOrNull { (_, words) ->
+                // Palabras cortas (nba, f1, tyc) completas; las largas también como inicio ("espn2").
+                words.any { w -> t.contains(" $w") && (w.length > 3 || t.contains(" $w ")) }
+            }?.key
+        }
+
+        internal fun isSportsChannel(name: String, group: String): Boolean =
+            brandOf(name) != null || brandOf(group) != null ||
+                SPORTS_WORDS.containsMatchIn(normalize(name)) || SPORTS_WORDS.containsMatchIn(normalize(group))
+
+        internal fun sportsBrand(name: String, group: String): String = brandOf(name) ?: brandOf(group) ?: OTHERS
+
         private val ADULT = Regex("\\b(xxx|adult[oa]?s?|porno?|erotic[oa]?s?)\\b|18\\+|\\+18", RegexOption.IGNORE_CASE)
 
         private fun normalize(value: String) = Normalizer.normalize(value.lowercase(), Normalizer.Form.NFD)

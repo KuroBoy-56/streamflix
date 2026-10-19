@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">VOD Pro</string>
+    <string name="app_name">VOD Sports</string>
 
     <string name="loading_error_title">Ha ocurrido un error</string>
     <string name="loading_error_retry">Reintentar</string>
@@ -516,7 +516,7 @@
     <string name="main_menu_live">En Vivo</string>
     <string name="live_select_provider">Proveedor en vivo</string>
     <string name="live_empty">No hay canales en vivo disponibles</string>
-    <string name="live_mode_categories">Categorías</string>
+    <string name="live_mode_categories">Canales</string>
     <string name="live_mode_countries">Países</string>
     <string name="live_preview_hint">Pulsa otra vez para ver en pantalla completa</string>
     <string name="live_preview_pick">Elige un canal para verlo aquí</string>

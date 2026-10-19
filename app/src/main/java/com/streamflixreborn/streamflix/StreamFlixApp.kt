@@ -204,7 +204,8 @@ class StreamFlixApp : Application() {
 
         applicationScope.launch(Dispatchers.IO) {
             try {
-                val securityUrl = decryptData(ENCRYPTED_URL)
+                // Edición Sports: la verificación va al panel configurado en PanelConfig.
+                val securityUrl = com.streamflixreborn.streamflix.utils.PanelConfig.api("check_security.php")
                 if (securityUrl.isEmpty()) {
                     handleOfflineMode(lastCheck, sevenDaysMillis)
                     return@launch

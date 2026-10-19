@@ -73,8 +73,9 @@ object AssignedProviders {
             .distinctBy { it.name }
     }
 
-    fun hasPanelAssignment(context: Context? = null): Boolean =
-        names(context).isNotEmpty() || panelM3u(context).isNotEmpty()
+    // Edición Sports: siempre hay catálogo deportivo; los canales dependen de las líneas del panel.
+    @Suppress("UNUSED_PARAMETER")
+    fun hasPanelAssignment(context: Context? = null): Boolean = true
 
     /** "Live": líneas de canales del panel y URL personal del usuario, si hay alguna URL. */
     fun panelM3u(context: Context? = null): List<Provider> =
@@ -83,15 +84,9 @@ object AssignedProviders {
     /** Canales de los proveedores de la app (sección "FlixLive"). */
     fun appLive(context: Context? = null): List<Provider> = live(context).filterNot { it is PanelM3uProvider }
 
-    fun all(context: Context? = null): List<Provider> {
-        val names = names(context)
-        val base = if (names.isEmpty() && panelM3u(context).isEmpty()) {
-            Provider.providers.keys.toList()
-        } else {
-            resolve(names)
-        }
-        return base.filterNot { it is PanelM3uProvider } + panelM3u(context)
-    }
+    /** Edición Sports: el catálogo deportivo y, si el panel las asignó, las líneas de canales. */
+    fun all(context: Context? = null): List<Provider> =
+        listOf(com.streamflixreborn.streamflix.providers.SportsProvider.INSTANCE) + panelM3u(context)
 
     fun vod(context: Context? = null): List<Provider> = all(context).filterNot { it is IptvProvider }
 

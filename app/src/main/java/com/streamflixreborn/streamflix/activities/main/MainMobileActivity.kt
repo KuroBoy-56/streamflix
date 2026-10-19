@@ -162,11 +162,8 @@ class MainMobileActivity : FragmentActivity() {
                 splashOverlay?.animate()?.alpha(0f)?.setDuration(600)?.withEndAction {
                     try { (splashOverlay?.parent as? ViewGroup)?.removeView(splashOverlay) } catch(e: Exception){}
                     splashOverlay = null
-                    setupExpirationWarningWebView()
                 }
             }
-        } else {
-            setupExpirationWarningWebView()
         }
 
         ViewCompat.setOnApplyWindowInsetsListener(binding.mainContent) { view, windowInsets ->

@@ -216,6 +216,12 @@ object TMDb3 {
         }
     }
 
+    /** Palabras clave de un título (la edición Sports filtra por ellas). */
+    object Keywords {
+        suspend fun movie(id: Int): List<Int> = service.getMovieKeywords(id).keywords.orEmpty().map { it.id }
+        suspend fun tv(id: Int): List<Int> = service.getTvKeywords(id).results.orEmpty().map { it.id }
+    }
+
     object MovieLists {
 
         suspend fun popular(
@@ -1008,6 +1014,12 @@ object TMDb3 {
         ): PageResult<Tv>
 
 
+        @GET("movie/{id}/keywords")
+        suspend fun getMovieKeywords(@Path("id") id: Int): MovieKeywordsResponse
+
+        @GET("tv/{id}/keywords")
+        suspend fun getTvKeywords(@Path("id") id: Int): TvKeywordsResponse
+
         @GET("genre/movie/list")
         suspend fun getGenreMoviesList(
             @QueryMap params: Map<String, String> = emptyMap(),
@@ -1104,6 +1116,10 @@ object TMDb3 {
     data class GenresResponse(
         val genres: List<Genre>,
     )
+
+    data class KeywordItem(val id: Int, val name: String?)
+    data class MovieKeywordsResponse(val keywords: List<KeywordItem>?)
+    data class TvKeywordsResponse(val results: List<KeywordItem>?)
 
     sealed class MultiItem {
 

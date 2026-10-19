@@ -92,14 +92,8 @@ object UserPreferences {
 
     /** Proveedor del inicio persistido (ignora la sesión "En Vivo"). */
     var storedProvider: Provider?
-        get() {
-            val providerName = Key.CURRENT_PROVIDER.getString()
-            if (providerName?.startsWith("TMDb (") == true && providerName.endsWith(")")) {
-                val lang = providerName.substringAfter("TMDb (").substringBefore(")")
-                return TmdbProvider(lang)
-            }
-            return Provider.providers.keys.find { it.name == providerName }
-        }
+        // Edición Sports: el inicio siempre es el catálogo deportivo (no se elige proveedor).
+        get() = com.streamflixreborn.streamflix.providers.SportsProvider.INSTANCE
         set(value) {
             AppDatabase.resetInstance()
 
