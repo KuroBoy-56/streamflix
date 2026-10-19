@@ -17,7 +17,9 @@
   <script type="text/brightscript" uri="pkg:/components/views/RowsView.brs"/>
   <children>
     <Rectangle width="1920" height="1080" color="0x0F111AFF"/>
-    <Poster id="backdrop" width="1920" height="720" loadDisplayMode="scaleToZoom" loadWidth="1280" loadHeight="720"/>
+    <!-- Portada en 16:9 exacto a la derecha: en 1920x720 el zoom recortaba la parte de arriba. -->
+    <Poster id="backdrop" translation="[640,0]" width="1280" height="720" loadDisplayMode="scaleToZoom" loadWidth="1280" loadHeight="720"/>
+    <Poster translation="[640,0]" width="320" height="720" uri="pkg:/images/fade_right.png" rotation="3.14159" scaleRotateCenter="[160,360]"/>
     <Poster width="1920" height="720" uri="pkg:/images/hero_scrim.png"/>
     <Label id="heroTitle" translation="[140,230]" width="1100" font="font:LargeBoldSystemFont" color="0xFFFFFFFF"/>
     <Label id="heroMeta" translation="[140,300]" width="1100" font="font:SmallSystemFont" color="0xE5E5E5FF"/>
