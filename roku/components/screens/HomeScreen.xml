@@ -18,7 +18,7 @@
     </Rectangle>
     <Rectangle id="nav" width="380" height="1080" color="0x0B0D14F2" visible="false">
       <Poster id="navLogo" translation="[40,40]" width="300" height="110" loadDisplayMode="scaleToFit"/>
-      <LabelList id="menu" translation="[40,220]" itemSize="[300,72]" itemSpacing="[0,8]" color="0xBBBBBBFF" focusedColor="0xFFFFFFFF" focusBitmapUri="pkg:/images/red.png" focusFootprintBitmapUri="pkg:/images/red.png"/>
+      <MarkupList id="menu" translation="[40,220]" numRows="9" itemSize="[300,72]" itemSpacing="[0,8]" itemComponentName="MenuItem" drawFocusFeedback="false" vertFocusAnimationStyle="floatingFocus"/>
       <Poster id="avatar" translation="[40,940]" width="64" height="64" loadDisplayMode="scaleToZoom"/>
       <Label id="profileName" translation="[120,955]" width="240" font="font:SmallSystemFont" color="0xFFFFFFFF"/>
     </Rectangle>

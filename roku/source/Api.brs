@@ -175,6 +175,7 @@ function ApiLogin(p as object) as object
         panel_default_channel_line: PanelText(json.default_channel_line)
         channel_lines_from: ToInt(json.channel_lines_from).ToStr()
         settings_note: PanelText(json.settings_note)
+        live_enabled: AsStr(channelLines.Count() > 0 or personal.Count() > 0)
         profile_limit: limit.ToStr()
         last_online_check: NowSec().ToStr()
     })
@@ -272,7 +273,11 @@ function ApiNotice() as object
     url = PanelApiUrl("ntf_api.php") + "?mac=" + UrlEnc(DeviceMac()) + "&u=" + UrlEnc(RegRead("alpha_token")) + "&cb=" + NowSec().ToStr() + "&platform=roku"
     r = Http(url, { timeout: 10000 })
     if r.code <> 200 then return { text: "" }
-    return { text: HtmlToText(r.body) }
+    ' La página es "AVISO IMPORTANTE" + el mensaje: la primera línea va como título de la tarjeta.
+    lines = HtmlToText(r.body).Split(Chr(10))
+    if lines.Count() < 2 then return { title: "Aviso", text: lines.Join(Chr(10)) }
+    title = lines.Shift()
+    return { title: title, text: lines.Join(Chr(10)) }
 end function
 
 function HtmlToText(html as string) as string

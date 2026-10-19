@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Opción de menú: fondo rojo redondeado con margen al enfocar; tono suave si la lista no tiene el foco. -->
+<component name="MenuItem" extends="Group">
+  <interface>
+    <field id="itemContent" type="node" onChange="onContent"/>
+    <field id="width" type="float" onChange="onLayout"/>
+    <field id="height" type="float" onChange="onLayout"/>
+    <field id="focusPercent" type="float" onChange="onFocus"/>
+    <field id="listHasFocus" type="boolean" onChange="onFocus"/>
+  </interface>
+  <script type="text/brightscript" uri="pkg:/components/items/MenuItem.brs"/>
+  <children>
+    <Poster id="bg" uri="pkg:/images/menu_focus.9.png" opacity="0"/>
+    <Label id="label" translation="[28,0]" vertAlign="center" font="font:MediumSystemFont" color="0xB4B9C8FF"/>
+  </children>
+</component>

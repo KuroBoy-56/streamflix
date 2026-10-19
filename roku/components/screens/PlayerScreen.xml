@@ -22,7 +22,13 @@
       <Poster id="osdLogo" translation="[100,860]" width="200" height="130" loadDisplayMode="scaleToFit"/>
       <Label id="osdNumber" translation="[340,860]" font="font:SmallSystemFont" color="0xB0B0B0FF"/>
       <Label id="osdTitle" translation="[340,900]" width="1400" font="font:LargeBoldSystemFont" color="0xFFFFFFFF"/>
-      <Label id="osdHint" translation="[340,970]" width="1400" font="font:SmallestSystemFont" color="0x9A9A9AFF" text="▲ ▼ cambiar de canal"/>
+      <Label id="osdHint" translation="[340,970]" width="1400" font="font:SmallestSystemFont" color="0x9A9A9AFF" text="OK: lista de canales   ·   ▲ ▼ cambiar de canal"/>
+    </Group>
+    <Group id="channelMenu" visible="false">
+      <Rectangle width="780" height="1080" color="0x0B0D14EB"/>
+      <Label id="menuTitle" translation="[70,50]" width="640" font="font:MediumBoldSystemFont" color="0xFFFFFFFF"/>
+      <MarkupList id="menuList" translation="[70,120]" itemComponentName="ChannelItem" itemSize="[640,84]" itemSpacing="[0,4]" numRows="10" drawFocusFeedback="false" vertFocusAnimationStyle="floatingFocus"/>
+      <Label translation="[70,1010]" width="640" font="font:SmallestSystemFont" color="0x9A9A9AFF" text="OK: ver canal   ·   Atrás: cerrar"/>
     </Group>
     <BusySpinner id="spinner" translation="[912,492]" visible="false"/>
     <Label id="status" translation="[160,620]" width="1600" horizAlign="center" wrap="true" font="font:MediumSystemFont" color="0xFFFFFFFF"/>

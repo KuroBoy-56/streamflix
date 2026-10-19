@@ -11,5 +11,5 @@ sub onContent()
 end sub
 
 sub onFocusPercent()
-    if m.top.focusPercent > 0.5 then m.bg.color = "0xE50914FF" else m.bg.color = "0x1A1D2900"
+    m.bg.opacity = m.top.focusPercent
 end sub

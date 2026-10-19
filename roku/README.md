@@ -35,6 +35,10 @@ Para publicarlo en la tienda de canales de Roku, sube ese mismo zip en el
 | Catálogo TMDb con la clave del panel: tendencias, populares, anime y por plataforma; películas y series por género; ficha con reparto y recomendaciones; temporadas y episodios; búsqueda; filmografía de cada actor | Igual |
 | En Vivo estilo TiviMate: carpetas por categoría y país, canales, vista previa y guía (EPG) | Igual |
 | Líneas de canales del panel, URL personal y línea por defecto; sin duplicados ni canales para adultos; si una señal falla pasa sola a otra línea | Igual |
+| Caché de canales: la segunda vez abre al instante con la copia guardada y la lista se actualiza aparte si tiene más de 30 min | Igual |
+| En pantalla completa, lista de canales de la categoría para cambiar sin salir | Igual: OK o ◀ abre la lista, ▲▼ cambia de canal |
+| En Vivo desaparece si el panel no le asignó canales a la cuenta | Igual |
+| Logo y fondo según el distribuidor (marca blanca del administrador) | Igual. El icono del canal en el menú del Roku es fijo: Roku no deja cambiarlo desde la app |
 | Reporte de errores al panel (`log_error.php`) | Igual |
 | Idioma | Ajustes → **Idioma del audio**: Español latino (por defecto) o Inglés. En español latino, si el título no trae audio en español se activan los subtítulos en español. Títulos y sinopsis de TMDb en español latino |
 | Cerrar sesión, sincronizar ahora | Igual (Ajustes) |

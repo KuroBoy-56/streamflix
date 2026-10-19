@@ -25,7 +25,7 @@ sub Build()
     m.items.Push({ id: "audio", title: "Idioma del audio: " + AudioLabel() })
     if RegRead("profile_limit", "1").ToInt() >= 2 then m.items.Push({ id: "profile", title: "Cambiar de perfil" })
     m.items.Push({ id: "sync", title: "Sincronizar ahora" })
-    if RegRead("panel_channel_lines") <> "" or RegRead("personal_provider_url") <> "" then m.items.Push({ id: "channels", title: "Actualizar canales" })
+    if RegRead("live_enabled") = "true" then m.items.Push({ id: "channels", title: "Actualizar canales" })
     m.items.Push({ id: "logout", title: "Cerrar sesión" })
     content = CreateObject("roSGNode", "ContentNode")
     for each item in m.items

@@ -305,7 +305,10 @@ function LoadChannels(force as boolean) as object
     if key = "" then return { channels: [], alternates: {}, epg: [] }
     cache = JsonOf(ReadAsciiFile(LiveCacheFile()))
     sameKey = cache <> invalid and cache.key = key and GetInterface(cache.channels, "ifArray") <> invalid
-    if sameKey and not force and NowSec() - ToInt(cache.time) < 1800 then return cache
+    if sameKey and not force then
+        cache.stale = NowSec() - ToInt(cache.time) >= 1800
+        return cache
+    end if
 
     epg = []
     lines = []
@@ -416,7 +419,7 @@ function ApiLive(p as object) as object
     for each ch in channels
         if ch.epgId <> "" then ids.Push(ch.epgId)
     end for
-    return { content: root, epgSources: data.epg, epgIds: ids, total: channels.Count() }
+    return { content: root, epgSources: data.epg, epgIds: ids, total: channels.Count(), stale: data.stale = true }
 end function
 
 ' =======================================================================================

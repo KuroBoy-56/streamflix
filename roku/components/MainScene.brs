@@ -198,7 +198,7 @@ sub onNotice(event as object)
     res = TaskResult(event)
     if res = invalid or not m.sessionStarted then return
     text = AsStr(res.text)
-    if Len(text) > 15 then PushScreen("NoteScreen", { title: "Aviso", text: text })
+    if Len(text) > 5 then PushScreen("NoteScreen", { title: AsStr(res.title), text: text })
 end sub
 
 ' ---------------------------------------------------------------------------------------

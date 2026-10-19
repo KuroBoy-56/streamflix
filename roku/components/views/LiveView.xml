@@ -16,7 +16,7 @@
   <children>
     <Rectangle width="1920" height="1080" color="0x0F111AF0"/>
     <Label id="heading" translation="[130,50]" width="900" font="font:LargeBoldSystemFont" color="0xFFFFFFFF" text="En Vivo"/>
-    <LabelList id="folders" translation="[130,150]" itemSize="[380,64]" itemSpacing="[0,4]" numRows="13" color="0xBBBBBBFF" focusedColor="0xFFFFFFFF" focusBitmapUri="pkg:/images/red.png" focusFootprintBitmapUri="pkg:/images/red.png"/>
+    <MarkupList id="folders" translation="[130,150]" itemSize="[380,64]" itemSpacing="[0,4]" numRows="13" itemComponentName="MenuItem" drawFocusFeedback="false" vertFocusAnimationStyle="floatingFocus"/>
     <MarkupList id="channels" translation="[540,150]" itemComponentName="ChannelItem" itemSize="[620,84]" itemSpacing="[0,4]" numRows="10" drawFocusFeedback="false"/>
     <Rectangle translation="[1190,150]" width="640" height="360" color="0x000000FF"/>
     <Video id="preview" translation="[1190,150]" width="640" height="360" enableUI="false"/>

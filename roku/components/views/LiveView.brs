@@ -51,6 +51,22 @@ sub Load(force as boolean)
     RunTask("live", { force: force }, "onLoaded")
 end sub
 
+' Copia de más de 30 min: se muestra al instante y se descarga la nueva aparte (como Android).
+sub onRefreshed(event as object)
+    res = TaskResult(event)
+    if res = invalid or res.error <> invalid or not m.top.active then return
+    folder = m.folders.itemFocused
+    channel = m.channels.itemFocused
+    inChannels = m.channels.isInFocusChain()
+    ApplyContent(res)
+    if folder < m.content.getChildCount() then
+        m.folders.jumpToItem = folder
+        onFolderFocused()
+        if channel < m.channels.content.getChildCount() then m.channels.jumpToItem = channel
+    end if
+    if inChannels then FocusOn(m.channels)
+end sub
+
 sub onLoaded(event as object)
     res = TaskResult(event)
     if res = invalid then return
@@ -61,6 +77,13 @@ sub onLoaded(event as object)
         return
     end if
     m.message.text = ""
+    StopPreview()
+    ApplyContent(res)
+    FocusSoft(m.folders)
+    if res.stale = true then RunTask("live", { force: true }, "onRefreshed", "liveRefresh")
+end sub
+
+sub ApplyContent(res as object)
     m.loadedAt = NowSec()
     m.content = res.content
     m.top.findNode("heading").text = "En Vivo  ·  " + res.total.ToStr() + " canales"
@@ -73,7 +96,6 @@ sub onLoaded(event as object)
     m.folders.content = labels
     m.folderIndex = -1
     onFolderFocused()
-    FocusSoft(m.folders)
     if res.epgSources <> invalid and res.epgSources.Count() > 0 then RunTask("epg", { sources: res.epgSources, ids: res.epgIds }, "onEpg")
 end sub
 

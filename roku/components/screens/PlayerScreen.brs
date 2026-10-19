@@ -13,6 +13,9 @@ sub init()
     m.video.observeField("availableAudioTracks", "onAudioTracks")
     m.video.observeField("availableSubtitleTracks", "onAudioTracks")
     m.top.findNode("osdTimer").observeField("fire", "onOsdTimer")
+    m.channelMenu = m.top.findNode("channelMenu")
+    m.menuList = m.top.findNode("menuList")
+    m.menuList.observeField("itemSelected", "onMenuSelected")
     m.lastSaved = 0
     m.audioChosen = false
     m.closing = false
@@ -22,6 +25,8 @@ end sub
 sub onParams()
     m.p = m.top.params
     if m.p.mediaType = "channel" then
+        ' Sin la barra del Roku: OK, ◀ y ▲▼ los maneja la lista de canales.
+        m.video.enableUI = false
         m.channelIndex = m.p.index
         PlayChannel()
     else
@@ -169,6 +174,30 @@ sub onOsdTimer()
     m.osd.visible = false
 end sub
 
+'  Lista de canales de la categoría sin salir de la pantalla completa (LiveChannelsOverlay).
+sub OpenChannelMenu()
+    m.top.findNode("menuTitle").text = m.p.folder.title
+    if m.menuList.content = invalid then m.menuList.content = m.p.folder
+    m.menuList.jumpToItem = m.channelIndex
+    m.osd.visible = false
+    m.channelMenu.visible = true
+    FocusOn(m.menuList)
+end sub
+
+sub CloseChannelMenu()
+    m.channelMenu.visible = false
+    FocusOn(m.video)
+end sub
+
+sub onMenuSelected()
+    index = m.menuList.itemSelected
+    CloseChannelMenu()
+    if index <> m.channelIndex then
+        m.channelIndex = index
+        PlayChannel()
+    end if
+end sub
+
 sub ZapChannel(delta as integer)
     count = m.p.folder.getChildCount()
     if count = 0 then return
@@ -217,6 +246,11 @@ end sub
 
 function onKeyEvent(key as string, press as boolean) as boolean
     if not press then return false
+    if key = "back" and m.channelMenu.visible then
+        CloseChannelMenu()
+        return true
+    end if
+    if m.channelMenu.visible then return false
     if key = "back" then
         SaveNow()
         Close()
@@ -229,7 +263,10 @@ function onKeyEvent(key as string, press as boolean) as boolean
         else if key = "down" or key = "channelDown" then
             ZapChannel(1)
             return true
-        else if key = "OK" or key = "info" then
+        else if key = "OK" or key = "left" then
+            OpenChannelMenu()
+            return true
+        else if key = "info" then
             ShowOsd()
             return true
         end if

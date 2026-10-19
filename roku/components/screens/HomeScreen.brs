@@ -13,7 +13,9 @@ end sub
 sub onParams()
     ApplyBrand()
     hasVod = RegRead("assigned_servers") <> ""
-    hasLive = RegRead("panel_channel_lines") <> "" or RegRead("personal_provider_url") <> ""
+    ' Igual que Android: En Vivo solo si el panel le asignó canales a la cuenta al iniciar sesión
+    ' (la marca del panel puede traer líneas del dueño que esta cuenta no tiene).
+    hasLive = RegRead("live_enabled") = "true"
     ' Igual que Android: "En Vivo" aparece como sección propia si hay canales y también VOD;
     ' si la cuenta solo tiene canales, En Vivo es el inicio.
     onlyLive = hasLive and not hasVod
