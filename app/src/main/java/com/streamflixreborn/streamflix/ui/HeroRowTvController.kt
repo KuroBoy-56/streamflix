@@ -313,7 +313,7 @@ class HeroRowTvController(
             // Los logos de canales en vivo se muestran completos a la derecha (no recortados).
             if (live) {
                 iv.scaleType = ImageView.ScaleType.FIT_END
-                iv.setPadding(0, 40.dp(iv.context), 80.dp(iv.context), 260.dp(iv.context))
+                iv.setPadding(0, 32.dp(iv.context), 48.dp(iv.context), 32.dp(iv.context))
             } else {
                 iv.scaleType = ImageView.ScaleType.CENTER_CROP
                 iv.setPadding(0, 0, 0, 0)

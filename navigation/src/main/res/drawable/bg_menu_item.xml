@@ -1,19 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Igual que el menú de Roku: rojo al enfocar, gris azulado en la sección abierta. -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
 
     <item android:state_focused="true">
         <shape android:shape="rectangle">
-            <corners android:radius="2dp" />
-            <solid android:color="#26FFFFFF" />
-            <stroke android:width="2dp" android:color="?attr/colorAccent" />
+            <corners android:radius="10dp" />
+            <solid android:color="#E50914" />
         </shape>
     </item>
 
     <item android:state_selected="true">
         <shape android:shape="rectangle">
-            <corners android:radius="2dp" />
-            <solid android:color="#14FFFFFF" />
-            <stroke android:width="1dp" android:color="?attr/colorAccent" />
+            <corners android:radius="10dp" />
+            <solid android:color="#1F2230" />
         </shape>
     </item>
 

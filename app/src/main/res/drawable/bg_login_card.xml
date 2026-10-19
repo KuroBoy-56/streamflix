@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tarjeta del login, igual que en Roku. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <corners android:radius="20dp" />
+    <solid android:color="#F2121520" />
+    <stroke android:width="1dp" android:color="#262A38" />
+</shape>

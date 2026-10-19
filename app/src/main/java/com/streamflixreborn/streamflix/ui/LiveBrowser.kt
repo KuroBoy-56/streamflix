@@ -138,7 +138,7 @@ class LiveBrowser(
     private var pendingServers = mutableListOf<Video.Server>()
 
     init {
-        view.setBackgroundColor(Color.parseColor("#0B0B0F"))
+        view.setBackgroundColor(Color.parseColor("#0F111A"))
         view.clipChildren = false
         buildLayout()
     }

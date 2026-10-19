@@ -4,6 +4,12 @@
     <color name="ic_launcher_background">#1E2129</color>
     <color name="ic_banner_background">#1E2129</color>
 
+    <!-- Paleta igual a la del canal de Roku -->
+    <color name="roku_red">#E50914</color>
+    <color name="roku_background">#0F111A</color>
+    <color name="roku_card">#1C1F2B</color>
+    <color name="roku_field">#1F2230</color>
+
     <!-- Colore di sfondo dinamico per TV -->
     <color name="app_background">#181818</color>
     <color name="favorite_selected">#00E5FF</color>

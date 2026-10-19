@@ -2,8 +2,6 @@ package com.streamflixreborn.streamflix.activities.sync
 
 import android.content.Context
 import android.content.pm.PackageManager
-import android.content.res.ColorStateList
-import android.graphics.Color
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -102,17 +100,14 @@ class SyncGatewayActivity : AppCompatActivity() {
     private fun adjustLayoutForTv() {
         val isTv = packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
         val loginScroll = findViewById<View>(R.id.loginScroll)
-        val loginContainer = findViewById<View>(R.id.loginContainer)
         val params = loginScroll.layoutParams as ConstraintLayout.LayoutParams
 
         if (isTv) {
             params.horizontalBias = 0.9f
             loginScroll.layoutParams = params
-            loginContainer.setBackgroundColor(Color.parseColor("#99000000"))
         } else {
             params.horizontalBias = 0.5f
             loginScroll.layoutParams = params
-            loginContainer.setBackgroundColor(Color.parseColor("#991A1D29"))
         }
     }
 
@@ -121,11 +116,9 @@ class SyncGatewayActivity : AppCompatActivity() {
 
         inputAlpha.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
-                inputAlpha.setBackgroundColor(Color.parseColor("#33FFFFFF"))
                 inputAlpha.scaleX = 1.02f
                 inputAlpha.scaleY = 1.02f
             } else {
-                inputAlpha.setBackgroundColor(Color.parseColor("#0F111A"))
                 inputAlpha.scaleX = 1.0f
                 inputAlpha.scaleY = 1.0f
             }
@@ -133,11 +126,9 @@ class SyncGatewayActivity : AppCompatActivity() {
 
         inputBeta.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
-                inputBeta.setBackgroundColor(Color.parseColor("#33FFFFFF"))
                 inputBeta.scaleX = 1.02f
                 inputBeta.scaleY = 1.02f
             } else {
-                inputBeta.setBackgroundColor(Color.parseColor("#0F111A"))
                 inputBeta.scaleX = 1.0f
                 inputBeta.scaleY = 1.0f
             }
@@ -145,11 +136,9 @@ class SyncGatewayActivity : AppCompatActivity() {
 
         btnSync.setOnFocusChangeListener { _, hasFocus ->
             if (hasFocus) {
-                btnSync.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#FF5252"))
                 btnSync.scaleX = 1.05f
                 btnSync.scaleY = 1.05f
             } else {
-                btnSync.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#E50914"))
                 btnSync.scaleX = 1.0f
                 btnSync.scaleY = 1.0f
             }

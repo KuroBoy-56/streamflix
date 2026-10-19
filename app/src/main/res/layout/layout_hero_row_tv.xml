@@ -6,19 +6,20 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#000000"
+    android:background="@color/roku_background"
     android:clipChildren="false"
     android:clipToPadding="false">
 
+    <!-- Igual que Roku: la portada en 16:9 exacto a la derecha (sin recortes), fundida por la izquierda. -->
     <ImageView
         android:id="@+id/iv_hero_backdrop"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:scaleType="centerCrop"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintDimensionRatio="16:9"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintWidth_percent="0.667"
         tools:ignore="ContentDescription" />
 
     <!-- Segunda capa para fundir suavemente un póster con el siguiente. -->
@@ -28,11 +29,20 @@
         android:layout_height="0dp"
         android:alpha="0"
         android:scaleType="centerCrop"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintDimensionRatio="16:9"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintWidth_percent="0.667"
         tools:ignore="ContentDescription" />
+
+    <View
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="@drawable/bg_hero_fade_left"
+        app:layout_constraintBottom_toBottomOf="@id/iv_hero_backdrop"
+        app:layout_constraintStart_toStartOf="@id/iv_hero_backdrop"
+        app:layout_constraintTop_toTopOf="@id/iv_hero_backdrop"
+        app:layout_constraintWidth_percent="0.17" />
 
     <View
         android:layout_width="0dp"

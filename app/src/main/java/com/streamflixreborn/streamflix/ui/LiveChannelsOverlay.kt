@@ -64,7 +64,7 @@ class LiveChannelsOverlay(
             orientation = LinearLayout.HORIZONTAL
             isClickable = true
             background = if (isTv) {
-                GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, intArrayOf(Color.parseColor("#F20B0B0F"), Color.parseColor("#D90B0B0F")))
+                GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, intArrayOf(Color.parseColor("#F20F111A"), Color.parseColor("#D90F111A")))
             } else {
                 GradientDrawable().apply { setColor(Color.parseColor("#26000000")); cornerRadius = dp(12).toFloat() }
             }
@@ -208,8 +208,10 @@ class LiveChannelsOverlay(
                 setTextColor(if (playing) Color.parseColor("#FF5252") else Color.WHITE)
             }
             fun paint(focused: Boolean) {
+                // Igual que Roku: la fila enfocada en rojo con el texto en blanco.
+                (row.getChildAt(2) as TextView).setTextColor(if (playing && !focused) Color.parseColor("#FF5252") else Color.WHITE)
                 row.background = when {
-                    focused -> rounded(Color.parseColor("#40FFFFFF"))
+                    focused -> rounded(Color.parseColor("#E50914"))
                     playing -> rounded(Color.parseColor("#26E50914"))
                     else -> null
                 }
@@ -241,7 +243,7 @@ class LiveChannelsOverlay(
                 text = item.name
                 fun paint(focused: Boolean) {
                     val selected = item.name == category?.name
-                    background = if (focused) rounded(Color.parseColor("#40FFFFFF")) else null
+                    background = if (focused) rounded(Color.parseColor("#E50914")) else null
                     setTextColor(if (selected) Color.WHITE else Color.parseColor("#99FFFFFF"))
                     typeface = if (selected) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
                 }

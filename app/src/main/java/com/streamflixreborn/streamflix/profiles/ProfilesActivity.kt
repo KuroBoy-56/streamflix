@@ -110,7 +110,7 @@ class ProfilesActivity : AppCompatActivity() {
     // ---------------------------------------------------------------------------------------
 
     private fun buildContent(): View {
-        val root = FrameLayout(this).apply { setBackgroundColor(Color.parseColor("#141414")) }
+        val root = FrameLayout(this).apply { setBackgroundColor(Color.parseColor("#0F111A")) }
 
         val column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -319,14 +319,14 @@ class ProfilesActivity : AppCompatActivity() {
         gravity = Gravity.CENTER
     }
 
-    /** TV: el perfil enfocado crece y se marca con borde blanco (como en Netflix). */
+    /** TV: el perfil enfocado crece y se marca con borde rojo (igual que en Roku). */
     private fun bindFocus(tile: View, image: View) {
         tile.setOnFocusChangeListener { _, focused ->
             val scale = if (focused) 1.1f else 1f
             tile.animate().scaleX(scale).scaleY(scale).setDuration(150).start()
-            // Borde blanco al enfocar (View.foreground no existe en Android 5).
+            // Borde rojo al enfocar (View.foreground no existe en Android 5).
             if (image.getTag(R.id.profiles_tag_background) == null) image.setTag(R.id.profiles_tag_background, image.background ?: rounded(Color.TRANSPARENT, dp(6)))
-            image.background = if (focused) rounded(Color.WHITE, dp(8)) else image.getTag(R.id.profiles_tag_background) as android.graphics.drawable.Drawable
+            image.background = if (focused) rounded(Color.parseColor("#E50914"), dp(8)) else image.getTag(R.id.profiles_tag_background) as android.graphics.drawable.Drawable
             ((tile as ViewGroup).getChildAt(1) as? TextView)?.setTextColor(Color.parseColor(if (focused) "#FFFFFF" else "#B3B3B3"))
         }
     }
@@ -427,7 +427,7 @@ class ProfilesActivity : AppCompatActivity() {
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.parseColor("#141414"))
+            setBackgroundColor(Color.parseColor("#0F111A"))
             setPadding(dp(24), dp(if (isTv) 28 else 40), dp(24), dp(24))
         }
         root.addView(TextView(this).apply {
@@ -475,7 +475,7 @@ class ProfilesActivity : AppCompatActivity() {
                 isClickable = true
                 setPadding(dp(3), dp(3), dp(3), dp(3))
             }
-            fun mark() { item.background = if (url == avatar) rounded(Color.TRANSPARENT, dp(6), Color.WHITE, dp(3)) else null }
+            fun mark() { item.background = if (url == avatar) rounded(Color.TRANSPARENT, dp(6), Color.parseColor("#E50914"), dp(3)) else null }
             mark()
             Glide.with(this).load(url).transform(CenterCrop(), RoundedCorners(dp(6))).into(item)
             item.setOnClickListener {
@@ -554,7 +554,7 @@ class ProfilesActivity : AppCompatActivity() {
         })
         root.addView(body)
         dialog.setContentView(ScrollView(this).apply {
-            setBackgroundColor(Color.parseColor("#141414"))
+            setBackgroundColor(Color.parseColor("#0F111A"))
             addView(root)
         })
         dialog.setOnShowListener { (if (isTv) save else nameInput).requestFocus() }
@@ -603,32 +603,32 @@ class ProfilesActivity : AppCompatActivity() {
 
     private fun outlinedButton(text: String, onClick: () -> Unit) = TextView(this).apply {
         this.text = text
-        setTextColor(Color.parseColor("#B3B3B3"))
+        setTextColor(Color.parseColor("#D8DCE8"))
         textSize = 15f
         letterSpacing = 0.08f
         isFocusable = true
         isClickable = true
         gravity = Gravity.CENTER
         setPadding(dp(22), dp(10), dp(22), dp(10))
-        background = rounded(Color.TRANSPARENT, dp(2), Color.parseColor("#808080"), dp(1))
+        background = rounded(Color.parseColor("#1F2230"), dp(10), Color.parseColor("#2E3242"), dp(1))
         setOnClickListener { onClick() }
         setOnFocusChangeListener { v, f ->
-            (v as TextView).setTextColor(if (f) Color.BLACK else Color.parseColor("#B3B3B3"))
-            v.background = if (f) rounded(Color.WHITE, dp(2)) else rounded(Color.TRANSPARENT, dp(2), Color.parseColor("#808080"), dp(1))
+            (v as TextView).setTextColor(if (f) Color.WHITE else Color.parseColor("#D8DCE8"))
+            v.background = if (f) rounded(Color.parseColor("#E50914"), dp(10)) else rounded(Color.parseColor("#1F2230"), dp(10), Color.parseColor("#2E3242"), dp(1))
         }
     }
 
     private fun solidButton(text: String) = TextView(this).apply {
         this.text = text
-        setTextColor(Color.BLACK)
+        setTextColor(Color.WHITE)
         textSize = 15f
         typeface = Typeface.DEFAULT_BOLD
         isFocusable = true
         isClickable = true
         gravity = Gravity.CENTER
         setPadding(dp(26), dp(10), dp(26), dp(10))
-        background = rounded(Color.WHITE, dp(2))
-        setOnFocusChangeListener { v, f -> v.background = rounded(if (f) Color.parseColor("#E50914") else Color.WHITE, dp(2)); (v as TextView).setTextColor(if (f) Color.WHITE else Color.BLACK) }
+        background = rounded(Color.parseColor("#7A1018"), dp(10))
+        setOnFocusChangeListener { v, f -> v.background = rounded(if (f) Color.parseColor("#E50914") else Color.parseColor("#7A1018"), dp(10)) }
     }
 
     private fun rounded(color: Int, radius: Int, strokeColor: Int? = null, strokeWidth: Int = 0) = GradientDrawable().apply {

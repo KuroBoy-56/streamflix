@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Login con el mismo diseño del canal de Roku: tarjeta con barra roja, bienvenida y campos redondeados. -->
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#050505">
+    android:background="@color/roku_background">
 
     <ImageView
         android:id="@+id/bgGateway"
@@ -34,14 +35,22 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center"
-            android:padding="32dp"
-            android:background="#1A1D29">
+            android:paddingStart="28dp"
+            android:paddingEnd="28dp"
+            android:paddingBottom="24dp"
+            android:background="@drawable/bg_login_card">
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="4dp"
+                android:layout_marginBottom="22dp"
+                android:background="@color/roku_red" />
 
             <ImageView
                 android:id="@+id/logoGateway"
                 android:layout_width="match_parent"
-                android:layout_height="100dp"
-                android:layout_marginBottom="30dp"
+                android:layout_height="84dp"
+                android:layout_marginBottom="14dp"
                 android:visibility="gone"
                 android:scaleType="fitCenter"
                 android:adjustViewBounds="true"
@@ -51,90 +60,107 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Usuario"
-                android:textColor="#AAAAAA"
-                android:textSize="14sp"
-                android:layout_marginBottom="4dp"
+                android:gravity="center"
+                android:text="Bienvenido"
+                android:textColor="#FFFFFF"
+                android:textSize="26sp"
                 android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="22dp"
+                android:gravity="center"
+                android:text="Inicia sesión para continuar"
+                android:textColor="#B4B9C8"
+                android:textSize="16sp" />
 
             <EditText
                 android:id="@+id/inputAlpha"
                 android:layout_width="match_parent"
-                android:layout_height="55dp"
-                android:background="#0F111A"
+                android:layout_height="52dp"
+                android:background="@drawable/bg_login_field"
+                android:gravity="center_vertical"
                 android:textColor="#FFFFFF"
-                android:padding="16dp"
+                android:paddingStart="18dp"
+                android:paddingEnd="18dp"
                 android:inputType="textNoSuggestions"
-                android:layout_marginBottom="16dp"
+                android:layout_marginBottom="12dp"
                 android:focusable="true"
-                android:hint="Ingresar usuario"
-                android:textColorHint="#444444" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Contraseña"
-                android:textColor="#AAAAAA"
-                android:textSize="14sp"
-                android:layout_marginBottom="4dp"
-                android:textStyle="bold" />
+                android:hint="Usuario"
+                android:textColorHint="@color/login_hint_text" />
 
             <EditText
                 android:id="@+id/inputBeta"
                 android:layout_width="match_parent"
-                android:layout_height="55dp"
-                android:background="#0F111A"
+                android:layout_height="52dp"
+                android:background="@drawable/bg_login_field"
+                android:gravity="center_vertical"
                 android:textColor="#FFFFFF"
-                android:padding="16dp"
+                android:paddingStart="18dp"
+                android:paddingEnd="18dp"
                 android:inputType="textPassword"
-                android:layout_marginBottom="10dp"
+                android:layout_marginBottom="12dp"
                 android:focusable="true"
-                android:hint="Ingresar contraseña"
-                android:textColorHint="#444444" />
-
-            <!-- MAC del equipo (ANDROID_ID en pares, igual que la registra el panel) -->
-            <TextView
-                android:id="@+id/txtDeviceMac"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="14dp"
-                android:gravity="center"
-                android:shadowColor="#FF000000"
-                android:shadowDx="0"
-                android:shadowDy="0"
-                android:shadowRadius="4"
-                android:textColor="#FFFFFF"
-                android:textIsSelectable="true"
-                android:textSize="14sp"
-                android:textStyle="bold" />
+                android:hint="Contraseña"
+                android:textColorHint="@color/login_hint_text" />
 
             <Button
                 android:id="@+id/btnSync"
                 android:layout_width="match_parent"
-                android:layout_height="60dp"
-                android:text="ENTRAR"
+                android:layout_height="52dp"
+                android:background="@drawable/bg_login_button"
+                android:gravity="center_vertical|start"
+                android:paddingStart="18dp"
+                android:paddingEnd="18dp"
+                android:stateListAnimator="@null"
+                android:text="Iniciar sesión"
+                android:textAllCaps="false"
                 android:textColor="#FFFFFF"
-                android:backgroundTint="#E50914"
-                android:textStyle="bold"
+                android:textSize="17sp"
                 android:focusable="true" />
 
             <ProgressBar
                 android:id="@+id/progressSync"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
+                android:layout_marginTop="12dp"
                 android:visibility="gone"
-                android:indeterminateTint="#E50914"/>
+                android:indeterminateTint="@color/roku_red"/>
 
             <TextView
                 android:id="@+id/txtStatus"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="12dp"
                 android:gravity="center"
                 android:textColor="#FF5252"
                 android:textStyle="bold"
                 android:visibility="gone"/>
+
+            <!-- MAC del equipo (ANDROID_ID en pares, igual que la registra el panel) -->
+            <TextView
+                android:id="@+id/txtDeviceMac"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="22dp"
+                android:background="@drawable/bg_login_chip"
+                android:gravity="center"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp"
+                android:textColor="#E5E5E5"
+                android:textIsSelectable="true"
+                android:textSize="14sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center"
+                android:text="Campos vacíos: entra con la MAC vinculada"
+                android:textColor="#8A8FA0"
+                android:textSize="13sp" />
         </LinearLayout>
     </ScrollView>
 </androidx.constraintlayout.widget.ConstraintLayout>
