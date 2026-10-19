@@ -8,6 +8,10 @@ on:
     paths: ['ios/**', '.github/workflows/ios.yml']
   workflow_dispatch:
 
+# Permiso para publicar el .ipa en Releases.
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: macos-15
@@ -45,3 +49,21 @@ jobs:
         with:
           name: VODPro-iOS
           path: ios/VODPro-sin-firmar.ipa
+
+      # Release "ios-v<versión>": se crea la primera vez y luego se reemplaza el .ipa con cada compilación.
+      # (El prefijo "ios-" evita disparar la compilación del APK, que usa las etiquetas "v*".)
+      - name: Publicar en Releases
+        working-directory: ios
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(grep -m1 'MARKETING_VERSION' project.yml | sed 's/[^0-9.]//g')
+          TAG="ios-v$VERSION"
+          cp VODPro-sin-firmar.ipa "VODPro-iOS-$VERSION.ipa"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "VODPro-iOS-$VERSION.ipa" --clobber
+          else
+            gh release create "$TAG" "VODPro-iOS-$VERSION.ipa" --target "$GITHUB_SHA" \
+              --title "VOD Pro iOS $VERSION" \
+              --notes "App de iPhone/iPad (sin firmar). Instálala firmándola con tu Apple ID usando Sideloadly o AltStore, o súbela a TestFlight con una cuenta de Apple Developer."
+          fi
