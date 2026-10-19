@@ -1,0 +1,47 @@
+# Compila la app de iPhone en un Mac de GitHub: corre las pruebas de la lógica y genera
+# VODPro-sin-firmar.ipa (se firma al instalar con Sideloadly, AltStore o una cuenta de Apple).
+name: iOS
+
+on:
+  push:
+    branches: [ios]
+    paths: ['ios/**', '.github/workflows/ios.yml']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pruebas de la lógica (panel, catálogo, nube, en vivo)
+        working-directory: ios
+        run: swift test
+
+      - name: Generar el proyecto de Xcode
+        working-directory: ios
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      - name: Compilar para iPhone (sin firma)
+        working-directory: ios
+        run: |
+          xcodebuild -project VODPro.xcodeproj -scheme VODPro -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build > build.log 2>&1 \
+            || { grep -E "error:" -A3 build.log | head -150; tail -40 build.log; exit 1; }
+          tail -5 build.log
+
+      - name: Empaquetar .ipa
+        working-directory: ios
+        run: |
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/VODPro.app Payload/
+          zip -qry VODPro-sin-firmar.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VODPro-iOS
+          path: ios/VODPro-sin-firmar.ipa
