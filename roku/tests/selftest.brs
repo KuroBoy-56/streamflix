@@ -35,6 +35,14 @@ sub Main()
 
     Check("html", HtmlToText("<html><style>p{}</style><body><p>Tu cuenta vence en <b>3</b> días</p><button>Cerrar</button></body></html>"), "Tu cuenta vence en 3 días")
 
+    ' Audio: latino antes que castellano; sin español -> subtítulos completos en español.
+    tracks = [{ Track: "1", Language: "eng", Name: "English" }, { Track: "2", Language: "spa", Name: "Español (Castellano)" }, { Track: "3", Language: "spa", Name: "Español (Latino)" }]
+    Check("audio latino", PickAudio(tracks, "es").Track, "3")
+    Check("audio inglés", PickAudio(tracks, "en").Track, "1")
+    Check("sin audio español", AsStr(PickAudio([{ Track: "1", Language: "ita", Name: "Italiano" }], "es")), "")
+    subs = [{ TrackName: "a", Language: "spa", Description: "Spanish Forced" }, { TrackName: "b", Language: "spa", Description: "Spanish" }]
+    Check("subtítulo completo", PickSubtitle(subs).TrackName, "b")
+
     if m.failures = 0 then print "OK: todas las pruebas pasaron" else print "FALLARON " + m.failures.ToStr() + " pruebas"
 end sub
 

@@ -16,6 +16,7 @@
   <script type="text/brightscript" uri="pkg:/source/Screen.brs"/>
   <script type="text/brightscript" uri="pkg:/components/views/RowsView.brs"/>
   <children>
+    <Rectangle width="1920" height="1080" color="0x0F111AFF"/>
     <Poster id="backdrop" width="1920" height="720" loadDisplayMode="scaleToZoom" loadWidth="1280" loadHeight="720"/>
     <Poster width="1920" height="720" uri="pkg:/images/hero_scrim.png"/>
     <Label id="heroTitle" translation="[140,170]" width="1100" font="font:LargeBoldSystemFont" color="0xFFFFFFFF"/>

@@ -13,14 +13,28 @@
   <script type="text/brightscript" uri="pkg:/components/screens/LoginScreen.brs"/>
   <children>
     <Poster id="background" width="1920" height="1080" loadDisplayMode="scaleToZoom"/>
-    <Rectangle id="panel" width="700" height="1080" translation="[1160,0]" color="0x000000AA">
-      <Poster id="logo" translation="[200,110]" width="300" height="140" loadDisplayMode="scaleToFit"/>
-      <Label id="heading" translation="[60,290]" width="580" horizAlign="center" font="font:LargeBoldSystemFont" color="0xFFFFFFFF" text="Iniciar sesión"/>
-      <ButtonGroup id="form" translation="[60,380]" minWidth="580" maxWidth="580" itemSpacings="[24]"/>
-      <BusySpinner id="spinner" translation="[302,720]" visible="false" spinInterval="1"/>
-      <Label id="status" translation="[60,720]" width="580" height="160" wrap="true" horizAlign="center" font="font:SmallSystemFont" color="0xFF5252FF"/>
-      <Label id="mac" translation="[60,950]" width="580" horizAlign="center" font="font:SmallSystemFont" color="0xBBBBBBFF"/>
-      <Label id="hint" translation="[60,990]" width="580" horizAlign="center" wrap="true" font="font:SmallestSystemFont" color="0x8A8A8AFF" text="Sin usuario ni contraseña se entra con la MAC vinculada en el panel."/>
-    </Rectangle>
+    <Poster width="1920" height="1080" uri="pkg:/images/login_scrim.png"/>
+    <Label id="brand" translation="[120,920]" width="900" font="font:LargeBoldSystemFont" color="0xFFFFFFFF"/>
+
+    <Poster translation="[1140,80]" width="680" height="920" uri="pkg:/images/card.9.png"/>
+    <Rectangle translation="[1200,82]" width="560" height="6" color="0xE50914FF"/>
+    <Poster id="logo" translation="[1230,130]" width="500" height="170" loadDisplayMode="scaleToFit"/>
+    <Label translation="[1180,325]" width="600" horizAlign="center" font="font:LargeBoldSystemFont" color="0xFFFFFFFF" text="Bienvenido"/>
+    <Label translation="[1180,385]" width="600" horizAlign="center" font="font:SmallSystemFont" color="0x9AA0B4FF" text="Inicia sesión para continuar"/>
+
+    <Poster translation="[1190,460]" width="580" height="88" uri="pkg:/images/field.9.png"/>
+    <Poster translation="[1190,570]" width="580" height="88" uri="pkg:/images/field.9.png"/>
+    <Poster translation="[1190,680]" width="580" height="88" uri="pkg:/images/field_focus.9.png" opacity="0.45"/>
+    <ButtonGroup id="form" translation="[1190,460]" minWidth="580" maxWidth="580" buttonHeight="88" itemSpacings="[22]"
+        focusBitmapUri="pkg:/images/field_focus.9.png" focusFootprintBitmapUri="pkg:/images/field.9.png"
+        iconUri="" focusedIconUri="" textColor="0xD8DCE8FF" focusedTextColor="0xFFFFFFFF"
+        textFont="font:MediumSystemFont" focusedTextFont="font:MediumBoldSystemFont"/>
+
+    <BusySpinner id="spinner" translation="[1432,795]" visible="false" spinInterval="1"/>
+    <Label id="status" translation="[1180,790]" width="600" height="90" wrap="true" horizAlign="center" vertAlign="center" font="font:SmallSystemFont" color="0xFF6B6BFF"/>
+
+    <Poster translation="[1270,890]" width="420" height="52" uri="pkg:/images/chip.9.png"/>
+    <Label id="mac" translation="[1270,890]" width="420" height="52" horizAlign="center" vertAlign="center" font="font:SmallSystemFont" color="0xE5E5E5FF"/>
+    <Label translation="[1170,950]" width="620" horizAlign="center" wrap="true" font="font:SmallestSystemFont" color="0x7E8496FF" text="Sin usuario ni contraseña se entra con la MAC vinculada en el panel."/>
   </children>
 </component>

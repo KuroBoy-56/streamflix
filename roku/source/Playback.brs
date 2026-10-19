@@ -45,3 +45,46 @@ sub SetupVideo(video as object)
     agent.InitClientCertificates()
     video.setHttpAgent(agent)
 end sub
+
+' Pista de audio en el idioma elegido; en español se prefiere el latino al castellano.
+function PickAudio(tracks as dynamic, lang as string) as dynamic
+    best = invalid
+    bestScore = 0
+    if tracks = invalid then return invalid
+    for each t in tracks
+        language = LCase(AsStr(t.Language))
+        name = LCase(AsStr(t.Name))
+        score = 0
+        if lang = "es" then
+            if Left(language, 2) = "es" or Left(language, 3) = "spa" or Instr(1, name, "spanish") > 0 or Instr(1, name, "español") > 0 or Instr(1, name, "espanol") > 0 then score = 1
+            if Instr(1, name, "latin") > 0 or Instr(1, name, "lat)") > 0 or Instr(1, name, "[lat") > 0 or Instr(1, language, "419") > 0 or Instr(1, language, "mx") > 0 then score = 2
+        else
+            if Left(language, 2) = "en" or Instr(1, name, "english") > 0 or Instr(1, name, "inglés") > 0 then score = 1
+        end if
+        if score > bestScore then
+            best = t
+            bestScore = score
+        end if
+    end for
+    return best
+end function
+
+' Subtítulos completos en español (no "forced", que solo traducen partes sueltas).
+function PickSubtitle(tracks as dynamic) as dynamic
+    best = invalid
+    bestScore = 0
+    if tracks = invalid then return invalid
+    for each t in tracks
+        language = LCase(AsStr(t.Language))
+        text = LCase(AsStr(t.TrackName) + " " + AsStr(t.Description))
+        score = 0
+        if Left(language, 2) = "es" or Left(language, 3) = "spa" or Instr(1, text, "spanish") > 0 or Instr(1, text, "español") > 0 then score = 1
+        if score > 0 and (Instr(1, text, "latin") > 0 or Instr(1, language, "419") > 0) then score = 2
+        if Instr(1, text, "forced") > 0 or Instr(1, text, "forzad") > 0 then score = 0
+        if score > bestScore then
+            best = t
+            bestScore = score
+        end if
+    end for
+    return best
+end function

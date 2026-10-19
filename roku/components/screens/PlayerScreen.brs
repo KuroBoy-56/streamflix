@@ -11,6 +11,7 @@ sub init()
     m.video.observeField("state", "onState")
     m.video.observeField("position", "onPosition")
     m.video.observeField("availableAudioTracks", "onAudioTracks")
+    m.video.observeField("availableSubtitleTracks", "onAudioTracks")
     m.top.findNode("osdTimer").observeField("fire", "onOsdTimer")
     m.lastSaved = 0
     m.audioChosen = false
@@ -83,27 +84,28 @@ sub onPosition()
     end if
 end sub
 
-' Audio en el idioma del catálogo si el video trae varios (VixSrc: español, inglés...).
+' Audio en el idioma de Ajustes (español latino por defecto). Si el video no lo trae en
+' español, se activan los subtítulos en español para no cambiar de idioma a mano.
 sub onAudioTracks()
     if m.audioChosen then return
     tracks = m.video.availableAudioTracks
-    if tracks = invalid or tracks.Count() < 2 then return
-    lang = CatalogLanguage()
-    codes = { es: ["es", "spa", "esp"], en: ["en", "eng"], it: ["it", "ita"], fr: ["fr", "fre", "fra"], de: ["de", "ger", "deu"] }
-    wanted = codes[lang]
-    if wanted = invalid then wanted = [lang]
-    for each t in tracks
-        language = LCase(AsStr(t.Language))
-        name = LCase(AsStr(t.Name))
-        match = lang = "es" and (Instr(1, name, "spanish") > 0 or Instr(1, name, "español") > 0 or Instr(1, name, "latino") > 0)
-        for each code in wanted
-            if Left(language, Len(code)) = code then match = true
-        end for
-        if match and not m.audioChosen then
-            m.video.audioTrack = t.Track
+    if tracks = invalid or tracks.Count() = 0 then return
+    lang = AudioLanguage()
+    best = PickAudio(tracks, lang)
+    if best <> invalid then
+        if tracks.Count() > 1 then m.video.audioTrack = best.Track
+        m.video.globalCaptionMode = "Off"
+        m.audioChosen = true
+    else if lang = "es" then
+        subtitle = PickSubtitle(m.video.availableSubtitleTracks)
+        if subtitle <> invalid then
+            m.video.subtitleTrack = subtitle.TrackName
+            m.video.globalCaptionMode = "On"
             m.audioChosen = true
         end if
-    end for
+    else
+        m.audioChosen = true
+    end if
 end sub
 
 sub SaveNow()

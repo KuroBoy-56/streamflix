@@ -18,3 +18,12 @@ sub FocusSoft(node as object)
     m.focusTarget = node
     if m.top.isInFocusChain() then node.setFocus(true)
 end sub
+
+' Cambiar los botones de un ButtonGroup recrea sus nodos y el enfocado desaparece: sin
+' devolverle el foco el control deja de responder (se veía al volver del reproductor).
+sub SetButtons(group as object, labels as object, focusIndex as integer)
+    hadFocus = group.isInFocusChain()
+    group.buttons = labels
+    if focusIndex > 0 and focusIndex < labels.Count() then group.focusButton = focusIndex
+    if hadFocus then group.setFocus(true)
+end sub

@@ -16,7 +16,7 @@
       <Rectangle width="1000" height="6" color="0xE50914FF"/>
       <Label id="title" translation="[60,50]" width="880" font="font:LargeBoldSystemFont" color="0xFFFFFFFF"/>
       <Label id="message" translation="[60,130]" width="880" height="250" wrap="true" font="font:MediumSystemFont" color="0xE5E5E5FF"/>
-      <ButtonGroup id="buttons" translation="[60,400]" layoutDirection="horiz" itemSpacings="[20]" minWidth="250"/>
+      <ButtonGroup id="buttons" translation="[60,400]" layoutDirection="horiz" itemSpacings="[20]" minWidth="250" focusBitmapUri="pkg:/images/field_focus.9.png" iconUri="" focusedIconUri=""/>
     </Rectangle>
   </children>
 </component>

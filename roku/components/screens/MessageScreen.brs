@@ -11,6 +11,24 @@ sub onParams()
     buttons = p.buttons
     if buttons = invalid or buttons.Count() = 0 then buttons = ["Aceptar"]
     m.buttons.buttons = buttons
+    ' Más de dos opciones no caben en fila: van en columna y la tarjeta crece.
+    messageHeight = 250
+    if buttons.Count() > 2 then
+        messageHeight = 110
+        m.buttons.layoutDirection = "vert"
+        m.buttons.itemSpacings = [12]
+        m.buttons.minWidth = 880
+        m.buttons.maxWidth = 880
+        m.buttons.buttonHeight = 72
+        height = 130 + messageHeight + 20 + buttons.Count() * 84 + 40
+    else
+        height = 560
+    end if
+    m.top.findNode("message").height = messageHeight
+    m.buttons.translation = [60, 130 + messageHeight + 20]
+    panel = m.top.findNode("panel")
+    panel.height = height
+    panel.translation = [460, (1080 - height) / 2]
     FocusOn(m.buttons)
 end sub
 

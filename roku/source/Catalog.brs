@@ -13,7 +13,9 @@ function TmdbUrl(path as string, params = {} as object) as string
     url = "https://api.themoviedb.org/3/" + path
     sep = "?"
     if Instr(1, path, "?") > 0 then sep = "&"
-    url = url + sep + "language=" + CatalogLanguage()
+    lang = CatalogLanguage()
+    if lang = "es" then lang = "es-MX"
+    url = url + sep + "language=" + lang
     key = TmdbKey()
     if key <> "" and Left(key, 3) <> "eyJ" then url = url + "&api_key=" + UrlEnc(key)
     for each name in params
@@ -303,7 +305,7 @@ end function
 
 ' p: { mediaType, id, season, episode } -> { ok, url, format, headers, server } o { ok: false, error }
 function ApiResolve(p as object) as object
-    lang = CatalogLanguage()
+    lang = AudioLanguage()
     base = "https://vixsrc.to"
     if p.mediaType = "movie" then
         apiPath = "/api/movie/" + AsStr(p.id)

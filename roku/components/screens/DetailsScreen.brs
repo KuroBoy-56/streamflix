@@ -85,9 +85,7 @@ sub RenderButtons()
         if UD_IsWatched("movies", id) then labels.Push("Marcar como no visto") else labels.Push("Marcar como visto")
         m.actions.Push("watched")
     end if
-    focused = m.buttons.buttonFocused
-    m.buttons.buttons = labels
-    if focused > 0 and focused < labels.Count() then m.buttons.focusButton = focused
+    SetButtons(m.buttons, labels, m.buttons.buttonFocused)
 end sub
 
 sub onResumed()

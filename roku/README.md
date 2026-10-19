@@ -27,8 +27,8 @@ Para publicarlo en la tienda de canales de Roku, sube ese mismo zip en el
 | Inicio de sesión con usuario y contraseña, o con la MAC vinculada (campos vacíos) | Igual (`flixlat_api.php`, mismo token SHA-256 con la hora de Panamá) |
 | La MAC aparece en el login | Igual. En Roku la MAC sale del identificador del canal en ese equipo, así que es distinta a la del celular: hay que vincularla en el panel |
 | Verificación de la línea cada 30 min (`check_security.php`): cuenta vencida o bloqueada cierra la sesión; 7 días sin verificar también | Igual |
-| Actualización obligatoria | Muestra el aviso. Roku no instala APK: el canal se actualiza subiendo el zip nuevo |
-| Aviso de vencimiento (`ntf_api.php`) a pantalla completa tras el splash | Igual, pero Roku no tiene navegador: se muestra el texto de la página |
+| Aviso de vencimiento (`ntf_api.php`) tras el splash | Se muestra como tarjeta con el texto de la página (Roku no tiene navegador) |
+| Actualización obligatoria del panel | No aplica en Roku (es un APK para Android): se ignora. El canal se actualiza subiendo el zip nuevo |
 | Marca del distribuidor: logo, fondo, splash, nombre y nota en Ajustes; se actualiza cada 5 min (`config.json` / `config_<APP ID>.json`) | Igual |
 | Perfiles "¿Quién está viendo?" con PIN, avatar, crear, renombrar y eliminar (`profiles.php`) | Igual (✱ edita un perfil) |
 | Favoritos, historial y "Continuar viendo" sincronizados por perfil (`sync_userdata.php`) | Igual, con el mismo formato: lo que ves en Roku aparece en Android y al revés (proveedor TMDb) |
@@ -36,6 +36,7 @@ Para publicarlo en la tienda de canales de Roku, sube ese mismo zip en el
 | En Vivo estilo TiviMate: carpetas por categoría y país, canales, vista previa y guía (EPG) | Igual |
 | Líneas de canales del panel, URL personal y línea por defecto; sin duplicados ni canales para adultos; si una señal falla pasa sola a otra línea | Igual |
 | Reporte de errores al panel (`log_error.php`) | Igual |
+| Idioma | Ajustes → **Idioma del audio**: Español latino (por defecto) o Inglés. En español latino, si el título no trae audio en español se activan los subtítulos en español. Títulos y sinopsis de TMDb en español latino |
 | Cerrar sesión, sincronizar ahora | Igual (Ajustes) |
 
 ## Diferencias que hay que conocer
@@ -44,7 +45,7 @@ Para publicarlo en la tienda de canales de Roku, sube ese mismo zip en el
   SoloLatino, PelisPlus, Filemoon, Voe...), y varios necesitan un navegador interno (WebView)
   que Roku no tiene. En Roku, películas y series se reproducen desde **VixSrc** (con el audio en
   el idioma del catálogo cuando el video lo trae). Si un título no está en VixSrc, el
-  reproductor lo avisa.
+  reproductor lo avisa. El audio se pide en el idioma elegido en Ajustes.
 - **Proveedores del panel.** Los proveedores asignados que no son TMDb (sitios de películas,
   Pluto TV, Vavoo...) no se cargaron en Roku. El catálogo usa TMDb con la clave del panel y la
   sección En Vivo usa las líneas de canales del panel.
@@ -52,7 +53,7 @@ Para publicarlo en la tienda de canales de Roku, sube ese mismo zip en el
   leen, porque Roku no descomprime archivos.
 - **Ajustes propios de Android** (temas, tamaño de pantalla, subtítulos externos, idioma de la
   interfaz, tráileres de YouTube) no están. Los subtítulos que trae el video se activan desde
-  el menú ✱ del Roku. La interfaz está en español.
+  el menú ✱ del Roku si hace falta cambiarlos a mano. La interfaz está en español.
 
 ## Estructura
 

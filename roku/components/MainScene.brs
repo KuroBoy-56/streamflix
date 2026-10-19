@@ -8,7 +8,6 @@ sub init()
     m.stack = []
     m.syncedProfile = ""
     m.sessionStarted = false
-    m.updateNotified = false
 
     m.securityTimer = m.top.findNode("securityTimer")
     m.securityTimer.observeField("fire", "onSecurityTimer")
@@ -178,11 +177,6 @@ sub onSecurity(event as object)
     if res = invalid or not m.sessionStarted then return
     if res.action = "logout" then
         Logout(AsStr(res.message))
-    else if res.action = "update" and not m.updateNotified then
-        m.updateNotified = true
-        message = "Hay una versión nueva obligatoria de la aplicación. Contacta a tu distribuidor para actualizar el canal de Roku."
-        if AsStr(res.notes) <> "" then message = message + Chr(10) + Chr(10) + res.notes
-        PushScreen("MessageScreen", { title: "Actualización disponible", message: message, buttons: ["Aceptar"], tag: "" })
     end if
 end sub
 

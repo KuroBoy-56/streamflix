@@ -214,10 +214,8 @@ function ApiSecurity() as object
         if json.user_info <> invalid and PanelText(json.user_info.message) <> "" then message = PanelText(json.user_info.message)
         return { action: "logout", message: message }
     end if
+    ' update_required no se usa: la actualización del panel es un APK solo para Android.
     RegWrite("last_online_check", NowSec().ToStr())
-    if json.update_required = true or AsStr(json.update_required) = "true" then
-        return { action: "update", notes: PanelText(json.release_notes) }
-    end if
     return { action: "ok" }
 end function
 

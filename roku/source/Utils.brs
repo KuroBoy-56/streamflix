@@ -63,7 +63,7 @@ end sub
 sub RegClearSession()
     sec = CreateObject("roRegistrySection", "gateway")
     for each key in sec.GetKeyList()
-        if key <> "device_owner" then sec.Delete(key)
+        if key <> "device_owner" and key <> "audio_lang" then sec.Delete(key)
     end for
     sec.Flush()
 end sub
@@ -275,6 +275,12 @@ function CatalogLanguage() as string
     re = CreateObject("roRegex", "tmdb\s*\(([a-z]{2})\)", "i")
     found = re.Match(def)
     if found.Count() > 1 then return LCase(found[1])
+    return "es"
+end function
+
+' Idioma del audio elegido en Ajustes: "es" (español latino, por defecto) o "en" (inglés).
+function AudioLanguage() as string
+    if RegRead("audio_lang") = "en" then return "en"
     return "es"
 end function
 

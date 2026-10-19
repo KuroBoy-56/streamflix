@@ -22,6 +22,7 @@ sub Build()
         if title = "" then title = "Aviso"
         m.items.Push({ id: "note", title: title })
     end if
+    m.items.Push({ id: "audio", title: "Idioma del audio: " + AudioLabel() })
     if RegRead("profile_limit", "1").ToInt() >= 2 then m.items.Push({ id: "profile", title: "Cambiar de perfil" })
     m.items.Push({ id: "sync", title: "Sincronizar ahora" })
     if RegRead("panel_channel_lines") <> "" or RegRead("personal_provider_url") <> "" then m.items.Push({ id: "channels", title: "Actualizar canales" })
@@ -61,6 +62,8 @@ sub onFocused()
         text = lines.Join(Chr(10))
     else if item.id = "note" then
         text = RegRead("settings_note")
+    else if item.id = "audio" then
+        text = "Idioma en que se reproducen películas y series." + Chr(10) + Chr(10) + "Español latino: si el título no tiene audio en español, se activan los subtítulos en español." + Chr(10) + "Inglés: audio original en inglés."
     else if item.id = "profile" then
         text = "Abre ¿Quién está viendo? para elegir otro perfil. Cada perfil tiene su propio historial y favoritos."
     else if item.id = "sync" then
@@ -79,6 +82,8 @@ sub onSelected()
     item = m.items[m.list.itemSelected]
     if item.id = "note" then
         OpenScreen("NoteScreen", { title: item.title, text: RegRead("settings_note") })
+    else if item.id = "audio" then
+        ShowMessage("Idioma del audio", "Elige el idioma de películas y series.", ["Español latino", "Inglés"], "audio")
     else if item.id = "profile" then
         SendAction({ type: "switchProfile" })
     else if item.id = "sync" then
@@ -98,4 +103,13 @@ end sub
 sub onResult()
     r = m.top.result
     if r.tag = "logout" and r.index = 0 then SendAction({ type: "logout" })
+    if r.tag = "audio" and r.index >= 0 then
+        if r.index = 1 then RegWrite("audio_lang", "en") else RegWrite("audio_lang", "es")
+        Build()
+    end if
 end sub
+
+function AudioLabel() as string
+    if AudioLanguage() = "en" then return "Inglés"
+    return "Español latino"
+end function

@@ -22,6 +22,7 @@ sub onParams()
     bg = RegRead("custom_background_tv_url")
     if bg = "" then bg = RegRead("custom_background_url")
     m.top.findNode("background").uri = bg
+    m.top.findNode("brand").text = RegRead("brand_name")
     if AsStr(m.top.params.message) <> "" then ShowStatus(m.top.params.message)
 
     savedUser = RegRead("alpha_token")
@@ -36,10 +37,10 @@ end sub
 
 sub RenderForm()
     userText = m.user
-    if userText = "" then userText = "(vacío)"
-    passText = "(vacío)"
+    if userText = "" then userText = "—"
+    passText = "—"
     if m.pass <> "" then passText = String(Len(m.pass), "•")
-    m.form.buttons = ["Usuario: " + userText, "Contraseña: " + passText, "Iniciar sesión"]
+    SetButtons(m.form, ["Usuario:  " + userText, "Contraseña:  " + passText, "Iniciar sesión"], m.form.buttonFocused)
 end sub
 
 sub onFormSelected()
@@ -67,6 +68,7 @@ sub onResult()
     RenderForm()
     if r.tag = "user" then m.form.focusButton = 1
     if r.tag = "pass" then m.form.focusButton = 2
+    m.form.setFocus(true)
 end sub
 
 sub DoLogin(auto as boolean)
