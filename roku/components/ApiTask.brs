@@ -40,6 +40,8 @@ sub execute()
         res = ApiPerson(p)
     else if kind = "resolve" then
         res = ApiResolve(p)
+    else if kind = "links" then
+        res = ApiLinks(p)
     else if kind = "servers" then
         res = ApiServers(p)
     else if kind = "extract" then

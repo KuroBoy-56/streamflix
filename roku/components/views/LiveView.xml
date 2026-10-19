@@ -16,6 +16,7 @@
   <children>
     <Rectangle width="1920" height="1080" color="0x0F111AF0"/>
     <Label id="heading" translation="[130,50]" width="900" font="font:LargeBoldSystemFont" color="0xFFFFFFFF" text="En Vivo"/>
+    <MarkupGrid id="modes" translation="[130,140]" itemComponentName="PillItem" drawFocusFeedback="false" numRows="1" numColumns="2" itemSize="[184,56]" itemSpacing="[12,0]" visible="false"/>
     <MarkupList id="folders" translation="[130,150]" itemSize="[380,64]" itemSpacing="[0,4]" numRows="13" itemComponentName="MenuItem" drawFocusFeedback="false" vertFocusAnimationStyle="floatingFocus"/>
     <MarkupList id="channels" translation="[540,150]" itemComponentName="ChannelItem" itemSize="[620,84]" itemSpacing="[0,4]" numRows="10" drawFocusFeedback="false"/>
     <Rectangle translation="[1190,150]" width="640" height="360" color="0x000000FF"/>

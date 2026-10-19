@@ -13,6 +13,9 @@ sub init()
     m.video.observeField("availableAudioTracks", "onAudioTracks")
     m.video.observeField("availableSubtitleTracks", "onAudioTracks")
     m.top.findNode("osdTimer").observeField("fire", "onOsdTimer")
+    m.trackMenu = m.top.findNode("trackMenu")
+    m.trackList = m.top.findNode("trackList")
+    m.trackList.observeField("itemSelected", "onTrackSelected")
     m.channelMenu = m.top.findNode("channelMenu")
     m.menuList = m.top.findNode("menuList")
     m.menuList.observeField("itemSelected", "onMenuSelected")
@@ -76,6 +79,11 @@ sub onServers(event as object)
     if res = invalid or m.closing then return
     m.servers = res.servers
     if m.servers = invalid then m.servers = []
+    if res.links <> invalid and res.links.Count() > 0 then
+        playback = m.p
+        playback.links = res.links
+        m.p = playback
+    end if
     TryServer(0)
 end sub
 
@@ -234,6 +242,64 @@ sub onMenuSelected()
     end if
 end sub
 
+'  Botón *: audio y subtítulos del video, con su idioma en español.
+sub OpenTrackMenu()
+    labels = []
+    m.trackActions = []
+    current = AsStr(m.video.currentAudioTrack)
+    tracks = m.video.availableAudioTracks
+    if tracks <> invalid then
+        for each t in tracks
+            mark = ""
+            if AsStr(t.Track) = current or tracks.Count() = 1 then mark = "  (en uso)"
+            labels.Push("Audio: " + TrackLabel(t.Language, t.Name) + mark)
+            m.trackActions.Push({ type: "audio", id: t.Track })
+        end for
+    end if
+    if labels.Count() = 0 then
+        labels.Push("Audio: el del servidor (una sola pista)")
+        m.trackActions.Push({ type: "none" })
+    end if
+    captionsOn = m.video.globalCaptionMode = "On"
+    mark = ""
+    if not captionsOn then mark = "  (en uso)"
+    labels.Push("Subtítulos: desactivados" + mark)
+    m.trackActions.Push({ type: "subOff" })
+    subs = m.video.availableSubtitleTracks
+    if subs <> invalid then
+        for each s in subs
+            mark = ""
+            if captionsOn and AsStr(s.TrackName) = AsStr(m.video.subtitleTrack) then mark = "  (en uso)"
+            labels.Push("Subtítulos: " + TrackLabel(s.Language, AsStr(s.TrackName) + " " + AsStr(s.Description)) + mark)
+            m.trackActions.Push({ type: "sub", id: s.TrackName })
+        end for
+    end if
+    SetPills(m.trackList, labels, "left")
+    m.trackList.jumpToItem = 0
+    m.trackMenu.visible = true
+    FocusOn(m.trackList)
+end sub
+
+sub CloseTrackMenu()
+    m.trackMenu.visible = false
+    FocusOn(m.video)
+end sub
+
+sub onTrackSelected()
+    action = m.trackActions[m.trackList.itemSelected]
+    if action.type = "audio" then
+        m.video.audioTrack = action.id
+    else if action.type = "subOff" then
+        m.video.globalCaptionMode = "Off"
+    else if action.type = "sub" then
+        m.video.subtitleTrack = action.id
+        m.video.globalCaptionMode = "On"
+    end if
+    ' Lo que elige la persona manda: no se vuelve a cambiar solo.
+    m.audioChosen = true
+    CloseTrackMenu()
+end sub
+
 sub ZapChannel(delta as integer)
     count = m.p.folder.getChildCount()
     if count = 0 then return
@@ -288,6 +354,14 @@ end sub
 
 function onKeyEvent(key as string, press as boolean) as boolean
     if not press then return false
+    if m.trackMenu.visible then
+        if key = "back" or key = "options" then CloseTrackMenu()
+        return key = "back" or key = "options"
+    end if
+    if key = "options" and m.p.mediaType <> "channel" then
+        OpenTrackMenu()
+        return true
+    end if
     if key = "back" and m.channelMenu.visible then
         CloseChannelMenu()
         return true

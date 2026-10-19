@@ -292,3 +292,50 @@ function TmdbImage(path as dynamic, size as string) as string
     if path = invalid or AsStr(path) = "" then return ""
     return "https://image.tmdb.org/t/p/" + size + AsStr(path)
 end function
+
+' Título normalizado para comparar ("¡Matrix: Recargado!" -> "matrixrecargado").
+function TitleKey(title as string) as string
+    return CreateObject("roRegex", "[^a-z0-9]", "").ReplaceAll(Normalize(title), "")
+end function
+
+' Mismo criterio que Android (isMatch): igual, o uno contiene al otro con poca diferencia.
+function TitleMatches(found as string, wanted as string) as boolean
+    a = TitleKey(found)
+    b = TitleKey(wanted)
+    if a = "" or b = "" then return false
+    if a = b then return true
+    if (Instr(1, a, b) > 0 or Instr(1, b, a) > 0) and Abs(Len(a) - Len(b)) <= 5 then return true
+    return false
+end function
+
+' ---------------------------------------------------------------------------------------
+' Nube compartida con Android: cada título va bajo el proveedor de la app (clave = nombre del
+' proveedor con "_") y con el id de ese sitio. Roku sabe armar los ids de estos tres.
+' ---------------------------------------------------------------------------------------
+
+function CloudKeyFor(providerName as string) as string
+    keys = { cuevana3: "Cuevana_3", poseidonhd2: "Poseidonhd2", cinecalidad: "CineCalidad" }
+    return AsStr(keys[TitleKey(providerName)])
+end function
+
+' Clave donde Android guarda lo que se ve ahora: el proveedor por defecto del panel. Si Roku no
+' sabe armar sus ids, lo nuevo de Roku va a la clave TMDb.
+function MainCloudKey() as string
+    key = CloudKeyFor(RegRead("default_provider"))
+    if key = "" then key = SafeName(CatalogProviderName())
+    return key
+end function
+
+function LinkSeasonId(link as object, season as string) as string
+    if link.style = "cuevana" then return link.id + "/temporada-" + season
+    if link.style = "poseidon" then return link.id + "/temporada/" + season
+    if link.style = "cine" then return link.id + "|" + season
+    return ""
+end function
+
+function LinkEpisodeId(link as object, season as string, episode as string) as string
+    if link.style = "cuevana" then return "episodio/" + link.slug + "-temporada-" + season + "-episodio-" + episode
+    if link.style = "poseidon" then return link.id + "/temporada/" + season + "/episodio/" + episode
+    if link.style = "cine" then return link.base + "/ver-el-episodio/" + link.slug + "-" + season + "x" + episode + "/"
+    return ""
+end function

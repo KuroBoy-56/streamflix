@@ -31,7 +31,10 @@ sub onLayout()
     w = m.top.width
     h = m.top.height
     if w <= 0 or h <= 0 then return
-    imageH = h - 44
+    ' Margen arriba: al enfocar, la tarjeta crece y la fila recortaría el aro superior.
+    top = 12
+    imageH = h - 44 - top
+    m.card.translation = [0, top]
     m.frame.width = w
     m.frame.height = imageH
     m.mask.width = w
@@ -48,7 +51,7 @@ sub onLayout()
     m.fallback.height = imageH
     m.fallback.translation = [10, 0]
     m.title.width = w
-    m.title.translation = [0, imageH + 10]
+    m.title.translation = [0, top + imageH + 10]
     m.card.scaleRotateCenter = [w / 2, imageH / 2]
     progress = 0
     if c <> invalid then progress = c.progress

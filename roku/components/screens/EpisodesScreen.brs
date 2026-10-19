@@ -31,7 +31,7 @@ sub onParams()
         if p.last <> invalid and s.number = p.last.seasonNumber then start = i
     end for
     m.seasons.content = content
-    if p.last <> invalid then m.focusEpisode = p.last.episodeId
+    if p.last <> invalid then m.focusEpisode = p.last.episodeNumber.ToStr()
     m.seasons.jumpToItem = start
     LoadSeason(start)
     FocusOn(m.seasons)
@@ -71,7 +71,7 @@ sub onSeason(event as object)
     if m.list.Count() = 0 then m.message.text = "Esta temporada aún no tiene episodios."
     if m.focusEpisode <> "" then
         for i = 0 to m.list.Count() - 1
-            if m.list[i].id = m.focusEpisode then
+            if m.list[i].number.ToStr() = m.focusEpisode then
                 m.episodes.jumpToItem = i
                 FocusOn(m.episodes)
             end if
@@ -92,11 +92,12 @@ sub Render()
         meta = []
         if ep.airDate <> "" then meta.Push(ep.airDate)
         if ep.runtime > 0 then meta.Push(ep.runtime.ToStr() + " min")
-        if UD_IsWatched("episodes", ep.id) then meta.Push("✓ Visto")
-        resume = UD_ResumeSeconds("episodes", ep.id)
+        rec = EpisodeRec(ep)
+        if rec <> invalid and rec.isWatched = true then meta.Push("Visto")
+        resume = UD_ResumeOf(rec)
         if resume > 0 then meta.Push("Continuar desde " + FormatClock(resume))
         node.ShortDescriptionLine1 = meta.Join("   ·   ")
-        node.progress = UD_Percent(UD_Data().episodes[ep.id])
+        node.progress = UD_Percent(rec)
     end for
     m.episodes.content = content
     if focused > 0 and focused < m.list.Count() then m.episodes.jumpToItem = focused
@@ -107,13 +108,18 @@ sub onResumed()
 end sub
 
 function EpisodePlayback(index as integer) as object
-    return { mediaType: "tv", item: m.item, season: m.season, episode: m.list[index], episodes: m.list, index: index }
+    return { mediaType: "tv", item: m.item, season: m.season, episode: m.list[index], episodes: m.list, index: index, links: m.top.params.links }
+end function
+
+' Registro del episodio en la nube (el de Android si ya existe).
+function EpisodeRec(ep as object) as dynamic
+    return UD_EpisodeRecord(m.item, m.top.params.links, ToInt(m.season.number), ToInt(ep.number), AsStr(ep.id))
 end function
 
 sub onEpisodeSelected()
     index = m.episodes.itemSelected
     if index < 0 or index >= m.list.Count() then return
-    resume = UD_ResumeSeconds("episodes", m.list[index].id)
+    resume = UD_ResumeOf(EpisodeRec(m.list[index]))
     if resume > 30 then
         ShowMessage(m.list[index].title, "¿Continuar donde lo dejaste?", ["Continuar (" + FormatClock(resume) + ")", "Desde el inicio"], "resume:" + index.ToStr())
     else
@@ -125,7 +131,7 @@ sub onResult()
     r = m.top.result
     if Left(AsStr(r.tag), 7) <> "resume:" or r.index < 0 then return
     index = Mid(r.tag, 8).ToInt()
-    if r.index = 0 then Play(index, UD_ResumeSeconds("episodes", m.list[index].id)) else Play(index, 0)
+    if r.index = 0 then Play(index, UD_ResumeOf(EpisodeRec(m.list[index]))) else Play(index, 0)
 end sub
 
 sub Play(index as integer, startAt as integer)
@@ -145,7 +151,8 @@ function onKeyEvent(key as string, press as boolean) as boolean
     else if key = "options" and m.episodes.isInFocusChain() then
         index = m.episodes.itemFocused
         if index >= 0 and index < m.list.Count() then
-            UD_SetWatched(EpisodePlayback(index), not UD_IsWatched("episodes", m.list[index].id))
+            rec = EpisodeRec(m.list[index])
+            UD_SetWatched(EpisodePlayback(index), not (rec <> invalid and rec.isWatched = true))
             Render()
         end if
         return true

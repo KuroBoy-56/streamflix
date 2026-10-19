@@ -10,9 +10,12 @@ end sub
 
 sub onParams()
     m.item = m.top.params.item
+    m.links = invalid
     ShowItem(m.item)
     RenderButtons()
-    RunTask("details", { mediaType: m.item.mediaType, id: m.item.itemId }, "onDetails")
+    ' Registro de la nube guardado por Android con el id de otro sitio: se busca en TMDb por título.
+    match = m.item.extra <> invalid and m.item.extra.match = true
+    RunTask("details", { mediaType: m.item.mediaType, id: m.item.itemId, match: match, title: m.item.title, year: AsStr(m.item.year) }, "onDetails")
 end sub
 
 sub ShowItem(item as object)
@@ -53,6 +56,15 @@ sub onDetails(event as object)
     m.rows.content = root
     m.rows.visible = root.getChildCount() > 0
     RenderButtons()
+    ' Ids del título en los sitios: Mi lista y el progreso van al mismo registro que en Android.
+    RunTask("links", { mediaType: m.item.mediaType, id: m.item.itemId }, "onLinks")
+end sub
+
+sub onLinks(event as object)
+    res = TaskResult(event)
+    if res = invalid then return
+    m.links = res.links
+    RenderButtons()
 end sub
 
 sub RenderButtons()
@@ -60,7 +72,7 @@ sub RenderButtons()
     m.actions = []
     id = m.item.itemId
     if m.item.mediaType = "movie" then
-        resume = UD_ResumeSeconds("movies", id)
+        resume = UD_MovieResume(m.item, m.links)
         if resume > 30 then
             labels.Push("Continuar · " + FormatClock(resume))
             m.actions.Push("resume")
@@ -71,7 +83,7 @@ sub RenderButtons()
             m.actions.Push("play")
         end if
     else
-        last = UD_LastEpisode(id)
+        last = UD_LastEpisode(m.item, m.links)
         if last <> invalid then
             labels.Push("Continuar T" + last.seasonNumber.ToStr() + ":E" + last.episodeNumber.ToStr())
             m.actions.Push("continue")
@@ -79,10 +91,10 @@ sub RenderButtons()
         labels.Push("Ver episodios")
         m.actions.Push("episodes")
     end if
-    if UD_IsFavorite(m.item.mediaType, id) then labels.Push("Quitar de Mi lista") else labels.Push("Agregar a Mi lista")
+    if UD_IsFavorite(m.item, m.links) then labels.Push("Quitar de Mi lista") else labels.Push("Agregar a Mi lista")
     m.actions.Push("favorite")
     if m.item.mediaType = "movie" then
-        if UD_IsWatched("movies", id) then labels.Push("Marcar no visto") else labels.Push("Marcar visto")
+        if UD_MovieWatched(m.item, m.links) then labels.Push("Marcar no visto") else labels.Push("Marcar visto")
         m.actions.Push("watched")
     end if
     m.buttons.numColumns = labels.Count()
@@ -98,22 +110,22 @@ sub onButton()
     if act = "play" then
         Play(0)
     else if act = "resume" then
-        Play(UD_ResumeSeconds("movies", m.item.itemId))
+        Play(UD_MovieResume(m.item, m.links))
     else if act = "episodes" then
         OpenEpisodes(invalid)
     else if act = "continue" then
-        OpenEpisodes(UD_LastEpisode(m.item.itemId))
+        OpenEpisodes(UD_LastEpisode(m.item, m.links))
     else if act = "favorite" then
-        UD_SetFavorite(m.item, not UD_IsFavorite(m.item.mediaType, m.item.itemId))
+        UD_SetFavorite(m.item, m.links, not UD_IsFavorite(m.item, m.links))
         RenderButtons()
     else if act = "watched" then
-        UD_SetWatched({ mediaType: "movie", item: m.item }, not UD_IsWatched("movies", m.item.itemId))
+        UD_SetWatched({ mediaType: "movie", item: m.item, links: m.links }, not UD_MovieWatched(m.item, m.links))
         RenderButtons()
     end if
 end sub
 
 sub Play(startAt as integer)
-    OpenScreen("PlayerScreen", { mediaType: "movie", item: m.item, startAt: startAt })
+    OpenScreen("PlayerScreen", { mediaType: "movie", item: m.item, startAt: startAt, links: m.links })
 end sub
 
 sub OpenEpisodes(last as dynamic)
@@ -125,7 +137,7 @@ sub OpenEpisodes(last as dynamic)
         m.top.findNode("message").text = "Esta serie no tiene episodios disponibles."
         return
     end if
-    OpenScreen("EpisodesScreen", { item: m.item, seasons: m.details.seasons, last: last })
+    OpenScreen("EpisodesScreen", { item: m.item, seasons: m.details.seasons, last: last, links: m.links })
 end sub
 
 sub onRowSelected()

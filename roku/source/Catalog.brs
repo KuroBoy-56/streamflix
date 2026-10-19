@@ -209,6 +209,11 @@ end function
 function ApiDetails(p as object) as object
     if TmdbKey() = "" then return NoTmdbKey()
     mediaType = p.mediaType
+    if p.match = true then
+        id = TmdbMatch(mediaType, AsStr(p.title), AsStr(p.year))
+        if id = "" then return { error: "No se encontró este título en el catálogo." }
+        p.id = id
+    end if
     json = TmdbGet(mediaType + "/" + AsStr(p.id), { append_to_response: "credits,recommendations,external_ids" })
     if json = invalid then return { error: "No se pudo cargar la información." }
     item = TmdbItem(json, mediaType)
@@ -249,6 +254,21 @@ function ApiDetails(p as object) as object
         recommendations: TmdbResults(json.recommendations, mediaType)
         seasons: seasons
     }
+end function
+
+'' Id de TMDb de un título guardado por Android con el id de otro sitio: mismo nombre (y año).
+function TmdbMatch(mediaType as string, title as string, year as string) as string
+    params = { query: title, include_adult: "false" }
+    if year <> "" and mediaType = "movie" then params.primary_release_year = year
+    if year <> "" and mediaType = "tv" then params.first_air_date_year = year
+    json = TmdbGet("search/" + mediaType, params)
+    results = TmdbResults(json, mediaType)
+    if results.Count() = 0 and year <> "" then results = TmdbResults(TmdbGet("search/" + mediaType, { query: title, include_adult: "false" }), mediaType)
+    for each r in results
+        if TitleKey(r.title) = TitleKey(title) then return r.itemId
+    end for
+    if results.Count() > 0 then return results[0].itemId
+    return ""
 end function
 
 ' Episodios de una temporada (getEpisodesBySeason).

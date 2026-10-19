@@ -369,9 +369,7 @@ function ApiSyncDown(profileId as string) as object
     end if
     ' Copia completa de la nube: al subir se conservan los proveedores que Roku no usa.
     WriteAsciiFile(CloudFile(profileId), FormatJson(doc))
-    mine = doc[SafeName(CatalogProviderName())]
-    if mine = invalid then mine = {}
-    return { ok: true, profileId: profileId, mine: mine }
+    return { ok: true, profileId: profileId, doc: doc }
 end function
 
 function ApiSyncUp(profileId as string, data as object) as object
@@ -384,7 +382,10 @@ function ApiSyncUp(profileId as string, data as object) as object
     end if
     doc = JsonOf(text)
     if doc = invalid then doc = {}
-    doc[SafeName(CatalogProviderName())] = data
+    ' Se parte de la copia de la nube y se reemplazan los proveedores que tiene Roku.
+    for each key in data
+        doc[key] = data[key]
+    end for
 
     url = PanelApiUrl("sync_userdata.php") + "?u=" + ActiveUserId() + "&p=" + profileId
     headers = SyncHeaders()

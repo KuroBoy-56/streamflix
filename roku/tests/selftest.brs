@@ -43,6 +43,13 @@ sub Main()
     subs = [{ TrackName: "a", Language: "spa", Description: "Spanish Forced" }, { TrackName: "b", Language: "spa", Description: "Spanish" }]
     Check("subtítulo completo", PickSubtitle(subs).TrackName, "b")
 
+    ' Nombres de pistas para el menú del botón *.
+    Check("pista latino", TrackLabel("spa", "Spanish (Latino)"), "Español latino")
+    Check("pista es-419", TrackLabel("es-419", ""), "Español latino")
+    Check("pista castellano", TrackLabel("spa", "Castellano"), "Español (España)")
+    Check("pista inglés", TrackLabel("eng", "English"), "Inglés")
+    Check("pista sin código", TrackLabel("", "Audio 2"), "Audio 2")
+
     if m.failures = 0 then print "OK: todas las pruebas pasaron" else print "FALLARON " + m.failures.ToStr() + " pruebas"
 end sub
 

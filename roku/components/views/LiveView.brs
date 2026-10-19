@@ -11,6 +11,10 @@ sub init()
     m.preview.observeField("state", "onPreviewState")
     m.folders.observeField("itemFocused", "onFolderFocused")
     m.folders.observeField("itemSelected", "onFolderSelected")
+    m.modes = m.top.findNode("modes")
+    m.modes.observeField("itemSelected", "onModeSelected")
+    m.mode = "category"
+    m.folderMap = []
     m.channels.observeField("itemFocused", "onChannelFocused")
     m.channels.observeField("itemSelected", "onChannelSelected")
     m.global.observeField("brandTick", "onBrand")
@@ -59,7 +63,7 @@ sub onRefreshed(event as object)
     channel = m.channels.itemFocused
     inChannels = m.channels.isInFocusChain()
     ApplyContent(res)
-    if folder < m.content.getChildCount() then
+    if folder < m.folderMap.Count() then
         m.folders.jumpToItem = folder
         onFolderFocused()
         if channel < m.channels.content.getChildCount() then m.channels.jumpToItem = channel
@@ -87,16 +91,52 @@ sub ApplyContent(res as object)
     m.loadedAt = NowSec()
     m.content = res.content
     m.top.findNode("heading").text = "En Vivo  ·  " + res.total.ToStr() + " canales"
+    ' Como Android: "Países" solo si la lista trae canales de 2 o más países.
+    countries = 0
+    for i = 0 to m.content.getChildCount() - 1
+        if m.content.getChild(i).folderType = "country" then countries = countries + 1
+    end for
+    hasCountries = countries >= 2
+    m.modes.visible = hasCountries
+    if hasCountries then
+        m.folders.translation = [130, 220]
+        m.folders.numRows = 12
+    else
+        m.mode = "category"
+        m.folders.translation = [130, 150]
+        m.folders.numRows = 13
+    end if
+    RenderFolders()
+    if res.epgSources <> invalid and res.epgSources.Count() > 0 then RunTask("epg", { sources: res.epgSources, ids: res.epgIds }, "onEpg")
+end sub
+
+' Carpetas del modo elegido: "Todos" y categorías, o países.
+sub RenderFolders()
+    ' El modo activo queda marcado en rojo suave.
+    active = 0
+    if m.mode = "country" then active = 1
+    if m.modes.visible then SetPills(m.modes, ["Categorías", "Países"], "", active)
     labels = CreateObject("roSGNode", "ContentNode")
+    m.folderMap = []
     for i = 0 to m.content.getChildCount() - 1
         folder = m.content.getChild(i)
-        item = labels.createChild("ContentNode")
-        item.title = folder.title + "  (" + folder.channelCount.ToStr() + ")"
+        isCountry = folder.folderType = "country"
+        if isCountry = (m.mode = "country") then
+            item = labels.createChild("ContentNode")
+            item.title = folder.title + "  (" + folder.channelCount.ToStr() + ")"
+            m.folderMap.Push(i)
+        end if
     end for
     m.folders.content = labels
+    m.folders.jumpToItem = 0
     m.folderIndex = -1
     onFolderFocused()
-    if res.epgSources <> invalid and res.epgSources.Count() > 0 then RunTask("epg", { sources: res.epgSources, ids: res.epgIds }, "onEpg")
+end sub
+
+sub onModeSelected()
+    if m.modes.itemSelected = 1 then m.mode = "country" else m.mode = "category"
+    RenderFolders()
+    FocusOn(m.folders)
 end sub
 
 sub onEpg(event as object)
@@ -109,7 +149,9 @@ end sub
 
 function CurrentFolder() as dynamic
     if m.content = invalid then return invalid
-    return m.content.getChild(m.folders.itemFocused)
+    index = m.folders.itemFocused
+    if index < 0 or index >= m.folderMap.Count() then return invalid
+    return m.content.getChild(m.folderMap[index])
 end function
 
 sub onFolderFocused()
@@ -136,7 +178,7 @@ sub onChannelFocused()
     m.top.findNode("channelName").text = node.title
     meta = []
     if node.group <> "" then meta.Push(node.group)
-    if node.country <> "" then meta.Push(node.country)
+    if node.country <> "" and node.country <> node.group then meta.Push(node.country)
     if node.sources.Count() > 1 then meta.Push(node.sources.Count().ToStr() + " señales")
     m.top.findNode("channelMeta").text = meta.Join("   ·   ")
     ShowEpg(node)
@@ -234,7 +276,13 @@ end sub
 
 function onKeyEvent(key as string, press as boolean) as boolean
     if not press then return false
-    if key = "right" and m.folders.isInFocusChain() and m.channels.content <> invalid and m.channels.content.getChildCount() > 0 then
+    if key = "up" and m.folders.isInFocusChain() and m.modes.visible then
+        FocusOn(m.modes)
+        return true
+    else if key = "down" and m.modes.isInFocusChain() then
+        FocusOn(m.folders)
+        return true
+    else if key = "right" and m.folders.isInFocusChain() and m.channels.content <> invalid and m.channels.content.getChildCount() > 0 then
         FocusOn(m.channels)
         return true
     else if (key = "left" or key = "back") and m.channels.isInFocusChain() then

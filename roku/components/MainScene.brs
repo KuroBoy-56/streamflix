@@ -213,7 +213,7 @@ sub onSyncDown(event as object)
     res = TaskResult(event)
     if res = invalid or res.ok <> true or res.profileId <> m.global.profileId then return
     m.syncedProfile = res.profileId
-    needsUpload = UD_MergeRemote(res.mine)
+    needsUpload = UD_MergeRemote(res.doc)
     if needsUpload or m.global.uploadPending then UploadNow()
 end sub
 

@@ -31,9 +31,9 @@ Para publicarlo en la tienda de canales de Roku, sube ese mismo zip en el
 | Actualización obligatoria del panel | No aplica en Roku (es un APK para Android): se ignora. El canal se actualiza subiendo el zip nuevo |
 | Marca del distribuidor: logo, fondo, splash, nombre y nota en Ajustes; se actualiza cada 5 min (`config.json` / `config_<APP ID>.json`) | Igual |
 | Perfiles "¿Quién está viendo?" con PIN, avatar, crear, renombrar y eliminar (`profiles.php`) | Igual (botón * edita un perfil) |
-| Favoritos, historial y "Continuar viendo" sincronizados por perfil (`sync_userdata.php`) | Igual, con el mismo formato: lo que ves en Roku aparece en Android y al revés (proveedor TMDb) |
+| Favoritos, historial y "Continuar viendo" sincronizados por perfil (`sync_userdata.php`) | Igual: la misma nube y los mismos registros que Android (por proveedor: Cuevana 3, Poseidonhd2, CineCalidad...). Lo que marcas en Android aparece en Roku y al revés |
 | Catálogo TMDb con la clave del panel: tendencias, populares, anime y por plataforma; películas y series por género; ficha con reparto y recomendaciones; temporadas y episodios; búsqueda; filmografía de cada actor | Igual |
-| En Vivo estilo TiviMate: carpetas por categoría y país, canales, vista previa y guía (EPG) | Igual |
+| En Vivo estilo TiviMate: carpetas por categoría y país, canales, vista previa y guía (EPG) | Igual: arriba se elige **Categorías** o **Países** y cada canal aparece solo en su país |
 | Líneas de canales del panel, URL personal y línea por defecto; sin duplicados ni canales para adultos; si una señal falla pasa sola a otra línea | Igual |
 | Caché de canales: la segunda vez abre al instante con la copia guardada y la lista se actualiza aparte si tiene más de 30 min | Igual |
 | En pantalla completa, lista de canales de la categoría para cambiar sin salir | Igual: OK o ◀ abre la lista, ▲▼ cambia de canal |
@@ -41,10 +41,15 @@ Para publicarlo en la tienda de canales de Roku, sube ese mismo zip en el
 | Logo y fondo según el distribuidor (marca blanca del administrador) | Igual. El icono del canal en el menú del Roku es fijo: Roku no deja cambiarlo desde la app |
 | Reporte de errores al panel (`log_error.php`) | Igual |
 | Idioma | Ajustes → **Idioma del audio**: Español latino (por defecto) o Inglés. En español latino, si el título no trae audio en español se activan los subtítulos en español. Títulos y sinopsis de TMDb en español latino |
+| Cambiar audio y subtítulos durante la película o serie | Botón **\*** del control: lista los idiomas del video en español (Español latino, Inglés...) y permite quitar los subtítulos |
 | Cerrar sesión, sincronizar ahora | Igual (Ajustes) |
 
 ## Diferencias que hay que conocer
 
+- **Nube compartida con Android.** Roku guarda cada título con el ID del sitio que usa Android
+  (Cuevana 3, Poseidonhd2 o CineCalidad, según el proveedor por defecto que asigna el panel).
+  Si la cuenta usa otro proveedor por defecto, lo nuevo de Roku se guarda con el ID de TMDb.
+  Los títulos que llegan de Android se abren buscándolos por nombre en TMDb.
 - **Servidores de video (búsqueda automática, como Android).** Al reproducir, el canal busca el
   título en **Cuevana**, **PoseidonHD2** y **CineCalidad** (los dos primeros por el ID exacto de
   TMDb) y arma la lista de servidores en el idioma de Ajustes:
@@ -65,7 +70,7 @@ Para publicarlo en la tienda de canales de Roku, sube ese mismo zip en el
   leen, porque Roku no descomprime archivos.
 - **Ajustes propios de Android** (temas, tamaño de pantalla, subtítulos externos, idioma de la
   interfaz, tráileres de YouTube) no están. Los subtítulos que trae el video se activan desde
-  el menú * del Roku si hace falta cambiarlos a mano. La interfaz está en español.
+  el menú * del canal si hace falta cambiarlos a mano. La interfaz está en español.
 
 ## Estructura
 
@@ -76,7 +81,7 @@ roku/
   components/              pantallas SceneGraph (login, perfiles, inicio, ficha, episodios,
                            buscar, en vivo, ajustes, reproductor) y tarjetas
   images/                  iconos, splash y gráficos
-  tests/selftest.brs       pruebas de la lógica de canales y textos (no van en el zip)
+  tests/                   pruebas de canales, textos, extractores y nube (no van en el zip)
   build.sh                 genera dist/VODPro-roku.zip
 ```
 
@@ -87,4 +92,6 @@ cd roku
 npx brs tests/selftest.brs source/Utils.brs source/Live.brs source/Api.brs source/Catalog.brs source/Playback.brs source/Nodes.brs source/UserData.brs
 cat tests/extract_test.brs source/Utils.brs source/Live.brs source/Playback.brs source/Sources.brs source/Extract.brs source/Api.brs source/Catalog.brs > /tmp/t.brs
 npx -p brs-node brs-cli -n /tmp/t.brs
+cat tests/cloud_test.brs source/Utils.brs source/UserData.brs > /tmp/c.brs
+npx -p brs-node brs-cli -n /tmp/c.brs
 ```

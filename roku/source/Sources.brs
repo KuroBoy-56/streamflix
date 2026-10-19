@@ -34,21 +34,6 @@ function SiteHeaders(base as string) as object
     return { Referer: base + "/" }
 end function
 
-' Título normalizado para comparar ("¡Matrix: Recargado!" -> "matrixrecargado").
-function TitleKey(title as string) as string
-    return CreateObject("roRegex", "[^a-z0-9]", "").ReplaceAll(Normalize(title), "")
-end function
-
-' Mismo criterio que Android (isMatch): igual, o uno contiene al otro con poca diferencia.
-function TitleMatches(found as string, wanted as string) as boolean
-    a = TitleKey(found)
-    b = TitleKey(wanted)
-    if a = "" or b = "" then return false
-    if a = b then return true
-    if (Instr(1, a, b) > 0 or Instr(1, b, a) > 0) and Abs(Len(a) - Len(b)) <= 5 then return true
-    return false
-end function
-
 ' Cuevana y PoseidonHD2 (mismo sistema): resultados con el id de TMDb -> emparejado exacto.
 function NextSiteFind(html as string, tmdbId as string, mediaType as string) as dynamic
     pp = NextData(html)
@@ -150,12 +135,8 @@ function OriginOf(url as string) as string
 end function
 
 ' p: { mediaType, id (TMDb), season, episode } -> { servers: [{ name, url, referer, lang }] }
-function ApiServers(p as object) as object
-    lang = AudioLanguage()
-    vix = { name: "VixSrc", url: "vixsrc", referer: "", lang: "multi" }
-    servers = []
-    if lang = "en" then servers.Push(vix)
-
+' Busca el título (por id de TMDb) en los sitios. Devuelve { found, year }.
+function FindOnSites(p as object) as object
     ' Título en español latino y original, y año, para buscar en los sitios.
     info = TmdbGet(p.mediaType + "/" + AsStr(p.id))
     titles = []
@@ -180,6 +161,42 @@ function ApiServers(p as object) as object
             end if
         end if
     end for
+    return { found: found, year: year }
+end function
+
+' IDs del título en cada sitio, con el formato que usa la app Android en la nube (clave =
+' nombre del proveedor en Android). Así Roku escribe en los mismos registros que el celular.
+function SiteLinks(found as object, mediaType as string) as object
+    links = {}
+    if found.cuevana <> invalid then
+        prefix = "ver-pelicula/"
+        if mediaType = "tv" then prefix = "ver-serie/"
+        links["Cuevana_3"] = { style: "cuevana", id: prefix + found.cuevana.name, slug: found.cuevana.name }
+    end if
+    if found.poseidon <> invalid then links["Poseidonhd2"] = { style: "poseidon", id: found.poseidon.path }
+    if found.cine <> invalid then
+        parts = found.cine.Split("/")
+        slug = ""
+        for each part in parts
+            if part <> "" then slug = part
+        end for
+        links["CineCalidad"] = { style: "cine", id: found.cine, slug: slug, base: SiteCineCalidad() }
+    end if
+    return links
+end function
+
+function ApiLinks(p as object) as object
+    return { links: SiteLinks(FindOnSites(p).found, p.mediaType) }
+end function
+
+function ApiServers(p as object) as object
+    lang = AudioLanguage()
+    vix = { name: "VixSrc", url: "vixsrc", referer: "", lang: "multi" }
+    servers = []
+    if lang = "en" then servers.Push(vix)
+    search = FindOnSites(p)
+    found = search.found
+    links = SiteLinks(found, p.mediaType)
 
     pages = []
     names = []
@@ -204,6 +221,7 @@ function ApiServers(p as object) as object
         if names[i] = "cine" then
             if p.mediaType = "tv" then
                 ep = CineCalidadEpisode(html, AsStr(p.season), AsStr(p.episode))
+                if ep <> "" then links["CineCalidad"].episodeId = ep
                 if ep <> "" then html = Http(ep, { headers: SiteHeaders(SiteCineCalidad()) }).body else html = ""
             end if
             CineCalidadServers(html, found2)
@@ -226,7 +244,7 @@ function ApiServers(p as object) as object
             end for
         end if
     end for
-    return { servers: servers }
+    return { servers: servers, links: links }
 end function
 
 function ArrayHas(list as object, value as string) as boolean

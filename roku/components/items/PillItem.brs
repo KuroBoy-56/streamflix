@@ -26,6 +26,7 @@ sub onLayout()
     m.small = w < 400
     pad = 32
     if m.small then pad = 18
+    if w < 200 then pad = 8
     m.label.translation = [pad, 0]
     m.label.width = w - pad * 2
     m.label.height = h

@@ -88,3 +88,22 @@ function PickSubtitle(tracks as dynamic) as dynamic
     end for
     return best
 end function
+
+' Nombre en español de una pista ("spa" + "Latino" -> "Español latino", "eng" -> "Inglés").
+function TrackLabel(language as dynamic, name as dynamic) as string
+    code = LCase(AsStr(language))
+    text = AsStr(name).Trim()
+    lower = LCase(text)
+    names = { es: "Español", spa: "Español", esp: "Español", en: "Inglés", eng: "Inglés", it: "Italiano", ita: "Italiano", pt: "Portugués", por: "Portugués", fr: "Francés", fra: "Francés", fre: "Francés", de: "Alemán", deu: "Alemán", ger: "Alemán", ja: "Japonés", jpn: "Japonés", ko: "Coreano", kor: "Coreano", zh: "Chino", chi: "Chino", zho: "Chino", ru: "Ruso", rus: "Ruso" }
+    base = names[Left(code, 3)]
+    if base = invalid then base = names[Left(code, 2)]
+    if base = invalid then
+        if text <> "" then return text
+        if code <> "" then return UCase(code)
+        return "Original"
+    end if
+    if base = "Español" and (Instr(1, code, "419") > 0 or Instr(1, code, "mx") > 0 or Instr(1, lower, "lat") > 0) then return "Español latino"
+    if base = "Español" and (Instr(1, lower, "castellano") > 0 or Instr(1, lower, "spain") > 0 or Instr(1, lower, "españa") > 0) then return "Español (España)"
+    if Instr(1, lower, "forced") > 0 or Instr(1, lower, "forzad") > 0 then return base + " (forzados)"
+    return base
+end function

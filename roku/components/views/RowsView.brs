@@ -27,7 +27,8 @@ end sub
 
 sub onUserData()
     m.dirty = true
-    if m.top.visible and m.top.isInFocusChain() then RefreshLocalRows()
+    ' La nube puede llegar con el foco en el menú: las filas propias se actualizan igual.
+    if m.top.visible then RefreshLocalRows()
 end sub
 
 sub Load()
@@ -79,6 +80,8 @@ sub RefreshLocalRows()
     end for
     if focused <> invalid and focused.Count() = 2 and content.getChildCount() > 0 then
         row = focused[0] + m.localRows - before
+        ' Sin haber navegado aún (nube recién llegada) se muestran primero las filas propias.
+        if focused[0] = before and focused[1] = 0 then row = 0
         if row < 0 then row = 0
         if row >= content.getChildCount() then row = content.getChildCount() - 1
         col = focused[1]

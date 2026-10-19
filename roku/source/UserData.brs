@@ -1,22 +1,37 @@
-' Favoritos, historial y progreso del perfil activo (equivale a las bases Room + UserDataCache).
-' El formato es el mismo documento que guarda la app Android en la nube (sync_userdata.php):
-' { movies: { id: Movie }, tv_shows: { id: TvShow }, episodes: { id: Episode } }, así lo que se
-' ve en Roku aparece en el celular o Android TV y al revés (mismo proveedor TMDb).
+' Favoritos, historial y progreso del perfil activo, en el MISMO documento de la nube que usa la
+' app Android (sync_userdata.php): { "<Proveedor>": { movies, tv_shows, episodes }, ... }.
+' Android guarda cada título bajo su proveedor (p. ej. "Cuevana_3") con el id de ese sitio, así
+' que Roku lee todos los proveedores y escribe en el registro que Android ya tiene, o en el
+' proveedor por defecto del panel con el id de ese sitio. Así "Continuar viendo" y "Mi lista"
+' son una sola lista en Android y Roku.
 
 function UD_File(profileId as string) as string
     return "cachefs:/ud_" + profileId + ".json"
 end function
 
-function UD_Empty() as object
+function UD_TmdbKey() as string
+    return SafeName(CatalogProviderName())
+end function
+
+function UD_EmptyPart() as object
     return { movies: {}, tv_shows: {}, episodes: {} }
 end function
 
-function UD_Normalize(data as dynamic) as object
-    out = UD_Empty()
-    if data = invalid or GetInterface(data, "ifAssociativeArray") = invalid then return out
+function UD_NormalizePart(part as dynamic) as object
+    out = UD_EmptyPart()
+    if part = invalid or GetInterface(part, "ifAssociativeArray") = invalid then return out
     for each kind in ["movies", "tv_shows", "episodes"]
-        part = data[kind]
-        if part <> invalid and GetInterface(part, "ifAssociativeArray") <> invalid then out[kind] = part
+        if part[kind] <> invalid and GetInterface(part[kind], "ifAssociativeArray") <> invalid then out[kind] = part[kind]
+    end for
+    return out
+end function
+
+' Documento completo: una parte por proveedor.
+function UD_Normalize(data as dynamic) as object
+    out = {}
+    if data = invalid or GetInterface(data, "ifAssociativeArray") = invalid then return out
+    for each key in data
+        if Left(key, 1) <> "_" and GetInterface(data[key], "ifAssociativeArray") <> invalid then out[key] = UD_NormalizePart(data[key])
     end for
     return out
 end function
@@ -30,6 +45,11 @@ end sub
 
 function UD_Data() as object
     return UD_Normalize(m.global.userData)
+end function
+
+function UD_Part(data as object, key as string) as object
+    if data[key] = invalid then data[key] = UD_EmptyPart()
+    return data[key]
 end function
 
 ' Guarda en el equipo y avisa a MainScene para subir a la nube (con espera, como Android).
@@ -46,6 +66,24 @@ sub UD_DeleteAllFiles()
         if Left(name, 3) = "ud_" or Left(name, 6) = "cloud_" then fs.Delete("cachefs:/" + name)
     end for
 end sub
+
+'' ---------------------------------------------------------------------------------------
+' Campos con el nombre EXACTO que lee Android (Gson distingue mayúsculas). En BrightScript
+' "rec.isFavorite = x" crea la clave en minúsculas, así que se escribe siempre con JSet/JObj.
+' ---------------------------------------------------------------------------------------
+
+sub JSet(aa as object, key as string, value as dynamic)
+    aa.Delete(key)
+    aa[key] = value
+end sub
+
+function JObj(pairs as object) as object
+    aa = {}
+    for each pair in pairs
+        aa[pair[0]] = pair[1]
+    end for
+    return aa
+end function
 
 ' ---------------------------------------------------------------------------------------
 ' Reglas de fusión (CloudSyncManager: gana el más reciente; si empatan, el que tiene datos)
@@ -65,7 +103,7 @@ end function
 ' Fecha como la serializa Gson para java.util.Calendar.
 function UD_NowCalendar() as object
     dt = CreateObject("roDateTime")
-    return { year: dt.GetYear(), month: dt.GetMonth() - 1, dayOfMonth: dt.GetDayOfMonth(), hourOfDay: dt.GetHours(), minute: dt.GetMinutes(), second: dt.GetSeconds() }
+    return JObj([["year", dt.GetYear()], ["month", dt.GetMonth() - 1], ["dayOfMonth", dt.GetDayOfMonth()], ["hourOfDay", dt.GetHours()], ["minute", dt.GetMinutes()], ["second", dt.GetSeconds()]])
 end function
 
 function UD_MaxLong(values as object) as longinteger
@@ -91,31 +129,40 @@ function UD_HasData(kind as string, rec as object) as boolean
     return rec.isWatched = true or rec.watchHistory <> invalid
 end function
 
-' Fusiona lo que vino de la nube. Devuelve true si lo local tiene algo que la nube no (hay que subir).
+' Fusiona el documento de la nube (todos los proveedores). Devuelve true si lo local tiene algo
+' que la nube no (hay que subir).
 function UD_MergeRemote(remote as dynamic) as boolean
     remote = UD_Normalize(remote)
     local = UD_Data()
     needsUpload = false
-    for each kind in ["movies", "tv_shows", "episodes"]
-        for each id in remote[kind]
-            r = remote[kind][id]
-            if GetInterface(r, "ifAssociativeArray") <> invalid then
-                l = local[kind][id]
-                if l = invalid then
-                    local[kind][id] = r
-                else
-                    ru& = UD_UpdatedAt(kind, r)
-                    lu& = UD_UpdatedAt(kind, l)
-                    if ru& > lu& or (ru& = lu& and UD_HasData(kind, r) and not UD_HasData(kind, l)) then
-                        local[kind][id] = r
-                    else if lu& > ru& then
-                        needsUpload = true
+    for each key in remote
+        lpart = UD_Part(local, key)
+        rpart = remote[key]
+        for each kind in ["movies", "tv_shows", "episodes"]
+            for each id in rpart[kind]
+                r = rpart[kind][id]
+                if GetInterface(r, "ifAssociativeArray") <> invalid then
+                    l = lpart[kind][id]
+                    if l = invalid then
+                        lpart[kind][id] = r
+                    else
+                        ru& = UD_UpdatedAt(kind, r)
+                        lu& = UD_UpdatedAt(kind, l)
+                        if ru& > lu& or (ru& = lu& and UD_HasData(kind, r) and not UD_HasData(kind, l)) then
+                            lpart[kind][id] = r
+                        else if lu& > ru& then
+                            needsUpload = true
+                        end if
                     end if
                 end if
-            end if
+            end for
         end for
-        for each id in local[kind]
-            if remote[kind][id] = invalid then needsUpload = true
+    end for
+    for each key in local
+        for each kind in ["movies", "tv_shows", "episodes"]
+            for each id in local[key][kind]
+                if remote[key] = invalid or remote[key][kind][id] = invalid then needsUpload = true
+            end for
         end for
     end for
     m.global.userData = local
@@ -124,22 +171,26 @@ function UD_MergeRemote(remote as dynamic) as boolean
     return needsUpload
 end function
 
-' Lo que se sube: solo registros con datos del usuario.
+' Lo que se sube: todos los proveedores, solo registros con datos del usuario.
 function UD_ForUpload() as object
     data = UD_Data()
     out = {}
-    for each kind in ["movies", "tv_shows", "episodes"]
+    for each key in data
         part = {}
-        for each id in data[kind]
-            if UD_HasData(kind, data[kind][id]) then part[id] = data[kind][id]
+        for each kind in ["movies", "tv_shows", "episodes"]
+            records = {}
+            for each id in data[key][kind]
+                if UD_HasData(kind, data[key][kind][id]) then records[id] = data[key][kind][id]
+            end for
+            if records.Count() > 0 then part[kind] = records
         end for
-        if part.Count() > 0 then out[kind] = part
+        out[key] = part
     end for
     return out
 end function
 
 ' ---------------------------------------------------------------------------------------
-' Favoritos
+' Dónde está (o irá) el registro de un título
 ' ---------------------------------------------------------------------------------------
 
 function UD_KindOf(mediaType as string) as string
@@ -147,31 +198,89 @@ function UD_KindOf(mediaType as string) as string
     return "movies"
 end function
 
-function UD_BaseRecord(kind as string, item as object) as object
-    rec = { id: item.itemId, title: AsStr(item.title), overview: AsStr(item.overview), poster: AsStr(item.poster), banner: AsStr(item.backdrop), isFavorite: false }
-    if item.rating <> invalid and AsStr(item.rating) <> "" then rec.rating = ToFloat(item.rating)
-    if kind = "movies" then rec.isWatched = false
-    if kind = "tv_shows" then rec.isWatching = true
+' item: el de la ficha (id de TMDb; extra.pkey/extra.pid si vino de un registro de la nube).
+' links: ids del título en los sitios (ApiLinks), por clave de proveedor. -> { key, id, link }
+function UD_Locate(data as object, kind as string, item as object, links as dynamic) as object
+    if links = invalid then links = {}
+    extra = item.extra
+    if extra <> invalid and AsStr(extra.pkey) <> "" and AsStr(extra.pid) <> "" then return { key: extra.pkey, id: extra.pid, link: links[extra.pkey] }
+    mainKey = MainCloudKey()
+    keys = [mainKey]
+    for each key in links
+        if key <> mainKey then keys.Push(key)
+    end for
+    for each key in keys
+        link = links[key]
+        if link <> invalid and data[key] <> invalid and data[key][kind][link.id] <> invalid then return { key: key, id: link.id, link: link }
+    end for
+    tmdbStore = UD_TmdbKey()
+    if data[tmdbStore] <> invalid and data[tmdbStore][kind][item.itemId] <> invalid then return { key: tmdbStore, id: item.itemId }
+    ' Registro de otro proveedor con el mismo título (Android lo guardó con su id).
+    wanted = TitleKey(AsStr(item.title))
+    if wanted <> "" then
+        for each key in data
+            for each id in data[key][kind]
+                if TitleKey(AsStr(data[key][kind][id].title)) = wanted then return { key: key, id: id, link: links[key] }
+            end for
+        end for
+    end if
+    if links[mainKey] <> invalid then return { key: mainKey, id: links[mainKey].id, link: links[mainKey] }
+    return { key: tmdbStore, id: item.itemId }
+end function
+
+function UD_BaseRecord(kind as string, item as object, id as string) as object
+    rec = JObj([["id", id], ["title", AsStr(item.title)], ["overview", AsStr(item.overview)], ["poster", AsStr(item.poster)], ["banner", AsStr(item.backdrop)], ["isFavorite", false]])
+    if item.rating <> invalid and AsStr(item.rating) <> "" then JSet(rec, "rating", ToFloat(item.rating))
+    if kind = "movies" then JSet(rec, "isWatched", false)
+    if kind = "tv_shows" then JSet(rec, "isWatching", true)
     return rec
 end function
 
-function UD_IsFavorite(mediaType as string, id as string) as boolean
-    rec = UD_Data()[UD_KindOf(mediaType)][id]
+function UD_Get(data as object, kind as string, loc as object) as dynamic
+    if data[loc.key] = invalid then return invalid
+    return data[loc.key][kind][loc.id]
+end function
+
+' Episodio de la serie en el mismo proveedor: el que Android ya guardó (serie + temporada +
+' número) o un id nuevo con el formato del sitio. -> { key, id, showLoc } o invalid.
+function UD_LocateEpisode(data as object, showLoc as object, season as integer, number as integer, tmdbEpisodeId as string) as dynamic
+    part = data[showLoc.key]
+    if part <> invalid then
+        for each id in part.episodes
+            ep = part.episodes[id]
+            if ep.tvShow <> invalid and AsStr(ep.tvShow.id) = showLoc.id and ep.season <> invalid and ToInt(ep.season.number) = season and ToInt(ep.number) = number then return { key: showLoc.key, id: id, showLoc: showLoc }
+        end for
+    end if
+    if showLoc.key = UD_TmdbKey() then return { key: showLoc.key, id: tmdbEpisodeId, showLoc: showLoc }
+    if showLoc.link <> invalid then
+        id = AsStr(showLoc.link.episodeId)
+        if id = "" or showLoc.link.style <> "cine" then id = LinkEpisodeId(showLoc.link, season.ToStr(), number.ToStr())
+        return { key: showLoc.key, id: id, showLoc: showLoc }
+    end if
+    return invalid
+end function
+
+' ---------------------------------------------------------------------------------------
+' Favoritos ("Mi lista")
+' ---------------------------------------------------------------------------------------
+
+function UD_IsFavorite(item as object, links as dynamic) as boolean
+    data = UD_Data()
+    kind = UD_KindOf(item.mediaType)
+    rec = UD_Get(data, kind, UD_Locate(data, kind, item, links))
     return rec <> invalid and rec.isFavorite = true
 end function
 
-sub UD_SetFavorite(item as object, favorite as boolean)
-    kind = UD_KindOf(item.mediaType)
+sub UD_SetFavorite(item as object, links as dynamic, favorite as boolean)
     data = UD_Data()
-    rec = data[kind][item.itemId]
-    if rec = invalid then rec = UD_BaseRecord(kind, item)
-    rec.isFavorite = favorite
-    rec.favoritedAtMillis = NowMs()
-    if UD_HasData(kind, rec) then
-        data[kind][item.itemId] = rec
-    else
-        data[kind].Delete(item.itemId)
-    end if
+    kind = UD_KindOf(item.mediaType)
+    loc = UD_Locate(data, kind, item, links)
+    part = UD_Part(data, loc.key)
+    rec = part[kind][loc.id]
+    if rec = invalid then rec = UD_BaseRecord(kind, item, loc.id)
+    JSet(rec, "isFavorite", favorite)
+    JSet(rec, "favoritedAtMillis", NowMs())
+    if UD_HasData(kind, rec) then part[kind][loc.id] = rec else part[kind].Delete(loc.id)
     UD_Commit(data)
 end sub
 
@@ -179,71 +288,112 @@ end sub
 ' Progreso de reproducción
 ' ---------------------------------------------------------------------------------------
 
-' Segundos donde se quedó (0 si terminó o no se empezó).
-function UD_ResumeSeconds(kind as string, id as string) as integer
-    rec = UD_Data()[kind][id]
+function UD_ResumeOf(rec as dynamic) as integer
     if rec = invalid or rec.watchHistory = invalid then return 0
     played& = ToLong(rec.watchHistory.lastPlaybackPositionMillis)
     return Int(played& / 1000)
 end function
 
-function UD_IsWatched(kind as string, id as string) as boolean
-    rec = UD_Data()[kind][id]
+' Película: segundos donde se quedó.
+function UD_MovieResume(item as object, links as dynamic) as integer
+    data = UD_Data()
+    return UD_ResumeOf(UD_Get(data, "movies", UD_Locate(data, "movies", item, links)))
+end function
+
+function UD_MovieWatched(item as object, links as dynamic) as boolean
+    data = UD_Data()
+    rec = UD_Get(data, "movies", UD_Locate(data, "movies", item, links))
     return rec <> invalid and rec.isWatched = true
 end function
 
-' playback: { mediaType: "movie"|"tv", item (película o serie), episode?, season? }
+' Registro de un episodio (serie de la ficha, temporada y número) o invalid.
+function UD_EpisodeRecord(item as object, links as dynamic, season as integer, number as integer, tmdbEpisodeId as string) as dynamic
+    data = UD_Data()
+    loc = UD_LocateEpisode(data, UD_Locate(data, "tv_shows", item, links), season, number, tmdbEpisodeId)
+    if loc = invalid then return invalid
+    return UD_Get(data, "episodes", loc)
+end function
+
+function UD_EpisodeRecordFor(data as object, showLoc as object, season as integer, number as integer, tmdbEpisodeId as string, base as object) as object
+    loc = UD_LocateEpisode(data, showLoc, season, number, tmdbEpisodeId)
+    if loc = invalid then
+        ' Proveedor de Android cuyos ids Roku no sabe armar: la serie y el episodio van a TMDb.
+        showLoc = { key: UD_TmdbKey(), id: base.showTmdbId }
+        loc = { key: showLoc.key, id: tmdbEpisodeId, showLoc: showLoc }
+    end if
+    return loc
+end function
+
+' playback: { mediaType: "movie"|"tv", item, episode?, season?, links? }
 sub UD_SaveProgress(playback as object, positionSec as integer, durationSec as integer)
     if durationSec <= 0 or positionSec < 5 then return
-    data = UD_Data()
-    now& = NowMs()
     finished = positionSec >= durationSec * 0.9
     played& = positionSec
     dur& = durationSec
-    history = { lastEngagementTimeUtcMillis: now&, lastPlaybackPositionMillis: played& * 1000, durationMillis: dur& * 1000 }
-    item = playback.item
+    now& = NowMs()
+    history = JObj([["lastEngagementTimeUtcMillis", now&], ["lastPlaybackPositionMillis", played& * 1000], ["durationMillis", dur& * 1000]])
+    UD_UpdatePlayback(playback, now&, finished, history)
+end sub
 
+' "Marcar como visto / no visto" (ficha y episodios).
+sub UD_SetWatched(playback as object, watched as boolean)
+    UD_UpdatePlayback(playback, invalid, watched, invalid)
+end sub
+
+' Cambia el registro de una película o episodio (y su serie). history invalid = sin progreso.
+sub UD_UpdatePlayback(playback as object, playedAt as dynamic, watched as boolean, history as dynamic)
+    data = UD_Data()
+    item = playback.item
+    links = playback.links
     if playback.mediaType = "movie" then
-        rec = data.movies[item.itemId]
-        if rec = invalid then rec = UD_BaseRecord("movies", item)
-        rec.lastPlayedAtMillis = now&
-        if finished then
-            rec.isWatched = true
-            rec.watchedDate = UD_NowCalendar()
-            rec.Delete("watchHistory")
-        else
-            rec.watchHistory = history
-        end if
-        data.movies[item.itemId] = rec
+        loc = UD_Locate(data, "movies", item, links)
+        part = UD_Part(data, loc.key)
+        rec = part.movies[loc.id]
+        if rec = invalid then rec = UD_BaseRecord("movies", item, loc.id)
+        if playedAt <> invalid then JSet(rec, "lastPlayedAtMillis", playedAt)
+        UD_ApplyWatch(rec, watched, history)
+        if UD_HasData("movies", rec) then part.movies[loc.id] = rec else part.movies.Delete(loc.id)
     else
         ep = playback.episode
         season = playback.season
-        show = data.tv_shows[item.itemId]
-        if show = invalid then show = UD_BaseRecord("tv_shows", item)
-        show.lastPlayedAtMillis = now&
-        show.lastPlayedEpisodeId = ep.id
-        show.isWatching = true
-        data.tv_shows[item.itemId] = show
-
-        rec = data.episodes[ep.id]
+        showLoc = UD_Locate(data, "tv_shows", item, links)
+        loc = UD_EpisodeRecordFor(data, showLoc, ToInt(season.number), ToInt(ep.number), AsStr(ep.id), { showTmdbId: item.itemId })
+        showLoc = loc.showLoc
+        part = UD_Part(data, loc.key)
+        if playedAt <> invalid then
+            show = part.tv_shows[showLoc.id]
+            if show = invalid then show = UD_BaseRecord("tv_shows", item, showLoc.id)
+            JSet(show, "lastPlayedAtMillis", playedAt)
+            JSet(show, "lastPlayedEpisodeId", loc.id)
+            JSet(show, "isWatching", true)
+            part.tv_shows[showLoc.id] = show
+        end if
+        seasonId = item.itemId + "-" + AsStr(season.number)
+        if showLoc.link <> invalid then seasonId = LinkSeasonId(showLoc.link, AsStr(season.number))
+        rec = part.episodes[loc.id]
         if rec = invalid then
-            rec = {
-                id: ep.id, number: ToInt(ep.number), title: AsStr(ep.title), poster: AsStr(ep.poster), overview: AsStr(ep.overview)
-                tvShow: { id: item.itemId, title: AsStr(item.title), poster: AsStr(item.poster), banner: AsStr(item.backdrop) }
-                season: { id: item.itemId + "-" + AsStr(season.number), number: ToInt(season.number), title: AsStr(season.title) }
-                isWatched: false
-            }
+            rec = JObj([["id", loc.id], ["number", ToInt(ep.number)], ["title", AsStr(ep.title)], ["poster", AsStr(ep.poster)], ["overview", AsStr(ep.overview)], ["isWatched", false]])
+            JSet(rec, "tvShow", JObj([["id", showLoc.id], ["title", AsStr(item.title)], ["poster", AsStr(item.poster)], ["banner", AsStr(item.backdrop)]]))
+            JSet(rec, "season", JObj([["id", seasonId], ["number", ToInt(season.number)], ["title", AsStr(season.title)]]))
         end if
-        if finished then
-            rec.isWatched = true
-            rec.watchedDate = UD_NowCalendar()
-            rec.Delete("watchHistory")
-        else
-            rec.watchHistory = history
-        end if
-        data.episodes[ep.id] = rec
+        UD_ApplyWatch(rec, watched, history)
+        if UD_HasData("episodes", rec) then part.episodes[loc.id] = rec else part.episodes.Delete(loc.id)
     end if
     UD_Commit(data)
+end sub
+
+sub UD_ApplyWatch(rec as object, watched as boolean, history as dynamic)
+    if watched then
+        JSet(rec, "isWatched", true)
+        JSet(rec, "watchedDate", UD_NowCalendar())
+        rec.Delete("watchHistory")
+    else if history <> invalid then
+        JSet(rec, "watchHistory", history)
+    else
+        JSet(rec, "isWatched", false)
+        rec.Delete("watchedDate")
+        rec.Delete("watchHistory")
+    end if
 end sub
 
 ' Porcentaje visto (para la barra de "Continuar viendo").
@@ -255,21 +405,40 @@ function UD_Percent(rec as dynamic) as integer
     return Int(played& * 100 / dur&)
 end function
 
-' ---------------------------------------------------------------------------------------
-' Listas para las filas
-' ---------------------------------------------------------------------------------------
-
-function UD_RecordToItem(kind as string, rec as object) as object
-    mediaType = "movie"
-    if kind = "tv_shows" then mediaType = "tv"
-    return { itemId: AsStr(rec.id), mediaType: mediaType, title: AsStr(rec.title), overview: AsStr(rec.overview), poster: AsStr(rec.poster), backdrop: AsStr(rec.banner), rating: AsStr(rec.rating) }
+' Último episodio visto de una serie: { seasonNumber, episodeNumber } o invalid.
+function UD_LastEpisode(item as object, links as dynamic) as dynamic
+    data = UD_Data()
+    loc = UD_Locate(data, "tv_shows", item, links)
+    show = UD_Get(data, "tv_shows", loc)
+    if show = invalid or show.lastPlayedEpisodeId = invalid then return invalid
+    ep = data[loc.key].episodes[AsStr(show.lastPlayedEpisodeId)]
+    if ep = invalid or ep.season = invalid then return invalid
+    return { seasonNumber: ToInt(ep.season.number), episodeNumber: ToInt(ep.number) }
 end function
 
-function UD_Sorted(entries as object) as object
+' ---------------------------------------------------------------------------------------
+' Listas para las filas (de todos los proveedores, sin repetir títulos)
+' ---------------------------------------------------------------------------------------
+
+function UD_RecordToItem(key as string, kind as string, rec as object) as object
+    mediaType = "movie"
+    if kind = "tv_shows" then mediaType = "tv"
+    item = { itemId: AsStr(rec.id), mediaType: mediaType, title: AsStr(rec.title), overview: AsStr(rec.overview), poster: AsStr(rec.poster), backdrop: AsStr(rec.banner), rating: AsStr(rec.rating) }
+    ' Registro de otro proveedor: la ficha busca el título en TMDb y escribe en este registro.
+    item.extra = { pkey: key, pid: AsStr(rec.id), match: key <> UD_TmdbKey() }
+    return item
+end function
+
+function UD_Collect(entries as object) as object
     entries.SortBy("sortKey", "r")
     out = []
+    seen = {}
     for each e in entries
-        out.Push(e.item)
+        k = e.item.mediaType + TitleKey(e.item.title)
+        if not seen.DoesExist(k) then
+            seen[k] = true
+            out.Push(e.item)
+        end if
     end for
     return out
 end function
@@ -277,80 +446,46 @@ end function
 function UD_ContinueWatching() as object
     data = UD_Data()
     entries = []
-    for each id in data.movies
-        rec = data.movies[id]
-        if rec.watchHistory <> invalid then
-            item = UD_RecordToItem("movies", rec)
-            item.progress = UD_Percent(rec)
-            updated& = UD_UpdatedAt("movies", rec)
-            entries.Push({ sortKey: updated&.ToStr(), item: item })
-        end if
-    end for
-    for each id in data.tv_shows
-        rec = data.tv_shows[id]
-        if rec.isWatching <> false and rec.lastPlayedAtMillis <> invalid then
-            item = UD_RecordToItem("tv_shows", rec)
-            ep = invalid
-            if rec.lastPlayedEpisodeId <> invalid then ep = data.episodes[AsStr(rec.lastPlayedEpisodeId)]
-            if ep <> invalid then item.progress = UD_Percent(ep)
-            updated& = UD_UpdatedAt("tv_shows", rec)
-            entries.Push({ sortKey: updated&.ToStr(), item: item })
-        end if
+    for each key in data
+        part = data[key]
+        for each id in part.movies
+            rec = part.movies[id]
+            if rec.watchHistory <> invalid then
+                item = UD_RecordToItem(key, "movies", rec)
+                item.progress = UD_Percent(rec)
+                updated& = UD_UpdatedAt("movies", rec)
+                entries.Push({ sortKey: updated&.ToStr(), item: item })
+            end if
+        end for
+        for each id in part.tv_shows
+            rec = part.tv_shows[id]
+            if rec.isWatching <> false and rec.lastPlayedAtMillis <> invalid then
+                item = UD_RecordToItem(key, "tv_shows", rec)
+                ep = invalid
+                if rec.lastPlayedEpisodeId <> invalid then ep = part.episodes[AsStr(rec.lastPlayedEpisodeId)]
+                if ep <> invalid then item.progress = UD_Percent(ep)
+                updated& = UD_UpdatedAt("tv_shows", rec)
+                entries.Push({ sortKey: updated&.ToStr(), item: item })
+            end if
+        end for
     end for
     ' Las claves son milisegundos con la misma cantidad de dígitos: el orden de texto sirve.
-    return UD_Sorted(entries)
+    return UD_Collect(entries)
 end function
 
 function UD_Favorites() as object
     data = UD_Data()
     entries = []
-    for each kind in ["movies", "tv_shows"]
-        for each id in data[kind]
-            rec = data[kind][id]
-            if rec.isFavorite = true then
-                favAt& = ToLong(rec.favoritedAtMillis)
-                entries.Push({ sortKey: favAt&.ToStr(), item: UD_RecordToItem(kind, rec) })
-            end if
+    for each key in data
+        for each kind in ["movies", "tv_shows"]
+            for each id in data[key][kind]
+                rec = data[key][kind][id]
+                if rec.isFavorite = true then
+                    favAt& = ToLong(rec.favoritedAtMillis)
+                    entries.Push({ sortKey: favAt&.ToStr(), item: UD_RecordToItem(key, kind, rec) })
+                end if
+            end for
         end for
     end for
-    return UD_Sorted(entries)
-end function
-
-' "Marcar como visto / no visto" (opciones de la ficha y de cada episodio).
-sub UD_SetWatched(playback as object, watched as boolean)
-    data = UD_Data()
-    item = playback.item
-    if playback.mediaType = "movie" then
-        rec = data.movies[item.itemId]
-        if rec = invalid then rec = UD_BaseRecord("movies", item)
-        kind = "movies"
-        id = item.itemId
-    else
-        ep = playback.episode
-        rec = data.episodes[ep.id]
-        if rec = invalid then
-            rec = {
-                id: ep.id, number: ToInt(ep.number), title: AsStr(ep.title), poster: AsStr(ep.poster), overview: AsStr(ep.overview)
-                tvShow: { id: item.itemId, title: AsStr(item.title), poster: AsStr(item.poster), banner: AsStr(item.backdrop) }
-                season: { id: item.itemId + "-" + AsStr(playback.season.number), number: ToInt(playback.season.number), title: AsStr(playback.season.title) }
-            }
-        end if
-        kind = "episodes"
-        id = ep.id
-    end if
-    rec.isWatched = watched
-    rec.Delete("watchHistory")
-    if watched then rec.watchedDate = UD_NowCalendar() else rec.Delete("watchedDate")
-    if UD_HasData(kind, rec) then data[kind][id] = rec else data[kind].Delete(id)
-    UD_Commit(data)
-end sub
-
-' Último episodio visto de una serie: { seasonNumber, episodeId } o invalid.
-function UD_LastEpisode(showId as string) as dynamic
-    data = UD_Data()
-    show = data.tv_shows[showId]
-    if show = invalid or show.lastPlayedEpisodeId = invalid then return invalid
-    ep = data.episodes[AsStr(show.lastPlayedEpisodeId)]
-    if ep = invalid or ep.season = invalid then return invalid
-    return { seasonNumber: ToInt(ep.season.number), episodeNumber: ToInt(ep.number), episodeId: AsStr(ep.id) }
+    return UD_Collect(entries)
 end function

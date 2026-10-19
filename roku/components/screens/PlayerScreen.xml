@@ -30,6 +30,12 @@
       <MarkupList id="menuList" translation="[70,120]" itemComponentName="ChannelItem" itemSize="[640,84]" itemSpacing="[0,4]" numRows="10" drawFocusFeedback="false" vertFocusAnimationStyle="floatingFocus"/>
       <Label translation="[70,1010]" width="640" font="font:SmallestSystemFont" color="0x9A9A9AFF" text="OK: ver canal   ·   Atrás: cerrar"/>
     </Group>
+    <Group id="trackMenu" visible="false">
+      <Rectangle translation="[1180,0]" width="740" height="1080" color="0x0B0D14EB"/>
+      <Label translation="[1240,60]" width="620" font="font:LargeBoldSystemFont" color="0xFFFFFFFF" text="Idioma"/>
+      <Label translation="[1240,125]" width="620" font="font:SmallestSystemFont" color="0x9A9A9AFF" text="Audio y subtítulos que trae este video"/>
+      <MarkupList id="trackList" translation="[1240,190]" itemComponentName="PillItem" itemSize="[620,72]" itemSpacing="[0,12]" numRows="10" drawFocusFeedback="false" vertFocusAnimationStyle="floatingFocus"/>
+    </Group>
     <BusySpinner id="spinner" translation="[912,492]" visible="false"/>
     <Label id="status" translation="[160,620]" width="1600" horizAlign="center" wrap="true" font="font:MediumSystemFont" color="0xFFFFFFFF"/>
     <Timer id="osdTimer" duration="4" repeat="false"/>
