@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Campo del login: rojo al enfocar, gris azulado en reposo (como Roku). -->
+<!-- Campo del login: borde gris claro al enfocar, gris azulado en reposo. -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_focused="true">
         <shape>
             <corners android:radius="12dp" />
-            <solid android:color="@color/roku_red" />
+            <solid android:color="@color/roku_field" />
+            <stroke android:width="2dp" android:color="@color/login_focus" />
         </shape>
     </item>
     <item>

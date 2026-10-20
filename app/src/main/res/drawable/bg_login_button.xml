@@ -1,21 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Botón del login: siempre rojo; al enfocar o pulsar, borde gris claro. -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_focused="true">
         <shape>
             <corners android:radius="12dp" />
             <solid android:color="@color/roku_red" />
+            <stroke android:width="2dp" android:color="@color/login_focus" />
         </shape>
     </item>
     <item android:state_pressed="true">
         <shape>
             <corners android:radius="12dp" />
             <solid android:color="@color/roku_red" />
+            <stroke android:width="2dp" android:color="@color/login_focus" />
         </shape>
     </item>
     <item>
         <shape>
             <corners android:radius="12dp" />
-            <solid android:color="#7A1018" />
+            <solid android:color="@color/roku_red" />
         </shape>
     </item>
 </selector>

@@ -9,6 +9,8 @@
     <color name="roku_background">#0F111A</color>
     <color name="roku_card">#1C1F2B</color>
     <color name="roku_field">#1F2230</color>
+    <!-- Selector del login: gris claro -->
+    <color name="login_focus">#D0D4DC</color>
 
     <!-- Colore di sfondo dinamico per TV -->
     <color name="app_background">#181818</color>
