@@ -6,7 +6,7 @@ enum Theme {
     static let card = Color(hex: 0x1C1F2B)
     static let field = Color(hex: 0x1F2230)
     static let red = Color(hex: 0xE50914)
-    static let darkRed = Color(hex: 0x7A1018)
+    static let loginFocus = Color(hex: 0xD0D4DC) // selector del login: gris claro
     static let navy = Color(hex: 0x0F111A)
     static let textSecondary = Color(hex: 0xBDBDBD)
     static let navInactive = Color(hex: 0x808080)

@@ -1,4 +1,4 @@
-// Inicio de sesión (activity_sync_gateway): tarjeta con barra roja, bienvenida, usuario,
+// Inicio de sesión (activity_sync_gateway): tarjeta, bienvenida, usuario,
 // contraseña, botón y la MAC del equipo. Con los campos vacíos entra con la MAC vinculada.
 import SwiftUI
 
@@ -29,8 +29,7 @@ struct LoginView: View {
 
     private var card: some View {
         VStack(spacing: 0) {
-            Rectangle().fill(Theme.red).frame(height: 4).padding(.bottom, 22)
-            BrandLogo(size: 84).padding(.bottom, 14)
+            BrandLogo(size: 84).padding(.top, 26).padding(.bottom, 14)
             Text("Bienvenido").font(.system(size: 26, weight: .bold)).foregroundColor(.white)
             Text("Inicia sesión para continuar").font(.system(size: 16)).foregroundColor(Color(hex: 0xB4B9C8))
                 .padding(.top, 4).padding(.bottom, 22)
@@ -52,7 +51,7 @@ struct LoginView: View {
                     if busy { ProgressView().tint(.white) }
                 }
                 .padding(.horizontal, 18).frame(height: 52)
-                .background(RoundedRectangle(cornerRadius: 12).fill(busy ? Theme.darkRed : Theme.red))
+                .background(RoundedRectangle(cornerRadius: 12).fill(Theme.red))
             }
             .disabled(busy)
 
@@ -84,7 +83,7 @@ struct LoginView: View {
         .foregroundColor(.white)
         .padding(.horizontal, 18).frame(height: 52)
         .background(RoundedRectangle(cornerRadius: 12).fill(Theme.field))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(focused ? Theme.red : Color(hex: 0x2E3242), lineWidth: focused ? 2 : 1))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(focused ? Theme.loginFocus : Color(hex: 0x2E3242), lineWidth: focused ? 2 : 1))
         .padding(.bottom, 12)
     }
 
