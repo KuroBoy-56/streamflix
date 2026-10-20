@@ -288,6 +288,11 @@ function CatalogProviderName() as string
     return "TMDb (" + CatalogLanguage() + ")"
 end function
 
+' Clave de las portadas de TMDb buscadas por título para el Inicio (tipo + título normalizado).
+function ArtKey(mediaType as string, title as string) as string
+    return mediaType + "|" + TitleKey(title)
+end function
+
 function TmdbImage(path as dynamic, size as string) as string
     if path = invalid or AsStr(path) = "" then return ""
     return "https://image.tmdb.org/t/p/" + size + AsStr(path)

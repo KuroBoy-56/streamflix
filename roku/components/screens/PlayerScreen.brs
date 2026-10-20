@@ -97,7 +97,7 @@ sub TryServer(index as integer)
     end if
     m.serverIndex = index
     server = m.servers[index]
-    Busy("Servidor " + (index + 1).ToStr() + " de " + m.servers.Count().ToStr() + ": " + server.name)
+    Busy("Servidor " + (index + 1).ToStr() + " de " + m.servers.Count().ToStr()) ' sin el nombre del proveedor
     params = BaseParams()
     params.url = server.url
     params.referer = server.referer
@@ -116,8 +116,10 @@ sub onExtracted(event as object)
     content = StreamContent(res.url, res.headers, PlaybackTitle(), false)
     if AsStr(res.format) <> "" then content.streamFormat = res.format
     if m.resumeAt > 0 then content.PlayStart = m.resumeAt
-    ' Los servidores de los sitios ya vienen en su idioma: solo VixSrc elige audio/subtítulos.
-    m.audioChosen = server.lang <> "multi"
+    ' Los servidores de los sitios ya vienen en su idioma: si traen varias pistas se elige la de
+    ' Ajustes; solo VixSrc activa además los subtítulos.
+    m.siteServer = server.lang <> "multi"
+    m.audioChosen = false
     m.video.content = content
     m.video.control = "play"
     FocusOn(m.video)
@@ -141,7 +143,10 @@ sub onAudioTracks()
     if tracks = invalid or tracks.Count() = 0 then return
     lang = AudioLanguage()
     best = PickAudio(tracks, lang)
-    if best <> invalid then
+    if m.siteServer = true then
+        if best <> invalid and tracks.Count() > 1 then m.video.audioTrack = best.Track
+        m.audioChosen = true
+    else if best <> invalid then
         if tracks.Count() > 1 then m.video.audioTrack = best.Track
         m.video.globalCaptionMode = "Off"
         m.audioChosen = true

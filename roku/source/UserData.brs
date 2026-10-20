@@ -443,10 +443,25 @@ function UD_Collect(entries as object) as object
     return out
 end function
 
+' Canales en vivo que Android guarda en la nube ("Live", listas IPTV, Vavoo): van solo en En Vivo.
+function UD_IsLiveKey(key as string) as boolean
+    k = LCase(key)
+    return k = "live" or Instr(1, k, "iptv") > 0 or Instr(1, k, "vavoo") > 0 or Instr(1, k, "live_tv") > 0
+end function
+
+' Claves de proveedores de películas y series (sin los de canales en vivo).
+function UD_MediaKeys(data as object) as object
+    keys = []
+    for each key in data
+        if not UD_IsLiveKey(key) then keys.Push(key)
+    end for
+    return keys
+end function
+
 function UD_ContinueWatching() as object
     data = UD_Data()
     entries = []
-    for each key in data
+    for each key in UD_MediaKeys(data)
         part = data[key]
         for each id in part.movies
             rec = part.movies[id]
@@ -476,7 +491,7 @@ end function
 function UD_Favorites() as object
     data = UD_Data()
     entries = []
-    for each key in data
+    for each key in UD_MediaKeys(data)
         for each kind in ["movies", "tv_shows"]
             for each id in data[key][kind]
                 rec = data[key][kind][id]

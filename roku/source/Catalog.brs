@@ -256,6 +256,28 @@ function ApiDetails(p as object) as object
     }
 end function
 
+' Portadas de TMDb (con la clave de la cuenta) para títulos guardados en la nube con las imágenes
+' de otro sitio o sin ellas. p.items: [{ mediaType, title }] -> { art: { ArtKey: { poster, backdrop } } }
+function ApiArtwork(p as object) as object
+    requests = []
+    for each it in p.items
+        requests.Push({ path: "search/" + it.mediaType, params: { query: it.title, include_adult: "false" } })
+    end for
+    art = {}
+    results = TmdbGetMany(requests)
+    for i = 0 to p.items.Count() - 1
+        it = p.items[i]
+        list = TmdbResults(results[i], it.mediaType)
+        pick = invalid
+        for each r in list
+            if pick = invalid and TitleKey(r.title) = TitleKey(it.title) then pick = r
+        end for
+        if pick = invalid and list.Count() > 0 then pick = list[0]
+        if pick <> invalid then art[ArtKey(it.mediaType, it.title)] = { poster: pick.poster, backdrop: pick.backdrop }
+    end for
+    return { art: art }
+end function
+
 '' Id de TMDb de un título guardado por Android con el id de otro sitio: mismo nombre (y año).
 function TmdbMatch(mediaType as string, title as string, year as string) as string
     params = { query: title, include_adult: "false" }

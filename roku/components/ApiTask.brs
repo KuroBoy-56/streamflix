@@ -28,6 +28,8 @@ sub execute()
         res = ApiHome()
     else if kind = "catalog" then
         res = ApiCatalog(p.mediaType)
+    else if kind = "artwork" then
+        res = ApiArtwork(p)
     else if kind = "page" then
         res = ApiPage(p)
     else if kind = "details" then

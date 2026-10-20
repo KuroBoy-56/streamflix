@@ -11,6 +11,8 @@ sub init()
     m.dirty = false
     m.localRows = 0
     m.pageRows = {}
+    m.art = {}
+    m.artAsked = {}
     m.global.observeField("userDataTick", "onUserData")
     InitScreen(m.rows)
 end sub
@@ -88,6 +90,47 @@ sub RefreshLocalRows()
         if col >= content.getChild(row).getChildCount() then col = 0
         m.rows.jumpToRowItem = [row, col]
     end if
+    ApplyArtwork(true)
+end sub
+
+' Títulos de la nube con imágenes de otro sitio (o sin ellas): portada y banner de TMDb.
+function NeedsArtwork(node as object) as boolean
+    return (node.extra <> invalid and node.extra.match = true) or node.HDPosterUrl = "" or node.backdrop = ""
+end function
+
+sub ApplyArtwork(request as boolean)
+    content = m.rows.content
+    if content = invalid then return
+    missing = []
+    for i = 0 to m.localRows - 1
+        row = content.getChild(i)
+        for j = 0 to row.getChildCount() - 1
+            node = row.getChild(j)
+            if NeedsArtwork(node) then
+                key = ArtKey(node.mediaType, node.title)
+                a = m.art[key]
+                if a <> invalid then
+                    if a.poster <> "" then
+                        node.HDPosterUrl = a.poster
+                        node.FHDPosterUrl = a.poster
+                    end if
+                    if a.backdrop <> "" then node.backdrop = a.backdrop
+                else if request and not m.artAsked.DoesExist(key) and missing.Count() < 40 then
+                    m.artAsked[key] = true
+                    missing.Push({ mediaType: node.mediaType, title: node.title })
+                end if
+            end if
+        end for
+    end for
+    if missing.Count() > 0 then RunTask("artwork", { items: missing }, "onArtwork", "artwork" + NowSec().ToStr() + Rnd(100000).ToStr())
+end sub
+
+sub onArtwork(event as object)
+    res = TaskResult(event)
+    if res = invalid or res.art = invalid then return
+    m.art.Append(res.art)
+    ApplyArtwork(false)
+    onFocused()
 end sub
 
 function FocusedNode() as dynamic
