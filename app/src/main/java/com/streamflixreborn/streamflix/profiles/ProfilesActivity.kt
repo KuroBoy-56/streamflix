@@ -331,14 +331,14 @@ class ProfilesActivity : AppCompatActivity() {
         gravity = Gravity.CENTER
     }
 
-    /** TV: el perfil enfocado crece y se marca con borde rojo (igual que en Roku). */
+    /** TV: el perfil enfocado crece y se marca con un blanco translúcido (igual que en Roku). */
     private fun bindFocus(tile: View, image: View) {
         tile.setOnFocusChangeListener { _, focused ->
             val scale = if (focused) 1.1f else 1f
             tile.animate().scaleX(scale).scaleY(scale).setDuration(150).start()
-            // Borde rojo al enfocar (View.foreground no existe en Android 5).
+            // Resaltado blanco translúcido al enfocar (View.foreground no existe en Android 5).
             if (image.getTag(R.id.profiles_tag_background) == null) image.setTag(R.id.profiles_tag_background, image.background ?: rounded(Color.TRANSPARENT, dp(6)))
-            image.background = if (focused) rounded(Color.parseColor("#E50914"), dp(8)) else image.getTag(R.id.profiles_tag_background) as android.graphics.drawable.Drawable
+            image.background = if (focused) rounded(Color.parseColor("#59FFFFFF"), dp(8)) else image.getTag(R.id.profiles_tag_background) as android.graphics.drawable.Drawable
             ((tile as ViewGroup).getChildAt(1) as? TextView)?.setTextColor(Color.parseColor(if (focused) "#FFFFFF" else "#B3B3B3"))
         }
     }
