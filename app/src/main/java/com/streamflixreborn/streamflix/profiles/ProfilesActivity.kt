@@ -112,6 +112,18 @@ class ProfilesActivity : AppCompatActivity() {
     private fun buildContent(): View {
         val root = FrameLayout(this).apply { setBackgroundColor(Color.parseColor("#0F111A")) }
 
+        // Fondo del administrador o del dueño de la cuenta (el que llega al iniciar sesión), tenue como en Roku.
+        BrandAssets.loginBackground(this, isTv)?.let { kind ->
+            val bg = ImageView(this).apply {
+                scaleType = ImageView.ScaleType.CENTER_CROP
+                alpha = 0.25f
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            }
+            if (BrandAssets.load(bg, kind) { it.centerCrop() }) {
+                root.addView(bg, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+            }
+        }
+
         val column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
