@@ -130,7 +130,7 @@
     <string name="player_external_player_title">Play using</string>
     <string name="player_external_player_error_video">Video not load yet</string>
     <string name="player_not_available_it_message">Not available on Italian servers, search for it on TMDB in other languages</string>
-    <string name="player_not_available_lang_message">Not available in %s, search for it on TMDB in other languages</string>
+    <string name="player_not_available_lang_message">Not available in %s right now</string>
     <string name="player_retry_later_message">Video currently unavailable on this provider. Please try again later</string>
     <string name="player_next_episode_up_next">Up next</string>
     <string name="player_next_episode_action">Play now</string>
@@ -594,10 +594,11 @@
     <string name="settings_force_extra_buffer_summary">Enable extra buffering for all servers by default</string>
     <string name="player_settings_providers_title">Providers</string>
     <string name="player_settings_providers_label">Providers</string>
-    <string name="player_provider_switching">Searching on %1$s…</string>
-    <string name="player_provider_not_found">Not available on %1$s</string>
+    <string name="player_provider_switching">Searching for a server…</string>
+    <string name="player_provider_not_found">No server available</string>
     <string name="player_provider_auto_fallback">Playback restored</string>
-    <string name="player_provider_auto_searching">Switching provider, don\'t close the player…</string>
+    <string name="player_provider_auto_searching">Trying Server %1$d, don\'t close the player…</string>
+    <string name="player_server_label">Server %1$d</string>
     <string name="main_menu_live">Live</string>
     <string name="live_select_provider">Live provider</string>
     <string name="live_empty">No live channels available</string>

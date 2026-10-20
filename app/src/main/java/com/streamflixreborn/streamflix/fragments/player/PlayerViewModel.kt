@@ -48,8 +48,8 @@ class PlayerViewModel(
         data class NotFound(val providerName: String) : ProviderSwitchEvent()
         /** Respaldo automático: el proveedor actual falló y se pasó a otro. */
         data class AutoFallback(val from: String, val to: String) : ProviderSwitchEvent()
-        /** Respaldo automático en curso: "Cambiando de proveedor, no cierres el reproductor". */
-        data class AutoSearching(val providerName: String) : ProviderSwitchEvent()
+        /** Respaldo automático en curso: se muestra como "Probando Servidor N" (nunca el nombre del proveedor). */
+        data class AutoSearching(val providerName: String, val serverNumber: Int) : ProviderSwitchEvent()
     }
 
     /** Proveedores ya intentados en esta reproducción (para no repetir en el respaldo). */
@@ -97,7 +97,7 @@ class PlayerViewModel(
             _state.emit(State.LoadingServers)
             for (target in candidates) {
                 triedProviders += target.name
-                _providerSwitchEvents.emit(ProviderSwitchEvent.AutoSearching(target.name))
+                _providerSwitchEvents.emit(ProviderSwitchEvent.AutoSearching(target.name, triedProviders.size))
                 val result = runCatching {
                     val (resolvedType, resolvedId) = findOnProvider(target, type) ?: return@runCatching null
                     val servers = target.getServers(resolvedId, resolvedType)

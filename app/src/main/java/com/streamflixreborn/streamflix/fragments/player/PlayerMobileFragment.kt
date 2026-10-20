@@ -351,9 +351,10 @@ class PlayerMobileFragment : Fragment() {
                     }
 
                     is PlayerViewModel.State.FailedLoadingServers -> if (!viewModel.tryNextProvider()) {
+                        // Mensaje genérico: el error crudo puede incluir el nombre/dominio del proveedor.
                         Toast.makeText(
                             requireContext(),
-                            state.error.message ?: "",
+                            getString(R.string.player_provider_not_found),
                             Toast.LENGTH_LONG
                         ).show()
                         findNavController().navigateUp()
@@ -618,23 +619,23 @@ class PlayerMobileFragment : Fragment() {
                 val context = context ?: return@collect
                 when (event) {
                     is PlayerViewModel.ProviderSwitchEvent.Searching -> Toast.makeText(
-                        context, getString(R.string.player_provider_switching, event.providerName), Toast.LENGTH_SHORT
+                        context, getString(R.string.player_provider_switching), Toast.LENGTH_SHORT
                     ).show()
                     is PlayerViewModel.ProviderSwitchEvent.Switched ->
                         PlayerSettingsView.Settings.ProviderOption.select(event.providerName)
                     is PlayerViewModel.ProviderSwitchEvent.AutoSearching -> Toast.makeText(
-                        context, getString(R.string.player_provider_auto_searching, event.providerName), Toast.LENGTH_LONG
+                        context, getString(R.string.player_provider_auto_searching, event.serverNumber), Toast.LENGTH_LONG
                     ).show()
                     is PlayerViewModel.ProviderSwitchEvent.AutoFallback -> {
                         PlayerSettingsView.Settings.ProviderOption.select(event.to)
                         Toast.makeText(
-                            context, getString(R.string.player_provider_auto_fallback, event.to), Toast.LENGTH_SHORT
+                            context, getString(R.string.player_provider_auto_fallback), Toast.LENGTH_SHORT
                         ).show()
                     }
                     is PlayerViewModel.ProviderSwitchEvent.NotFound -> {
                         PlayerSettingsView.Settings.ProviderOption.select(viewModel.activeProvider?.name)
                         Toast.makeText(
-                            context, getString(R.string.player_provider_not_found, event.providerName), Toast.LENGTH_LONG
+                            context, getString(R.string.player_provider_not_found), Toast.LENGTH_LONG
                         ).show()
                     }
                 }

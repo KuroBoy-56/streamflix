@@ -1,6 +1,7 @@
 package com.streamflixreborn.streamflix.activities.sync
 
 import android.content.Context
+import com.streamflixreborn.streamflix.BuildConfig
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.KeyEvent
@@ -268,12 +269,11 @@ class SyncGatewayActivity : AppCompatActivity() {
                             UserPreferences.customLogoUrl = customLogoUrl
                             UserPreferences.savedAppId = appId
 
-                            if (tmdbApiKey.isNotEmpty()) {
-                                UserPreferences.tmdbApiKey = tmdbApiKey
-                                UserPreferences.enableTmdb = true
-                            } else {
-                                UserPreferences.enableTmdb = false
-                            }
+                            // Clave de la cuenta que ingresa (su administrador o, si no tiene, el dueño):
+                            // nunca se queda la de otra cuenta. Sin clave se usa la de la app, si existe.
+                            if (UserPreferences.tmdbApiKey != tmdbApiKey) UserPreferences.tmdbApiKey = tmdbApiKey
+                            UserPreferences.enableTmdb = tmdbApiKey.isNotEmpty() ||
+                                    BuildConfig.TMDB_API_KEY.let { it.isNotBlank() && it != "null" }
 
                             getSharedPreferences("SecureGatewayPrefs", Context.MODE_PRIVATE).edit().apply {
                                 putString("custom_background_url", customBgMobileUrl)

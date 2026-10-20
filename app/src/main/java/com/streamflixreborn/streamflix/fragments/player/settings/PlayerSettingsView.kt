@@ -41,7 +41,7 @@ abstract class PlayerSettingsView @JvmOverloads constructor(
             if (field === value) return
 
             value?.let {
-                Settings.Server.init(it)
+                Settings.Server.init(it, resources)
                 Settings.Quality.init(it, resources)
                 Settings.Audio.init(it, resources)
                 Settings.Subtitle.init(it, resources)
@@ -51,7 +51,7 @@ abstract class PlayerSettingsView @JvmOverloads constructor(
             value?.addListener(object : Player.Listener {
                 override fun onEvents(player: Player, events: Player.Events) {
                     if (events.contains(Player.EVENT_PLAYLIST_METADATA_CHANGED)) {
-                        Settings.Server.init(value)
+                        Settings.Server.init(value, resources)
                     }
                     if (events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION)) {
                         Settings.Server.refresh(value)
@@ -1268,12 +1268,13 @@ abstract class PlayerSettingsView @JvmOverloads constructor(
                 val selected: Server?
                     get() = list.find { it.isSelected }
 
-                fun init(player: ExoPlayer) {
+                fun init(player: ExoPlayer, resources: Resources) {
                     list.clear()
-                    list.addAll(player.playlistMetadata.mediaServers.map {
+                    // Solo se muestra "Servidor N": el nombre real (proveedor/host) nunca se enseña.
+                    list.addAll(player.playlistMetadata.mediaServers.mapIndexed { index, it ->
                         Server(
                             id = it.id,
-                            name = it.name,
+                            name = resources.getString(R.string.player_server_label, index + 1),
                         )
                     })
 

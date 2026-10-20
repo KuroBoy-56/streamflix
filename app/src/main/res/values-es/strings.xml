@@ -120,7 +120,7 @@
     <string name="player_external_player_title">Reproducir con</string>
     <string name="player_external_player_error_video">El vídeo todavía no está cargado</string>
     <string name="player_not_available_it_message">No disponible en servidores italianos, búscalo en TMDB en otros idiomas</string>
-    <string name="player_not_available_lang_message">No disponible en %s, búscalo en TMDB en otros idiomas</string>
+    <string name="player_not_available_lang_message">No disponible en %s por el momento</string>
     <string name="player_retry_later_message">Vídeo no disponible por el momento. Por favor, inténtalo de nuevo más tarde</string>
     <string name="player_aspect_ratio_fit">Ajustar a la pantalla</string>
     <string name="player_aspect_ratio_fill">Estirar</string>
@@ -509,10 +509,11 @@
     <string name="supabase_instructions_summary">Abrir en el navegador la guía detallada para configurar la cuenta y la sincronización de Supabase</string>
     <string name="player_settings_providers_title">Proveedores</string>
     <string name="player_settings_providers_label">Proveedores</string>
-    <string name="player_provider_switching">Buscando en %1$s…</string>
-    <string name="player_provider_not_found">No disponible en %1$s</string>
+    <string name="player_provider_switching">Buscando servidor…</string>
+    <string name="player_provider_not_found">No se encontró un servidor disponible</string>
     <string name="player_provider_auto_fallback">Reproducción recuperada</string>
-    <string name="player_provider_auto_searching">Cambiando de proveedor, no cierres el reproductor…</string>
+    <string name="player_provider_auto_searching">Probando Servidor %1$d, no cierres el reproductor…</string>
+    <string name="player_server_label">Servidor %1$d</string>
     <string name="main_menu_live">En Vivo</string>
     <string name="live_select_provider">Proveedor en vivo</string>
     <string name="live_empty">No hay canales en vivo disponibles</string>

@@ -270,7 +270,7 @@
     <string name="theme_default">افتراضي</string>
     <string name="theme_nero_amoled_oled">أسود AMOLED/OLED</string>
     <string name="player_not_available_it_message">غير متوفر على الخوادم الإيطالية، ابحث عنه على TMDB بلغات أخرى</string>
-    <string name="player_not_available_lang_message">غير متوفر باللغة %s، ابحث عنه على TMDB بلغات أخرى</string>
+    <string name="player_not_available_lang_message">غير متوفر باللغة %s حاليًا</string>
     <string name="player_aspect_ratio_zoom_4_3">تكبير لـ 4:3</string>
     <string name="player_aspect_ratio_stretch_vertical">تمديد عمودي</string>
     <string name="player_aspect_ratio_super_zoom">تكبير فائق</string>
