@@ -21,7 +21,7 @@ end sub
 
 
 ' Opciones de una lista/cuadrícula de PillItem. Cambiar el contenido no quita el foco.
-sub SetPills(list as object, labels as object, style = "" as string, primaryIndex = -1 as integer)
+sub SetPills(list as object, labels as object, style = "" as string, primaryIndex = -1 as integer, posters = invalid as object)
     focused = list.itemFocused
     content = CreateObject("roSGNode", "ContentNode")
     for i = 0 to labels.Count() - 1
@@ -29,6 +29,7 @@ sub SetPills(list as object, labels as object, style = "" as string, primaryInde
         item.title = labels[i]
         item.ShortDescriptionLine1 = style
         if i = primaryIndex then item.ShortDescriptionLine2 = "primary"
+        if posters <> invalid then item.update(posters[i])
     end for
     list.content = content
     if focused > 0 and focused < labels.Count() then list.jumpToItem = focused

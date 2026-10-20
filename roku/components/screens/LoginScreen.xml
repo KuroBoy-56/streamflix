@@ -17,7 +17,6 @@
     <Label id="brand" translation="[120,920]" width="900" font="font:LargeBoldSystemFont" color="0xFFFFFFFF"/>
 
     <Poster translation="[1140,80]" width="680" height="920" uri="pkg:/images/card.9.png"/>
-    <Rectangle translation="[1200,82]" width="560" height="6" color="0xE50914FF"/>
     <Poster id="logo" translation="[1230,130]" width="500" height="170" loadDisplayMode="scaleToFit"/>
     <Label translation="[1180,325]" width="600" horizAlign="center" font="font:LargeBoldSystemFont" color="0xFFFFFFFF" text="Bienvenido"/>
     <Label translation="[1180,385]" width="600" horizAlign="center" font="font:SmallSystemFont" color="0x9AA0B4FF" text="Inicia sesión para continuar"/>

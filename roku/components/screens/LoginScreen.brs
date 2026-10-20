@@ -2,7 +2,7 @@ sub init()
     m.form = m.top.findNode("form")
     m.status = m.top.findNode("status")
     m.spinner = m.top.findNode("spinner")
-    m.spinner.poster.uri = "pkg:/images/spinner.png"
+    m.spinner.poster.uri = "pkg:/images/spinner_gray.png"
     m.spinner.poster.width = 96
     m.spinner.poster.height = 96
     m.form.observeField("itemSelected", "onFormSelected")
@@ -40,7 +40,10 @@ sub RenderForm()
     if userText = "" then userText = "—"
     passText = "—"
     if m.pass <> "" then passText = String(Len(m.pass), "•")
-    SetPills(m.form, ["Usuario:  " + userText, "Contraseña:  " + passText, "Iniciar sesión"], "left", 2)
+    ' Selector gris claro; el botón sigue rojo (HDPosterUrl = foco, SDPosterUrl = reposo).
+    gray = { HDPosterUrl: "pkg:/images/field_focus_gray.9.png" }
+    button = { HDPosterUrl: "pkg:/images/button_focus.9.png", SDPosterUrl: "pkg:/images/field_focus.9.png" }
+    SetPills(m.form, ["Usuario:  " + userText, "Contraseña:  " + passText, "Iniciar sesión"], "left", -1, [gray, gray, button])
 end sub
 
 sub onFormSelected()

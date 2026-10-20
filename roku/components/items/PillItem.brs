@@ -10,6 +10,11 @@ sub onContent()
     c = m.top.itemContent
     if c = invalid then return
     m.label.text = c.title
+    ' Imágenes propias opcionales (login): HDPosterUrl = foco, SDPosterUrl = reposo.
+    m.focus.uri = "pkg:/images/field_focus.9.png"
+    if c.HDPosterUrl <> "" then m.focus.uri = c.HDPosterUrl
+    m.idle.uri = "pkg:/images/field.9.png"
+    if c.SDPosterUrl <> "" then m.idle.uri = c.SDPosterUrl
     if c.ShortDescriptionLine1 = "left" then m.label.horizAlign = "left" else m.label.horizAlign = "center"
     onLayout()
     onFocus()
