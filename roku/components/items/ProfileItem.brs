@@ -16,6 +16,6 @@ end sub
 sub onFocusPercent()
     p = m.top.focusPercent
     if not m.top.gridHasFocus then p = 0
-    m.ring.opacity = p
+    m.ring.opacity = p * 0.5 ' blanco translúcido: se ve el resaltado sin color sólido
     if p > 0.5 then m.name.color = "0xFFFFFFFF" else m.name.color = "0xBBBBBBFF"
 end sub
