@@ -85,7 +85,8 @@ final class PlayerModel: ObservableObject {
         }
         serverIndex = index
         let server = servers[index]
-        setBusy("Servidor \(index + 1) de \(servers.count): \(server.name)")
+        // Nunca se muestra el nombre del proveedor: solo el número de servidor.
+        setBusy("Servidor \(index + 1) de \(servers.count)")
         switch await Extract.extract(server, request: request) {
         case .failure:
             if !closing { await tryServer(index + 1) }

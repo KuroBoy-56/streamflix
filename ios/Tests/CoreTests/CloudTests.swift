@@ -39,6 +39,11 @@ final class CloudTests: XCTestCase {
         XCTAssertEqual(cloudKeyFor("PoseidonHD2"), "Poseidonhd2")
     }
 
+    func testLiveKeysStayOutOfHome() {
+        for key in ["Live", "IPTV_All_World", "Vavoo_Mexico_Live_TV"] { XCTAssertTrue(UserData.isLiveKey(key), key) }
+        for key in ["TMDb__es_", "Cuevana_3", "Poseidonhd2"] { XCTAssertFalse(UserData.isLiveKey(key), key) }
+    }
+
     func testLocate() {
         let doc = UserData.normalize(androidDoc())
         XCTAssertNil(doc["_profile"])

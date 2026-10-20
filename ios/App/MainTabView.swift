@@ -56,6 +56,9 @@ final class RowsModel: ObservableObject {
     @Published var error = ""
     @Published var loading = false
     private var loadingPages = Set<String>()
+    /// Portadas de TMDb de los títulos de la nube (Continuar viendo / Mis favoritos), por tipo+título.
+    @Published private var art: [String: (poster: String, backdrop: String)] = [:]
+    private var artAsked = Set<String>()
     let mode: String
 
     init(mode: String) { self.mode = mode }
@@ -71,6 +74,31 @@ final class RowsModel: ObservableObject {
             Task { await PanelAPI.report("Inicio.Catalogo", self.error) }
         }
         loading = false
+    }
+
+    /// Títulos de la nube con imágenes de otro sitio (o sin ellas): portada y banner de TMDb.
+    func withArtwork(_ items: [Item]) -> [Item] {
+        var missing: [Item] = []
+        let out = items.map { item -> Item in
+            guard item.extra["match"] == "1" || item.poster.isEmpty || item.backdrop.isEmpty else { return item }
+            let key = item.mediaType + "|" + titleKey(item.title)
+            guard let a = art[key] else {
+                if !artAsked.contains(key) { missing.append(item) }
+                return item
+            }
+            var copy = item
+            if !a.poster.isEmpty { copy.poster = a.poster }
+            if !a.backdrop.isEmpty { copy.backdrop = a.backdrop }
+            return copy
+        }
+        for item in missing.prefix(40) {
+            let key = item.mediaType + "|" + titleKey(item.title)
+            artAsked.insert(key)
+            Task {
+                if let a = await Catalog.artwork(item.mediaType, item.title) { art[key] = a }
+            }
+        }
+        return out
     }
 
     /// Al acercarse al final de una fila se pide la página siguiente.
@@ -113,9 +141,9 @@ struct RowsScreen: View {
                         // "Continuar viendo" y "Mis favoritos" van arriba en Inicio (nube compartida).
                         if mode == "home" {
                             let _ = session.dataTick
-                            let continueItems = UserData.shared.continueWatching()
+                            let continueItems = model.withArtwork(UserData.shared.continueWatching())
                             if !continueItems.isEmpty { RowView(row: Row(title: "Continuar viendo", items: continueItems)) }
-                            let favs = UserData.shared.favorites()
+                            let favs = model.withArtwork(UserData.shared.favorites())
                             if !favs.isEmpty { RowView(row: Row(title: "Mis favoritos", items: favs)) }
                         }
                         ForEach(model.rows) { row in

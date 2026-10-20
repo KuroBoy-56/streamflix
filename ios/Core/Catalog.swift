@@ -205,6 +205,14 @@ public enum Catalog {
                        recommendations: tmdbResults(json["recommendations"], mediaType).map(\.item), seasons: seasons)
     }
 
+    /// Portada y banner de TMDb (con la clave de la cuenta) para un título guardado en la nube con
+    /// las imágenes de otro sitio o sin ellas. nil si TMDb no lo encuentra.
+    public static func artwork(_ mediaType: String, _ title: String) async -> (poster: String, backdrop: String)? {
+        let results = tmdbResults(await tmdbGet("search/" + mediaType, ["query": title, "include_adult": "false"]), mediaType)
+        guard let r = results.first(where: { titleKey($0.item.title) == titleKey(title) }) ?? results.first else { return nil }
+        return (r.item.poster, r.item.backdrop)
+    }
+
     /// Id de TMDb de un título guardado por Android con el id de otro sitio: mismo nombre (y año).
     static func tmdbMatch(_ mediaType: String, _ title: String, _ year: String) async -> String {
         var params = ["query": title, "include_adult": "false"]

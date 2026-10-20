@@ -387,9 +387,15 @@ public final class UserData {
         return out
     }
 
+    /// Canales en vivo que Android guarda en la nube ("Live", listas IPTV, Vavoo): van solo en En Vivo.
+    static func isLiveKey(_ key: String) -> Bool {
+        let k = key.lowercased()
+        return k == "live" || k.contains("iptv") || k.contains("vavoo") || k.contains("live_tv")
+    }
+
     public func continueWatching() -> [Item] {
         var entries: [(sortKey: Int64, item: Item)] = []
-        for key in data.keys.sorted() {
+        for key in data.keys.sorted() where !Self.isLiveKey(key) {
             let part = data[key]!
             for (_, rec) in part["movies"] ?? [:] where udHas(rec, "watchHistory") {
                 var item = Self.recordToItem(key, "movies", rec)
@@ -409,7 +415,7 @@ public final class UserData {
 
     public func favorites() -> [Item] {
         var entries: [(sortKey: Int64, item: Item)] = []
-        for key in data.keys.sorted() {
+        for key in data.keys.sorted() where !Self.isLiveKey(key) {
             for kind in ["movies", "tv_shows"] {
                 for (_, rec) in data[key]?[kind] ?? [:] where udBool(rec["isFavorite"]) == true {
                     entries.append((toLong(rec["favoritedAtMillis"]), Self.recordToItem(key, kind, rec)))
