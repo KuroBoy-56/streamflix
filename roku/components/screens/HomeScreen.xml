@@ -9,6 +9,7 @@
   </interface>
   <script type="text/brightscript" uri="pkg:/source/Utils.brs"/>
   <script type="text/brightscript" uri="pkg:/source/Screen.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Tasks.brs"/>
   <script type="text/brightscript" uri="pkg:/components/screens/HomeScreen.brs"/>
   <children>
     <Group id="views"/>

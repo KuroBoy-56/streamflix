@@ -1,28 +1,42 @@
 // Pestañas de abajo como la versión de celular: Inicio, En Vivo (si el panel asignó canales),
-// Películas, Series, Favoritos y Ajustes. La lupa de arriba abre la búsqueda.
+// Películas, Series, Favoritos y Ajustes. La lupa de arriba abre la búsqueda. Sin proveedores
+// compatibles con iPhone no hay catálogo (solo En Vivo si tiene canales, y Ajustes).
 import SwiftUI
 
 struct MainTabView: View {
     @EnvironmentObject var session: Session
 
+    /// Se cerró el aviso de "sin proveedores para iPhone".
+    @State private var noticeClosed = false
+
     var body: some View {
         TabView {
-            if Live.hasLive && !hasVod {
-                tab(LiveView(), "En Vivo", "dot.radiowaves.left.and.right")
-            } else {
+            if hasVod {
                 tab(RowsScreen(mode: "home"), "Inicio", "house.fill")
                 if Live.hasLive { tab(LiveView(), "En Vivo", "dot.radiowaves.left.and.right") }
                 tab(RowsScreen(mode: "movie"), "Películas", "film")
                 tab(RowsScreen(mode: "tv"), "Series", "tv")
+                tab(FavoritesView(), "Favoritos", "heart.fill")
+            } else if Live.hasLive {
+                // Cuenta solo con canales: En Vivo es el inicio.
+                tab(LiveView(), "En Vivo", "dot.radiowaves.left.and.right")
             }
-            tab(FavoritesView(), "Favoritos", "heart.fill")
             tab(SettingsView(), "Ajustes", "gearshape.fill")
         }
         .tint(Theme.navActive)
+        .alert("Sin proveedores para iPhone", isPresented: Binding(
+            get: { !hasVod && !Live.hasLive && !noticeClosed },
+            set: { if !$0 { noticeClosed = true } }
+        )) {
+            Button("Aceptar", role: .cancel) {}
+        } message: {
+            Text("Los proveedores de esta cuenta solo funcionan en la app de Android. Pide a tu distribuidor que marque en el panel un proveedor compatible con iPhone.")
+        }
     }
 
-    /// Cuenta solo con canales (sin servidores de películas): En Vivo es el inicio.
-    private var hasVod: Bool { !Reg.read("assigned_servers").isEmpty }
+    /// Inicio, Películas y Series solo si la cuenta tiene algún proveedor que iPhone sabe usar
+    /// (Cuevana 3, PoseidonHD2, CineCalidad o VixSrc), igual que Roku.
+    private var hasVod: Bool { !Sources.assignedSites(Reg.read("assigned_servers")).isEmpty }
 
     private func tab<V: View>(_ view: V, _ title: String, _ icon: String) -> some View {
         NavigationStack {

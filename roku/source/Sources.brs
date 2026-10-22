@@ -190,19 +190,6 @@ function FindOnSites(p as object) as object
     return { found: found, year: year }
 end function
 
-' Sitios que Roku sabe leer y que el panel asignó a la cuenta (assigned_servers del login, nombre
-' normalizado: "Cuevana 3" -> "cuevana3"). Si no asignó ninguno de ellos, todos (para que igual
-' reproduzca).
-function AssignedSites() as object
-    known = { cuevana3: "cuevana", poseidonhd2: "poseidon", cinecalidad: "cine", vixsrc: "vixsrc" }
-    sites = {}
-    for each name in RegRead("assigned_servers").Split(",")
-        site = known[TitleKey(name)]
-        if site <> invalid then sites[site] = true
-    end for
-    ' Solo los proveedores marcados en el panel para la cuenta (sin ninguno, no se busca en ninguno).
-    return sites
-end function
 
 ' IDs del título en cada sitio, con el formato que usa la app Android en la nube (clave =
 ' nombre del proveedor en Android). Así Roku escribe en los mismos registros que el celular.

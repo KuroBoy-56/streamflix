@@ -344,3 +344,15 @@ function LinkEpisodeId(link as object, season as string, episode as string) as s
     if link.style = "cine" then return link.base + "/ver-el-episodio/" + link.slug + "-" + season + "x" + episode + "/"
     return ""
 end function
+
+' Sitios que Roku sabe leer y que el panel asignó a la cuenta (assigned_servers del login, nombre
+' normalizado: "Cuevana 3" -> "cuevana3"). Solo esos: sin ninguno, la cuenta no tiene catálogo en Roku.
+function AssignedSites() as object
+    known = { cuevana3: "cuevana", poseidonhd2: "poseidon", cinecalidad: "cine", vixsrc: "vixsrc" }
+    sites = {}
+    for each name in RegRead("assigned_servers").Split(",")
+        site = known[TitleKey(name)]
+        if site <> invalid then sites[site] = true
+    end for
+    return sites
+end function
