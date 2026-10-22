@@ -23,6 +23,8 @@ targets:
         PRODUCT_NAME: VODPro
         TARGETED_DEVICE_FAMILY: "1,2"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # Icono del administrador 95925 (como el activity-alias .Admin95925 de Android).
+        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: AppIcon95925
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         INFOPLIST_FILE: App/Info.plist
         CODE_SIGN_STYLE: Automatic

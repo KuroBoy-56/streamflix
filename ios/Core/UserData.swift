@@ -135,40 +135,81 @@ public final class UserData {
         }
     }
 
-    /// Fusiona el documento de la nube (todos los proveedores). Devuelve true si lo local tiene
-    /// algo que la nube no (hay que subir).
-    public func mergeRemote(_ doc: JSON) -> Bool {
-        let remote = Self.normalize(doc)
-        var local = data
+    /// Última copia de la nube que este equipo leyó (y fusionó) o subió: la "base" de la fusión.
+    static func baseFile(_ profileId: String) -> String { "cloud_" + profileId + ".json" }
+
+    /// Fusión de tres vías (spec compartida con Android y Roku): base = última nube conocida,
+    /// remote = la nube recién leída, local = lo de este equipo. Así no se borra lo que otro
+    /// equipo escribió mientras esta app estaba abierta. needsUpload: lo fusionado difiere de la nube.
+    static func merge3(local: UDDoc, remote: UDDoc, base: UDDoc) -> (merged: UDDoc, needsUpload: Bool) {
+        var merged = local
         var needsUpload = false
-        for (key, rpart) in remote {
-            var lpart = local[key] ?? Self.normalizePart(nil)
+        for key in Set(local.keys).union(remote.keys) {
+            var part = local[key] ?? normalizePart(nil)
             for kind in udKinds {
-                for (id, r) in rpart[kind] ?? [:] {
-                    guard let l = lpart[kind]?[id] else { lpart[kind]![id] = r; continue }
-                    let ru = Self.updatedAt(kind, r), lu = Self.updatedAt(kind, l)
-                    if ru > lu || (ru == lu && Self.hasData(kind, r) && !Self.hasData(kind, l)) {
-                        lpart[kind]![id] = r
-                    } else if lu > ru {
-                        needsUpload = true
-                    }
+                let r = remote[key]?[kind] ?? [:], b = base[key]?[kind] ?? [:], l = local[key]?[kind] ?? [:]
+                var m = l
+                for (id, rr) in r {
+                    // Sin cambios en la nube desde la base: se respeta lo local (también si se borró aquí).
+                    if let bb = b[id], updatedAt(kind, bb) == updatedAt(kind, rr), hasData(kind, bb) == hasData(kind, rr) { continue }
+                    guard let ll = l[id] else { m[id] = rr; continue }
+                    let ru = updatedAt(kind, rr), lu = updatedAt(kind, ll)
+                    if ru > lu || (ru == lu && hasData(kind, rr) && !hasData(kind, ll)) { m[id] = rr }
+                }
+                // Estaba en la base y ya no en la nube: otro equipo lo quitó (salvo que aquí sea más nuevo).
+                for (id, ll) in l where r[id] == nil {
+                    if let bb = b[id], updatedAt(kind, ll) <= updatedAt(kind, bb) { m[id] = nil }
+                }
+                part[kind] = m
+                // Se sube si los registros con datos no coinciden con los de la nube.
+                let mine = m.filter { hasData(kind, $0.value) }, theirs = r.filter { hasData(kind, $0.value) }
+                if Set(mine.keys) != Set(theirs.keys) || mine.contains(where: { updatedAt(kind, $0.value) != updatedAt(kind, theirs[$0.key]!) }) {
+                    needsUpload = true
                 }
             }
-            local[key] = lpart
+            merged[key] = part
         }
-        for (key, part) in local {
-            for kind in udKinds {
-                for id in (part[kind] ?? [:]).keys where remote[key]?[kind]?[id] == nil { needsUpload = true }
-            }
+        return (merged, needsUpload)
+    }
+
+    /// Fusiona la nube recién leída con lo local del perfil (el activo o uno que se acaba de dejar)
+    /// y la guarda como nueva base. Devuelve true si lo local tiene algo que la nube no (hay que subir).
+    @discardableResult
+    public func mergeRemote(_ doc: JSON, profileId other: String? = nil) -> Bool {
+        let pid = other ?? profileId
+        let active = pid == profileId
+        let local = active ? data : Self.normalize(jsonOf(Paths.readText(Self.fileName(pid))))
+        let base = Self.normalize(jsonOf(Paths.readText(Self.baseFile(pid))))
+        let result = Self.merge3(local: local, remote: Self.normalize(doc), base: base)
+        Paths.writeText(Self.fileName(pid), jsonText(result.merged))
+        Paths.writeText(Self.baseFile(pid), jsonText(doc))
+        if active {
+            data = result.merged
+            notify()
         }
-        data = local
-        save()
-        notify()
-        return needsUpload
+        return result.needsUpload
+    }
+
+    /// Lo subido con éxito pasa a ser la base de la próxima fusión.
+    public func uploaded(_ doc: JSON, profileId pid: String) {
+        Paths.writeText(Self.baseFile(pid), jsonText(doc))
+    }
+
+    /// Cuerpo para subir: la nube recién leída con cada proveedor de este equipo reemplazado por
+    /// lo fusionado (solo registros con datos). Los proveedores que el equipo no tiene quedan igual.
+    public func uploadBody(_ remote: JSON, profileId other: String? = nil) -> JSON {
+        let pid = other ?? profileId
+        let local = pid == profileId ? data : Self.normalize(jsonOf(Paths.readText(Self.fileName(pid))))
+        var out: JSON = [:]
+        for (key, value) in remote where !key.hasPrefix("_") { out[key] = value }
+        for (key, part) in Self.forUpload(local) { out[key] = part }
+        return out
     }
 
     /// Lo que se sube: todos los proveedores, solo registros con datos del usuario.
-    public func forUpload() -> JSON {
+    public func forUpload() -> JSON { Self.forUpload(data) }
+
+    static func forUpload(_ data: UDDoc) -> JSON {
         var out: JSON = [:]
         for (key, part) in data {
             var outPart: JSON = [:]

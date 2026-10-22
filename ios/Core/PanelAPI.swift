@@ -216,13 +216,12 @@ public enum PanelAPI {
 
     // MARK: Nube del perfil (CloudSyncManager -> sync_userdata.php?u=<usuario>&p=<perfil>)
 
-    static func cloudFile(_ profileId: String) -> String { "cloud_\(profileId).json" }
-
     static func syncURL(_ profileId: String) -> String {
         Panel.apiURL("sync_userdata.php") + "?u=" + activeUserId() + "&p=" + profileId
     }
 
-    /// Documento completo de la nube (todas las claves de proveedor de Android).
+    /// Documento completo de la nube (todas las claves de proveedor de Android, sin las "_...").
+    /// La base de la fusión la guarda UserData.mergeRemote.
     public static func syncDown(_ profileId: String) async -> JSON? {
         if Reg.read("alpha_token").isEmpty { return nil }
         let r = await http(syncURL(profileId), headers: syncHeaders(), timeout: 10)
@@ -234,30 +233,19 @@ public enum PanelAPI {
                 for (key, value) in json where !key.hasPrefix("_") && value is JSON { doc[key] = value }
             }
         }
-        // Copia completa de la nube: al subir se conservan los proveedores que iOS no usa.
-        Paths.writeText(cloudFile(profileId), jsonText(doc))
         return doc
     }
 
-    public static func syncUp(_ profileId: String, data: JSON) async -> Bool {
-        // Nunca se sube sin haber leído la nube antes: en un equipo nuevo borraría datos de otros.
-        var text = Paths.readText(cloudFile(profileId))
-        if text.isEmpty {
-            guard await syncDown(profileId) != nil else { return false }
-            text = Paths.readText(cloudFile(profileId))
-        }
-        var doc = jsonOf(text) as? JSON ?? [:]
-        // Se parte de la copia de la nube y se reemplazan los proveedores que tiene iOS.
-        for (key, value) in data { doc[key] = value }
+    /// Sube el documento completo (el servidor reemplaza todo): se arma con UserData.uploadBody
+    /// sobre la nube leída justo antes.
+    public static func syncUp(_ profileId: String, doc: JSON) async -> Bool {
+        if Reg.read("alpha_token").isEmpty { return false }
         var headers = syncHeaders()
         headers["Content-Type"] = "application/json"
-        let body = jsonText(doc)
-        let r = await http(syncURL(profileId), method: "POST", body: body, headers: headers, timeout: 10)
+        let r = await http(syncURL(profileId), method: "POST", body: jsonText(doc), headers: headers, timeout: 10)
         // El servidor responde 200 también en errores: se revisa "status".
         let json = jsonOf(r.body) as? JSON
-        let ok = r.code == 200 && (json == nil || json?["status"] == nil || asStr(json?["status"]) == "success")
-        if ok { Paths.writeText(cloudFile(profileId), body) }
-        return ok
+        return r.code == 200 && (json == nil || json?["status"] == nil || asStr(json?["status"]) == "success")
     }
 
     // MARK: Reporte de errores al panel (ErrorReporter -> log_error.php)

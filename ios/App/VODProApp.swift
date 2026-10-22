@@ -34,6 +34,7 @@ struct VODProApp: App {
 
 struct RootView: View {
     @EnvironmentObject var session: Session
+    @Environment(\.scenePhase) private var phase
 
     var body: some View {
         ZStack {
@@ -51,6 +52,8 @@ struct RootView: View {
         .sheet(isPresented: $session.showNotice) {
             NoticeView()
         }
+        // Al volver a la app se trae lo que otro equipo guardó en la nube.
+        .onChange(of: phase) { p in if p == .active { session.refreshCloud() } }
     }
 }
 

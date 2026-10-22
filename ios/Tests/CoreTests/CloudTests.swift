@@ -156,4 +156,70 @@ final class CloudTests: XCTestCase {
         XCTAssertFalse(ud.mergeRemote(newer))
         XCTAssertFalse(ud.isFavorite(item, links: [:]))
     }
+    // MARK: Fusión de tres vías (Roku/Android escriben mientras esta app está abierta)
+
+    func fav(_ id: String, _ at: Int64, _ on: Bool = true) -> JSON { ["id": id, "title": id, "isFavorite": on, "favoritedAtMillis": at] }
+    func doc(_ movies: [String: JSON], key: String = "Cuevana_3") -> UDDoc { [key: ["movies": movies, "tv_shows": [:], "episodes": [:]]] }
+
+    func testMerge3KeepsOtherDevicesRecords() {
+        // Base: lo que este equipo leyó al iniciar. Roku agregó "b" a la nube; aquí se agregó "c".
+        let base = doc(["a": fav("a", 10)])
+        let remote = doc(["a": fav("a", 10), "b": fav("b", 20)])
+        let local = doc(["a": fav("a", 10), "c": fav("c", 30)])
+        let r = UserData.merge3(local: local, remote: remote, base: base)
+        XCTAssertEqual(Set((r.merged["Cuevana_3"]?["movies"] ?? [:]).keys), ["a", "b", "c"])
+        XCTAssertTrue(r.needsUpload, "c no está en la nube")
+    }
+
+    func testMerge3Deletions() {
+        // Borrado aquí (la nube no cambió desde la base): se respeta y se sube.
+        var r = UserData.merge3(local: doc([:]), remote: doc(["a": fav("a", 10)]), base: doc(["a": fav("a", 10)]))
+        XCTAssertNil(r.merged["Cuevana_3"]?["movies"]?["a"])
+        XCTAssertTrue(r.needsUpload)
+        // Borrado en otro equipo (estaba en la base, ya no en la nube) y sin cambios aquí: se quita.
+        r = UserData.merge3(local: doc(["a": fav("a", 10)]), remote: doc([:]), base: doc(["a": fav("a", 10)]))
+        XCTAssertNil(r.merged["Cuevana_3"]?["movies"]?["a"])
+        XCTAssertFalse(r.needsUpload)
+        // Borrado en otro equipo pero aquí es más nuevo: se conserva y se sube.
+        r = UserData.merge3(local: doc(["a": fav("a", 50)]), remote: doc([:]), base: doc(["a": fav("a", 10)]))
+        XCTAssertNotNil(r.merged["Cuevana_3"]?["movies"]?["a"])
+        XCTAssertTrue(r.needsUpload)
+    }
+
+    func testMerge3NewestWins() {
+        // Cambió en la nube y aquí: gana el más reciente.
+        var r = UserData.merge3(local: doc(["a": fav("a", 40)]), remote: doc(["a": fav("a", 30, false)]), base: doc(["a": fav("a", 10)]))
+        XCTAssertEqual(udBool(r.merged["Cuevana_3"]?["movies"]?["a"]?["isFavorite"]), true)
+        XCTAssertTrue(r.needsUpload)
+        r = UserData.merge3(local: doc(["a": fav("a", 20)]), remote: doc(["a": fav("a", 30, false)]), base: doc(["a": fav("a", 10)]))
+        XCTAssertEqual(udBool(r.merged["Cuevana_3"]?["movies"]?["a"]?["isFavorite"]), false)
+        XCTAssertFalse(r.needsUpload, "la nube ya tiene lo último")
+        // Sin base (equipo nuevo): todo lo de la nube entra.
+        r = UserData.merge3(local: [:], remote: doc(["a": fav("a", 10)]), base: [:])
+        XCTAssertNotNil(r.merged["Cuevana_3"]?["movies"]?["a"])
+        XCTAssertFalse(r.needsUpload)
+    }
+
+    func testUploadBodyKeepsUnknownKeys() {
+        let ud = UserData()
+        ud.load(profileId: "t3")
+        let remote: JSON = ["Otro_Proveedor": ["movies": ["x": fav("x", 5)]] as JSON,
+                            "Cuevana_3": ["movies": ["a": fav("a", 10)]] as JSON]
+        XCTAssertFalse(ud.mergeRemote(remote))
+        ud.setFavorite(Item(itemId: "9", mediaType: "movie", title: "Nueve"), links: [:], favorite: true)
+        // Se lee la nube otra vez antes de subir: Roku agregó "b" mientras tanto.
+        let later: JSON = ["Otro_Proveedor": ["movies": ["x": fav("x", 5)]] as JSON,
+                           "Cuevana_3": ["movies": ["a": fav("a", 10), "b": fav("b", 20)]] as JSON,
+                           "_meta": ["v": 1] as JSON]
+        XCTAssertTrue(ud.mergeRemote(later))
+        let body = ud.uploadBody(later)
+        XCTAssertNil(body["_meta"])
+        XCTAssertNotNil(((body["Otro_Proveedor"] as? JSON)?["movies"] as? JSON)?["x"])
+        XCTAssertEqual(Set((((body["Cuevana_3"] as? JSON)?["movies"] as? JSON) ?? [:]).keys), ["a", "b"])
+        XCTAssertNotNil(((body["TMDb__es_"] as? JSON)?["movies"] as? JSON)?["9"])
+        // Tras subir, la base es lo subido: la próxima lectura igual a lo subido no pide subir.
+        ud.uploaded(body, profileId: "t3")
+        XCTAssertFalse(ud.mergeRemote(body))
+        XCTAssertTrue(ud.isFavorite(Item(itemId: "9", mediaType: "movie", title: "Nueve"), links: [:]))
+    }
 }
