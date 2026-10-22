@@ -269,7 +269,7 @@ public enum Catalog {
     /// ApiResolve: enlace HLS de VixSrc con el audio del idioma de Ajustes.
     public static func resolveVixSrc(_ p: PlaybackRequest) async -> Result<Stream, CoreError> {
         let lang = audioLanguage()
-        let base = "https://vixsrc.to"
+        let base = Sources.siteHost("vixsrc", "vixsrc.to")
         let apiPath = p.mediaType == "movie" ? "/api/movie/" + p.id : "/api/tv/" + p.id + "/" + String(p.season) + "/" + String(p.episode)
         let apiURL = base + apiPath + "?lang=" + lang
         let jsonHeaders = ["Accept": "application/json, text/plain, */*", "X-Requested-With": "XMLHttpRequest", "Referer": base]

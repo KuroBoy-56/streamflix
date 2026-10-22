@@ -41,6 +41,9 @@ final class BaseTests: XCTestCase {
         Reg.writeMany(PanelAPI.panelDomains(["cinecalidad": "cine.nuevo"] as JSON)!)
         XCTAssertEqual(Sources.siteCuevana, "https://wv3.cuevana3.eu")
         XCTAssertEqual(Sources.siteCineCalidad, "https://cine.nuevo")
+        XCTAssertEqual(Sources.siteHost("vixsrc", "vixsrc.to"), "https://vixsrc.to")
+        Reg.writeMany(PanelAPI.panelDomains(["vixsrc": "vix.nuevo"] as JSON)!)
+        XCTAssertEqual(Sources.siteHost("vixsrc", "vixsrc.to"), "https://vix.nuevo")
     }
 
     func testMac() {
