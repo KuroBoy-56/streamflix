@@ -12,20 +12,20 @@ end sub
 
 sub onParams()
     ApplyBrand()
-    hasVod = RegRead("assigned_servers") <> ""
-    ' Igual que Android: En Vivo solo si el panel le asignó canales a la cuenta al iniciar sesión
-    ' (la marca del panel puede traer líneas del dueño que esta cuenta no tiene).
+    ' Inicio, Películas y Series solo si la cuenta tiene algún proveedor que Roku sabe usar.
+    hasVod = AssignedSites().Count() > 0
+    ' Igual que Android: En Vivo solo si el panel le asignó canales a la cuenta (líneas, URL
+    ' personal o proveedores de canales marcados).
     hasLive = RegRead("live_enabled") = "true"
-    ' Igual que Android: "En Vivo" aparece como sección propia si hay canales y también VOD;
-    ' si la cuenta solo tiene canales, En Vivo es el inicio.
+    ' Si la cuenta solo tiene canales, En Vivo es el inicio.
     onlyLive = hasLive and not hasVod
     m.sections = []
-    if not onlyLive then
+    if hasVod then
         m.sections.Push({ id: "search", title: "Buscar" })
         m.sections.Push({ id: "home", title: "Inicio" })
     end if
     if hasLive then m.sections.Push({ id: "live", title: "En Vivo" })
-    if not onlyLive then
+    if hasVod then
         m.sections.Push({ id: "movies", title: "Películas" })
         m.sections.Push({ id: "tv", title: "Series" })
         m.sections.Push({ id: "favorites", title: "Favoritos" })
@@ -37,7 +37,15 @@ sub onParams()
         item.title = s.title
     end for
     m.menu.content = content
-    if onlyLive then ShowSection("live") else ShowSection("home")
+    if hasVod then
+        ShowSection("home")
+    else if onlyLive then
+        ShowSection("live")
+    else
+        ' Ningún proveedor de la cuenta funciona en Roku: solo Ajustes y el aviso.
+        ShowSection("settings")
+        ShowMessage("Sin proveedores para Roku", "Los proveedores de esta cuenta solo funcionan en la app de Android. Pide a tu distribuidor que marque en el panel un proveedor compatible con Roku.")
+    end if
 end sub
 
 sub ApplyBrand()
