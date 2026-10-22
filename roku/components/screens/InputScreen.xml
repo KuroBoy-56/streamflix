@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Teclado en pantalla (texto, contraseña o PIN). Responde con { type: "result", tag, text }. -->
+<!-- Teclado en pantalla con voz (texto, contraseña o PIN; RSG 1.3 y requisito 4.12 de Roku).
+     Responde con { type: "result", tag, text }. -->
 <component name="InputScreen" extends="Group">
   <interface>
     <field id="params" type="assocarray" onChange="onParams"/>
@@ -13,8 +14,8 @@
   <children>
     <Rectangle width="1920" height="1080" color="0x0F111AF2"/>
     <Label id="title" translation="[0,90]" width="1920" horizAlign="center" font="font:LargeBoldSystemFont" color="0xFFFFFFFF"/>
-    <Keyboard id="keyboard" translation="[392,200]" visible="false"/>
-    <PinPad id="pinpad" translation="[660,200]" visible="false" pinLength="4" secureMode="true"/>
+    <DynamicKeyboard id="keyboard" translation="[417,200]" visible="false"/>
+    <DynamicPinPad id="pinpad" translation="[660,200]" visible="false"/>
     <MarkupGrid id="buttons" translation="[668,880]" itemComponentName="PillItem" drawFocusFeedback="false" numRows="1" numColumns="2" itemSize="[280,80]" itemSpacing="[24,0]"/>
     <Label id="hint" translation="[0,1000]" width="1920" horizAlign="center" font="font:SmallSystemFont" color="0x9A9A9AFF" text="Baja con el control para Aceptar. El botón ▶ también acepta."/>
   </children>
