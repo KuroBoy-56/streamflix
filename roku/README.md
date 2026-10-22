@@ -31,7 +31,7 @@ Para publicarlo en la tienda de canales de Roku, sube ese mismo zip en el
 | Actualización obligatoria del panel | No aplica en Roku (es un APK para Android): se ignora. El canal se actualiza subiendo el zip nuevo |
 | Marca del distribuidor: logo, fondo, splash, nombre y nota en Ajustes; se actualiza cada 5 min (`config.json` / `config_<APP ID>.json`) | Igual |
 | Perfiles "¿Quién está viendo?" con PIN, avatar, crear, renombrar y eliminar (`profiles.php`) | Igual (botón * edita un perfil) |
-| Favoritos, historial y "Continuar viendo" sincronizados por perfil (`sync_userdata.php`) | Igual: la misma nube y los mismos registros que Android (por proveedor: Cuevana 3, Poseidonhd2, CineCalidad...). Lo que marcas en Android aparece en Roku y al revés |
+| Favoritos, historial y "Continuar viendo" sincronizados por perfil (`sync_userdata.php`) | Igual: la misma nube y los mismos registros que Android (por proveedor: Cuevana 3, Poseidonhd2, CineCalidad...). Antes de cada subida se lee la nube y se fusiona en tres vías (base = última nube leída o subida), así no se borra lo que escribió Android. Al volver al Inicio se lee la nube otra vez (máx. una vez por minuto) |
 | Catálogo TMDb con la clave del panel: tendencias, populares, anime y por plataforma; películas y series por género; ficha con reparto y recomendaciones; temporadas y episodios; búsqueda; filmografía de cada actor | Igual |
 | En Vivo estilo TiviMate: carpetas por categoría y país, canales, vista previa y guía (EPG) | Igual: arriba se elige **Categorías** o **Países** y cada canal aparece solo en su país |
 | Líneas de canales del panel, URL personal y línea por defecto; sin duplicados ni canales para adultos; si una señal falla pasa sola a otra línea | Igual |
@@ -51,10 +51,15 @@ Para publicarlo en la tienda de canales de Roku, sube ese mismo zip en el
   Si la cuenta usa otro proveedor por defecto, lo nuevo de Roku se guarda con el ID de TMDb.
   Los títulos que llegan de Android se abren buscándolos por nombre en TMDb.
 - **Servidores de video (búsqueda automática, como Android).** Al reproducir, el canal busca el
-  título en **Cuevana**, **PoseidonHD2** y **CineCalidad** (los dos primeros por el ID exacto de
-  TMDb) y arma la lista de servidores en el idioma de Ajustes:
-  - Español latino: servidores latinos → VixSrc (audio o subtítulos en español) → subtitulados → castellano.
-  - Inglés: VixSrc → servidores con audio original.
+  título solo en los sitios que el panel asignó a la cuenta entre **Cuevana 3**, **PoseidonHD2** y
+  **CineCalidad** (los dos primeros por el ID exacto de TMDb; si no tiene asignado ninguno de los
+  tres, busca en todos) y arma la lista en el idioma de Ajustes:
+  - Español latino (por defecto): latino → castellano → subtitulado.
+  - Inglés: audio original (subtitulado) → latino → castellano.
+  - VixSrc solo si esos sitios no dieron ningún servidor.
+  En pantalla se ve "Servidor 1 · Latino", "Servidor 2 · Castellano"... (sin el nombre del sitio).
+  Audio: español latino → español → inglés (nunca italiano u otro si hay inglés); el menú * los
+  lista en ese orden.
   El reproductor prueba uno por uno; si un video falla pasa solo al siguiente desde el mismo
   minuto. Lee StreamWish, VidHide/FileLions, Voe, DoodStream, Streamtape, Ok.ru, MixDrop, Uqload,
   Goodstream y similares. **No** se pueden abrir en Roku: Filemoon (exige una firma del
