@@ -9,7 +9,8 @@
 function LiveSources() as object
     urls = []
     seen = {}
-    for each line in SplitLines(RegRead("panel_channel_lines") + Chr(10) + RegRead("personal_provider_url"))
+    ' Líneas del panel, URL personal y proveedores de canales marcados (Pluto TV, IPTV-Org).
+    for each line in SplitLines(RegRead("panel_channel_lines") + Chr(10) + RegRead("personal_provider_url") + Chr(10) + RegRead("live_provider_lines"))
         if IsHttpUrl(line) and not seen.DoesExist(line) then
             seen[line] = true
             urls.Push(line)

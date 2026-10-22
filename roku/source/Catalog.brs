@@ -348,7 +348,7 @@ end function
 ' p: { mediaType, id, season, episode } -> { ok, url, format, headers, server } o { ok: false, error }
 function ApiResolve(p as object) as object
     lang = AudioLanguage()
-    base = "https://vixsrc.to"
+    base = SiteHost("vixsrc", "vixsrc.to")
     if p.mediaType = "movie" then
         apiPath = "/api/movie/" + AsStr(p.id)
     else
