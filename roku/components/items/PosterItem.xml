@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Tarjeta de película, serie, persona o canal: esquinas redondeadas, aro rojo y acercamiento al enfocar. -->
+<!-- Tarjeta de película, serie, persona o canal: esquinas redondeadas, aro blanco y acercamiento al enfocar. -->
 <component name="PosterItem" extends="Group">
   <interface>
     <field id="itemContent" type="node" onChange="onContent"/>
@@ -16,7 +16,7 @@
       <Label id="fallback" color="0xC8C8C8FF" font="font:SmallSystemFont" horizAlign="center" vertAlign="center" wrap="true" maxLines="3"/>
       <Poster id="poster" loadDisplayMode="scaleToZoom"/>
       <Rectangle id="progressBg" color="0x000000AA" height="8" visible="false"/>
-      <Rectangle id="progress" color="0xE50914FF" height="8" visible="false"/>
+      <Rectangle id="progress" color="0xE5E5E5FF" height="8" visible="false"/>
       <Poster id="mask" uri="pkg:/images/poster_mask.9.png"/>
       <Poster id="ring" uri="pkg:/images/poster_ring.9.png" opacity="0"/>
     </Group>

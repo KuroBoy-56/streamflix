@@ -42,7 +42,7 @@ sub RenderForm()
     if m.pass <> "" then passText = String(Len(m.pass), "•")
     ' Selector gris claro; el botón sigue rojo (HDPosterUrl = foco, SDPosterUrl = reposo).
     gray = { HDPosterUrl: "pkg:/images/field_focus_gray.9.png" }
-    button = { HDPosterUrl: "pkg:/images/button_focus.9.png", SDPosterUrl: "pkg:/images/field_focus.9.png" }
+    button = { HDPosterUrl: "pkg:/images/button_focus.9.png", SDPosterUrl: "pkg:/images/button.9.png" }
     SetPills(m.form, ["Usuario:  " + userText, "Contraseña:  " + passText, "Iniciar sesión"], "left", -1, [gray, gray, button])
 end sub
 

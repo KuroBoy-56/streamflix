@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Opción de menú: fondo rojo redondeado con margen al enfocar; tono suave si la lista no tiene el foco. -->
+<!-- Opción de menú: fondo blanco translúcido redondeado con margen al enfocar; tono suave si la lista no tiene el foco. -->
 <component name="MenuItem" extends="Group">
   <interface>
     <field id="itemContent" type="node" onChange="onContent"/>

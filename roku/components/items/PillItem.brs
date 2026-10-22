@@ -1,5 +1,5 @@
 ' Contenido: title (texto), ShortDescriptionLine1 = "left" para alinear a la izquierda,
-' ShortDescriptionLine2 = "primary" para el botón principal (rojo suave aun sin foco).
+' ShortDescriptionLine2 = "primary" para el botón principal (resaltado suave aun sin foco).
 sub init()
     m.idle = m.top.findNode("idle")
     m.focus = m.top.findNode("focus")

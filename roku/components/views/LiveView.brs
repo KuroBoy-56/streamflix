@@ -112,7 +112,7 @@ end sub
 
 ' Carpetas del modo elegido: "Todos" y categorías, o países.
 sub RenderFolders()
-    ' El modo activo queda marcado en rojo suave.
+    ' El modo activo queda marcado en blanco translúcido.
     active = 0
     if m.mode = "country" then active = 1
     if m.modes.visible then SetPills(m.modes, ["Categorías", "Países"], "", active)

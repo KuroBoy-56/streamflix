@@ -13,7 +13,7 @@
   <children>
     <Rectangle width="1920" height="1080" color="0x000000CC"/>
     <Poster id="panel" width="1000" height="560" translation="[460,260]" uri="pkg:/images/card.9.png">
-      <Rectangle translation="[60,2]" width="880" height="6" color="0xE50914FF"/>
+      <Rectangle translation="[60,2]" width="880" height="6" color="0xE5E5E5FF"/>
       <Label id="title" translation="[60,50]" width="880" font="font:LargeBoldSystemFont" color="0xFFFFFFFF"/>
       <Label id="message" translation="[60,130]" width="880" height="250" wrap="true" font="font:MediumSystemFont" color="0xE5E5E5FF"/>
       <MarkupGrid id="buttons" itemComponentName="PillItem" drawFocusFeedback="false" numRows="1" numColumns="2" itemSize="[300,80]" itemSpacing="[24,0]"/>
