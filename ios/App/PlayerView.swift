@@ -24,6 +24,7 @@ final class PlayerModel: ObservableObject {
     private var episodes: [Episode]
     private var servers: [Server] = []
     private var serverIndex = -1
+    private var serverLabel = ""
     private var resumeAt = 0
     private var lastSaved = 0
     private var audioChosen = false
@@ -64,7 +65,8 @@ final class PlayerModel: ObservableObject {
             let res = await Sources.servers(request)
             guard !closing else { return }
             servers = res.servers
-            if !res.links.isEmpty { request.links = res.links }
+            // Se suman los ids encontrados sin perder los de la ficha (la nube usa los mismos registros).
+            request.links.merge(res.links) { _, new in new }
             await tryServer(0)
         }
     }
@@ -85,14 +87,15 @@ final class PlayerModel: ObservableObject {
         }
         serverIndex = index
         let server = servers[index]
-        // Nunca se muestra el nombre del proveedor: solo el número de servidor.
-        setBusy("Servidor \(index + 1) de \(servers.count)")
+        // Nunca se muestra el nombre del proveedor: número de servidor e idioma ("Servidor 1 · Latino").
+        serverLabel = Sources.label(index, server)
+        setBusy(serverLabel)
         switch await Extract.extract(server, request: request) {
         case .failure:
             if !closing { await tryServer(index + 1) }
         case .success(let stream):
             guard !closing else { return }
-            setBusy("Cargando video...")
+            setBusy(serverLabel + "\nCargando video...")
             // Los servidores de los sitios ya vienen en su idioma: solo VixSrc elige audio/subtítulos.
             audioChosen = server.lang != "multi"
             play(stream)
@@ -128,24 +131,31 @@ final class PlayerModel: ObservableObject {
         player.replaceCurrentItem(with: item)
     }
 
-    /// Audio en el idioma de Ajustes (español latino por defecto). Si el video no lo trae en
-    /// español, se activan los subtítulos en español.
+    /// Audio según Ajustes: latino > castellano > inglés > otro (nunca se deja italiano u otro si
+    /// hay latino o inglés). Si el audio elegido no es español, se activan subtítulos en español.
     private func chooseTracks(_ item: AVPlayerItem) async {
         guard !audioChosen else { return }
         audioChosen = true
         let asset = item.asset
         let lang = audioLanguage()
+        var chosen = false
+        var spanish = false
         if let audio = try? await asset.loadMediaSelectionGroup(for: .audible) {
-            let codes = audio.options.map { $0.extendedLanguageTag ?? $0.locale?.identifier ?? "" }
-            if let best = Tracks.pickAudio(codes, lang: lang) {
+            let tracks: [(language: String, name: String)] = audio.options.map { option in
+                (language: option.extendedLanguageTag ?? option.locale?.identifier ?? "", name: option.displayName)
+            }
+            if let best = Tracks.pickAudio(tracks, lang: lang) {
                 item.select(audio.options[best], in: audio)
-                if let legible = try? await asset.loadMediaSelectionGroup(for: .legible) { item.select(nil, in: legible) }
-                return
+                chosen = true
+                spanish = Tracks.audioScore(tracks[best], lang: "es") >= 2
             }
         }
-        if lang == "es", let legible = try? await asset.loadMediaSelectionGroup(for: .legible) {
-            let codes = legible.options.map { $0.extendedLanguageTag ?? $0.locale?.identifier ?? "" }
-            if let sub = Tracks.pickSubtitle(codes) { item.select(legible.options[sub], in: legible) }
+        guard let legible = try? await asset.loadMediaSelectionGroup(for: .legible) else { return }
+        let codes = legible.options.map { $0.extendedLanguageTag ?? $0.locale?.identifier ?? "" }
+        if lang == "es", !spanish, let sub = Tracks.pickSubtitle(codes) {
+            item.select(legible.options[sub], in: legible)
+        } else if chosen {
+            item.select(nil, in: legible)
         }
     }
 

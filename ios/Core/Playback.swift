@@ -15,7 +15,7 @@ public enum Tracks {
         return "hls"
     }
 
-    /// Pista de audio en el idioma elegido; en español se prefiere el latino al castellano.
+    /// Pista de audio según el idioma de Ajustes (nil si ninguna sirve).
     public static func pickAudio(_ languages: [String], lang: String) -> Int? {
         pickAudio(languages.map { (language: $0, name: "") }, lang: lang)
     }
@@ -24,17 +24,21 @@ public enum Tracks {
         var best: Int?
         var bestScore = 0
         for (i, t) in tracks.enumerated() {
-            let language = t.language.lowercased(), name = t.name.lowercased()
-            var score = 0
-            if lang == "es" {
-                if language.hasPrefix("es") || language.hasPrefix("spa") || name.contains("spanish") || name.contains("español") || name.contains("espanol") { score = 1 }
-                if name.contains("latin") || name.contains("lat)") || name.contains("[lat") || language.contains("419") || language.contains("mx") { score = 2 }
-            } else {
-                if language.hasPrefix("en") || name.contains("english") || name.contains("inglés") { score = 1 }
-            }
+            let score = audioScore(t, lang: lang)
             if score > bestScore { best = i; bestScore = score }
         }
         return best
+    }
+
+    /// Prioridad del audio (igual en Android y Roku): en español, latino 3 > castellano 2 > inglés 1;
+    /// en inglés, inglés 3 > latino 2 > castellano 1. 0 = otro idioma (no se elige).
+    public static func audioScore(_ t: (language: String, name: String), lang: String) -> Int {
+        let language = t.language.lowercased(), name = t.name.lowercased()
+        let english = language.hasPrefix("en") || name.contains("english") || name.contains("inglés") || name.contains("ingles")
+        let latino = name.contains("latin") || name.contains("lat)") || name.contains("[lat") || language.contains("419") || language.contains("mx")
+        let spanish = language.hasPrefix("es") || language.hasPrefix("spa") || name.contains("spanish") || name.contains("español") || name.contains("espanol")
+        if lang == "en" { return english ? 3 : latino ? 2 : spanish ? 1 : 0 }
+        return latino ? 3 : spanish ? 2 : english ? 1 : 0
     }
 
     /// Subtítulos completos en español (no "forced", que solo traducen partes sueltas).

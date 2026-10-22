@@ -40,9 +40,27 @@ final class ExtractTests: XCTestCase {
         ]
         let vix = Server(name: "VixSrc", url: "vixsrc", lang: "multi")
         XCTAssertEqual(Sources.orderServers(found, lang: "es", initial: [], vix: vix).map(\.name),
-                       ["CineCalidad · dood", "VixSrc", "Cuevana · streamwish", "Cuevana · voe"])
+                       ["CineCalidad · dood", "Cuevana · voe", "VixSrc", "Cuevana · streamwish"])
         XCTAssertEqual(Sources.orderServers(found, lang: "en", initial: [vix], vix: vix).map(\.name),
                        ["VixSrc", "Cuevana · streamwish", "CineCalidad · dood", "Cuevana · voe"])
+        // VixSrc no asignado por el panel: no aparece.
+        XCTAssertEqual(Sources.orderServers(found, lang: "es", initial: [], vix: nil).map(\.name),
+                       ["CineCalidad · dood", "Cuevana · voe", "Cuevana · streamwish"])
+
+        // Etiqueta visible: número e idioma, sin el sitio.
+        XCTAssertEqual(Sources.label(0, found[3]), "Servidor 1 · Latino")
+        XCTAssertEqual(Sources.label(1, found[0]), "Servidor 2 · Castellano")
+        XCTAssertEqual(Sources.label(2, vix), "Servidor 3 · Multiaudio")
+        XCTAssertEqual(Sources.label(3, found[1]), "Servidor 4 · Subtitulado")
+    }
+
+    func testAssignedSites() {
+        // Solo los proveedores del panel (nombre normalizado).
+        XCTAssertEqual(Sources.assignedSites("Cuevana 3,TMDb (es)"), ["cuevana", "vix"])
+        XCTAssertEqual(Sources.assignedSites("PoseidonHD2, CineCalidad"), ["poseidon", "cine"])
+        // Ninguno conocido: todos, para que siempre reproduzca.
+        XCTAssertEqual(Sources.assignedSites("Otro"), Sources.allSites)
+        XCTAssertEqual(Sources.assignedSites(""), Sources.allSites)
     }
 
     func testSiteParsers() {
@@ -82,6 +100,9 @@ final class ExtractTests: XCTestCase {
         XCTAssertEqual(Tracks.pickAudio(tracks, lang: "es"), 2)
         XCTAssertEqual(Tracks.pickAudio(tracks, lang: "en"), 0)
         XCTAssertNil(Tracks.pickAudio([(language: "ita", name: "Italiano")], lang: "es"))
+        // Sin español: inglés antes que italiano.
+        XCTAssertEqual(Tracks.pickAudio(["it", "en"], lang: "es"), 1)
+        XCTAssertEqual(Tracks.pickAudio([(language: "ita", name: "Italiano"), (language: "spa", name: "Español"), (language: "eng", name: "English")], lang: "es"), 1)
         XCTAssertEqual(Tracks.pickAudio(["en", "es-ES", "es-419"], lang: "es"), 2)
         XCTAssertEqual(Tracks.pickSubtitle([(language: "spa", name: "a Spanish Forced"), (language: "spa", name: "b Spanish")]), 1)
         XCTAssertEqual(Tracks.pickSubtitle(["en", "es"]), 1)
