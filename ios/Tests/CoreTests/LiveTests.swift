@@ -76,6 +76,9 @@ final class LiveTests: XCTestCase {
         Reg.write("personal_provider_url", "http://a/1.m3u\nftp://x")
         Reg.write("panel_default_channel_line", "http://a/1.m3u")
         XCTAssertEqual(Live.sources(), ["http://a/1.m3u", "http://b/2.m3u"])
+        // Listas de proveedores de canales: después de las del panel y la personal, sin repetir.
+        Reg.write("live_provider_lines", "http://p/pluto.m3u\nhttp://b/2.m3u")
+        XCTAssertEqual(Live.sources(), ["http://a/1.m3u", "http://b/2.m3u", "http://p/pluto.m3u"])
 
         var epg: [String] = []
         let base = Live.cleanChannels(Live.parseM3u(m3u, epg: &epg))
@@ -100,6 +103,9 @@ final class LiveTests: XCTestCase {
         XCTAssertTrue(Live.hasLive)
         Reg.write("panel_channel_lines", "")
         XCTAssertFalse(Live.hasLive)
+        // Solo un proveedor de canales marcado (Pluto TV / IPTV-Org): también hay En Vivo.
+        Reg.write("live_provider_lines", "http://pluto/mx.m3u")
+        XCTAssertTrue(Live.hasLive)
     }
 
     func testCacheIsUsed() async {

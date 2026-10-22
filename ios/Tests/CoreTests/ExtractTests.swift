@@ -39,12 +39,13 @@ final class ExtractTests: XCTestCase {
             Server(name: "CineCalidad · dood", url: "https://dood.to/e/1", lang: "lat"),
         ]
         let vix = Server(name: "VixSrc", url: "vixsrc", lang: "multi")
-        XCTAssertEqual(Sources.orderServers(found, lang: "es", initial: [], vix: vix).map(\.name),
-                       ["CineCalidad · dood", "Cuevana · voe", "VixSrc", "Cuevana · streamwish"])
-        XCTAssertEqual(Sources.orderServers(found, lang: "en", initial: [vix], vix: vix).map(\.name),
-                       ["VixSrc", "Cuevana · streamwish", "CineCalidad · dood", "Cuevana · voe"])
+        // VixSrc asignado: siempre al final.
+        XCTAssertEqual(Sources.orderServers(found, lang: "es", vix: true).map(\.name),
+                       ["CineCalidad · dood", "Cuevana · voe", "Cuevana · streamwish", "VixSrc"])
+        XCTAssertEqual(Sources.orderServers(found, lang: "en", vix: true).map(\.name),
+                       ["Cuevana · streamwish", "CineCalidad · dood", "Cuevana · voe", "VixSrc"])
         // VixSrc no asignado por el panel: no aparece.
-        XCTAssertEqual(Sources.orderServers(found, lang: "es", initial: [], vix: nil).map(\.name),
+        XCTAssertEqual(Sources.orderServers(found, lang: "es", vix: false).map(\.name),
                        ["CineCalidad · dood", "Cuevana · voe", "Cuevana · streamwish"])
 
         // Etiqueta visible: número e idioma, sin el sitio.
@@ -56,11 +57,11 @@ final class ExtractTests: XCTestCase {
 
     func testAssignedSites() {
         // Solo los proveedores del panel (nombre normalizado).
-        XCTAssertEqual(Sources.assignedSites("Cuevana 3,TMDb (es)"), ["cuevana", "vix"])
-        XCTAssertEqual(Sources.assignedSites("PoseidonHD2, CineCalidad"), ["poseidon", "cine"])
-        // Ninguno conocido: todos, para que siempre reproduzca.
-        XCTAssertEqual(Sources.assignedSites("Otro"), Sources.allSites)
-        XCTAssertEqual(Sources.assignedSites(""), Sources.allSites)
+        XCTAssertEqual(Sources.assignedSites("Cuevana 3,VixSrc"), ["cuevana", "vix"])
+        XCTAssertEqual(Sources.assignedSites("PoseidonHD2, CineCalidad,TMDb (es)"), ["poseidon", "cine"])
+        // Ninguno conocido o ninguno asignado: no se busca en ningún sitio.
+        XCTAssertEqual(Sources.assignedSites("Pluto TV"), [])
+        XCTAssertEqual(Sources.assignedSites(""), [])
     }
 
     func testSiteParsers() {

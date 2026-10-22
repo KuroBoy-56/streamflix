@@ -35,8 +35,8 @@ struct LiveCache: Codable {
 }
 
 public enum Live {
-    /// "En Vivo" solo existe si hay alguna lista http(s) del panel o personal (Android:
-    /// PanelM3uProvider.isConfigured). Se calcula al momento: si el panel quita las líneas, se oculta.
+    /// "En Vivo" solo existe si hay alguna lista http(s): del panel, personal o de un proveedor de
+    /// canales marcado. Se calcula al momento: si el panel quita las líneas, se oculta.
     public static var hasLive: Bool { !sources().isEmpty }
 
     static let cacheFile = "live_cache.json"
@@ -47,7 +47,7 @@ public enum Live {
     static func sources() -> [String] {
         var urls: [String] = []
         var seen = Set<String>()
-        for line in splitLines(Reg.read("panel_channel_lines") + "\n" + Reg.read("personal_provider_url")) {
+        for line in splitLines(Reg.read("panel_channel_lines") + "\n" + Reg.read("personal_provider_url") + "\n" + Reg.read("live_provider_lines")) {
             if isHttpURL(line), !seen.contains(line) { seen.insert(line); urls.append(line) }
         }
         let preferred = Reg.read("panel_default_channel_line").trimmingCharacters(in: .whitespacesAndNewlines)

@@ -82,6 +82,8 @@ public enum PanelAPI {
             "default_provider": panelText(json["default_provider"]),
             "panel_channel_lines": channelLines.joined(separator: "\n"),
             "personal_provider_url": personal.joined(separator: "\n"),
+            // Listas de los proveedores de canales marcados en la cuenta (Pluto TV, IPTV-Org).
+            "live_provider_lines": panelLines(json["live_provider_lines"]).joined(separator: "\n"),
             "panel_default_channel_line": panelText(json["default_channel_line"]),
             "channel_lines_from": String(toInt(json["channel_lines_from"])),
             "settings_note": panelText(json["settings_note"]),
@@ -170,7 +172,7 @@ public enum PanelAPI {
     static func panelDomains(_ value: Any?) -> [String: String]? {
         guard let domains = value as? JSON else { return nil }
         var out: [String: String] = [:]
-        for key in ["cuevana3", "poseidonhd2", "cinecalidad"] { out["domain_" + key] = panelText(domains[key]) }
+        for key in ["cuevana3", "poseidonhd2", "cinecalidad", "vixsrc"] { out["domain_" + key] = panelText(domains[key]) }
         return out
     }
 

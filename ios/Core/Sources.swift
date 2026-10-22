@@ -115,24 +115,20 @@ public enum Sources {
         return String(url[..<r.upperBound]) + hostOf(url)
     }
 
-    /// Sitios que conoce la app: "cuevana", "poseidon", "cine" y "vix" (VixSrc, del proveedor TMDb).
-    static let allSites: Set<String> = ["cuevana", "poseidon", "cine", "vix"]
-
     /// Solo los proveedores que el panel asignó (assigned_servers, nombre en minúsculas y solo
-    /// [a-z0-9]). Si no asignó ninguno de los que conoce la app, se usan todos para que reproduzca.
+    /// [a-z0-9]): "cuevana", "poseidon", "cine" y "vix" (VixSrc). Sin ninguno, no se busca en ninguno.
     static func assignedSites(_ assigned: String) -> Set<String> {
-        let known = ["cuevana3": "cuevana", "poseidonhd2": "poseidon", "cinecalidad": "cine"]
+        let known = ["cuevana3": "cuevana", "poseidonhd2": "poseidon", "cinecalidad": "cine", "vixsrc": "vix"]
         var out = Set<String>()
         for name in assigned.split(separator: ",") {
-            let key = titleKey(String(name))
-            if let site = known[key] { out.insert(site) }
-            if key.hasPrefix("tmdb") { out.insert("vix") }
+            if let site = known[titleKey(String(name))] { out.insert(site) }
         }
-        return out.isEmpty ? allSites : out
+        return out
     }
 
-    /// Busca el título (por id de TMDb) en los sitios pedidos.
-    static func findOnSites(_ p: PlaybackRequest, sites: Set<String> = Sources.allSites) async -> Found {
+    /// Busca el título (por id de TMDb) en los sitios asignados por el panel.
+    static func findOnSites(_ p: PlaybackRequest) async -> Found {
+        let sites = assignedSites(Reg.read("assigned_servers"))
         // Título en español latino y original, y año, para buscar en los sitios.
         let info = await Catalog.tmdbGet(p.mediaType + "/" + p.id)
         var titles: [String] = []
@@ -188,11 +184,7 @@ public enum Sources {
     /// los proveedores asignados por el panel.
     public static func servers(_ p: PlaybackRequest) async -> (servers: [Server], links: [String: SiteLink]) {
         let lang = audioLanguage()
-        let sites = assignedSites(Reg.read("assigned_servers"))
-        let vix = Server(name: "VixSrc", url: "vixsrc", referer: "", lang: "multi")
-        var servers: [Server] = []
-        if lang == "en" && sites.contains("vix") { servers.append(vix) }
-        let found = await findOnSites(p, sites: sites)
+        let found = await findOnSites(p)
         var links = siteLinks(found, p.mediaType)
 
         var pages: [String] = []
@@ -216,17 +208,18 @@ public enum Sources {
                 cineCalidadServers(html, &found2)
             }
         }
-        return (orderServers(found2, lang: lang, initial: servers, vix: sites.contains("vix") ? vix : nil), links)
+        let vix = assignedSites(Reg.read("assigned_servers")).contains("vix")
+        return (orderServers(found2, lang: lang, vix: vix), links)
     }
 
-    /// Orden por idioma (español latino por defecto): latino, castellano, VixSrc (multiaudio) y
-    /// subtitulado. En inglés: VixSrc, subtitulado, latino y castellano.
-    static func orderServers(_ found: [Server], lang: String, initial: [Server], vix: Server?) -> [Server] {
-        var servers = initial
-        for tag in lang == "en" ? ["sub", "lat", "cast"] : ["lat", "cast", "vix", "sub"] {
-            if tag == "vix" { if let vix { servers.append(vix) }; continue }
+    /// Orden por idioma (español latino por defecto): latino, castellano y subtitulado. En inglés:
+    /// primero el audio original (subtitulado). VixSrc al final, solo si el panel lo asignó.
+    static func orderServers(_ found: [Server], lang: String, vix: Bool) -> [Server] {
+        var servers: [Server] = []
+        for tag in lang == "en" ? ["sub", "lat", "cast"] : ["lat", "cast", "sub"] {
             servers += found.filter { $0.lang == tag && !unsupported($0.name + " " + $0.url) }
         }
+        if vix { servers.append(Server(name: "VixSrc", url: "vixsrc", referer: "", lang: "multi")) }
         return servers
     }
 
