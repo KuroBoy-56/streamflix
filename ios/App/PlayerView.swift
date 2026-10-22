@@ -210,13 +210,15 @@ final class PlayerModel: ObservableObject {
 struct PlayerView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var model: PlayerModel
+    @StateObject private var chrome = AutoHide()
 
     init(target: PlayerTarget) { _model = StateObject(wrappedValue: PlayerModel(target: target)) }
 
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            VideoPlayerController(player: model.player).ignoresSafeArea()
+            VideoPlayerController(player: model.player, onTap: { chrome.toggle() }, onSwipeDown: { model.close() })
+                .ignoresSafeArea()
             if model.busy || model.failed {
                 VStack(spacing: 14) {
                     if model.busy { ProgressView().tint(.white).scaleEffect(1.4) }
@@ -225,32 +227,77 @@ struct PlayerView: View {
                 }
                 .padding(24).background(RoundedRectangle(cornerRadius: 16).fill(Color.black.opacity(0.7)))
             }
-            VStack {
-                HStack {
-                    Button { model.close() } label: {
-                        Image(systemName: "xmark").font(.system(size: 18, weight: .bold)).foregroundColor(.white)
-                            .padding(12).background(Circle().fill(Color.black.opacity(0.5)))
+            // Cerrar y título: siempre mientras carga; reproduciendo, solo al tocar la pantalla.
+            if chrome.visible || model.busy || model.failed {
+                VStack {
+                    HStack {
+                        CloseButton { model.close() }
+                        Text(model.title).font(.system(size: 14, weight: .semibold)).foregroundColor(.white).lineLimit(1)
+                            .shadow(color: .black, radius: 3)
+                        Spacer()
                     }
-                    Text(model.title).font(.system(size: 14, weight: .semibold)).foregroundColor(.white).lineLimit(1)
-                        .opacity(model.busy || model.failed ? 1 : 0)
+                    .padding(.horizontal, 12).padding(.top, 8)
                     Spacer()
                 }
-                .padding(.horizontal, 12).padding(.top, 8)
-                Spacer()
+                .transition(.opacity)
             }
         }
         .statusBarHidden()
         .onAppear {
             model.onClose = { dismiss() }
             model.start()
+            chrome.show()
         }
         .onDisappear { model.close() }
     }
 }
 
+/// Botón de cerrar del reproductor (parte de los controles que se ocultan solos).
+struct CloseButton: View {
+    let action: () -> Void
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "xmark").font(.system(size: 18, weight: .bold)).foregroundColor(.white)
+                .padding(12).background(Circle().fill(Color.black.opacity(0.5)))
+        }
+        .accessibilityLabel("Cerrar")
+    }
+}
+
+/// Controles propios encima del video: aparecen al tocar y se ocultan solos a los 4 s,
+/// como los del reproductor de iPhone.
+@MainActor
+final class AutoHide: ObservableObject {
+    @Published private(set) var visible = true
+    private var task: Task<Void, Never>?
+
+    func show() {
+        visible = true
+        task?.cancel()
+        task = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 4_000_000_000)
+            guard !Task.isCancelled else { return }
+            withAnimation { self?.visible = false }
+        }
+    }
+
+    func hide() {
+        task?.cancel()
+        withAnimation { visible = false }
+    }
+
+    func toggle() { if visible { hide() } else { show() } }
+}
+
 /// AVPlayerViewController de iOS: controles, AirPlay, imagen en imagen y menú de audio/subtítulos.
+/// Un toque muestra u oculta los controles propios y deslizar hacia abajo cierra el reproductor;
+/// los gestos no le quitan los toques a los controles de iOS.
 struct VideoPlayerController: UIViewControllerRepresentable {
     let player: AVPlayer
+    var onTap: () -> Void = {}
+    var onSwipeDown: () -> Void = {}
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
 
     func makeUIViewController(context: Context) -> AVPlayerViewController {
         let vc = AVPlayerViewController()
@@ -258,10 +305,30 @@ struct VideoPlayerController: UIViewControllerRepresentable {
         vc.allowsPictureInPicturePlayback = true
         vc.canStartPictureInPictureAutomaticallyFromInline = true
         vc.videoGravity = .resizeAspect
+        let coordinator = context.coordinator
+        coordinator.parent = self
+        let tap = UITapGestureRecognizer(target: coordinator, action: #selector(Coordinator.tapped))
+        let swipe = UISwipeGestureRecognizer(target: coordinator, action: #selector(Coordinator.swiped))
+        swipe.direction = .down
+        for gesture in [tap, swipe] as [UIGestureRecognizer] {
+            gesture.cancelsTouchesInView = false
+            gesture.delegate = coordinator
+            vc.view.addGestureRecognizer(gesture)
+        }
         return vc
     }
 
     func updateUIViewController(_ vc: AVPlayerViewController, context: Context) {
         if vc.player !== player { vc.player = player }
+        context.coordinator.parent = self
+    }
+
+    @MainActor final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        var parent: VideoPlayerController?
+
+        @objc func tapped() { parent?.onTap() }
+        @objc func swiped() { parent?.onSwipeDown() }
+
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool { true }
     }
 }
