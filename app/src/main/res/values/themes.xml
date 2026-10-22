@@ -139,8 +139,8 @@
         <item name="app_background_color">@color/roku_background</item>
         <item name="preferenceTheme">@style/PreferenceThemeOverlayLeanback</item>
         <item name="alertDialogTheme">@style/Theme.AppCompat.Dialog.Alert</item>
-        <item name="colorAccent">@color/roku_red</item>
-        <item name="colorControlActivated">@color/roku_red</item>
+        <item name="colorAccent">#FFFFFF</item>
+        <item name="colorControlActivated">#FFFFFF</item>
         <item name="colorControlNormal">#B4B9C8</item>
         <item name="android:windowBackground">@color/roku_background</item>
         <item name="home_gradient_drawable">@drawable/bg_home_gradient_default</item>

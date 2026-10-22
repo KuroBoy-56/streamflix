@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Título bajo la carátula: tenue y blanco al enfocar (igual que en Roku). -->
+<!-- Título bajo la carátula: blanco brillante y de alto contraste con sombra/borde negro. -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:color="#FFFFFFFF" android:state_focused="true" />
-    <item android:color="#B3FFFFFF" />
+    <item android:color="#E6FFFFFF" />
 </selector>

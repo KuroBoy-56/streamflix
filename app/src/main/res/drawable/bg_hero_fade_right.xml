@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Borde derecho de la portada fundido con el fondo para que no haya bordes rectos -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient
+        android:angle="180"
+        android:centerColor="#800F111A"
+        android:endColor="#000F111A"
+        android:startColor="@color/roku_background" />
+</shape>

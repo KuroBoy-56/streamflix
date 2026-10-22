@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Estilo Roku: rojo al enfocar, gris azulado en reposo. -->
+<!-- Selector universal para opciones en TV: blanco/gris claro al enfocar. -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
 
     <item android:state_focused="true">
         <shape android:shape="rectangle">
             <corners android:radius="10dp" />
-            <solid android:color="@color/roku_red" />
+            <solid android:color="#E8EAED" />
+            <stroke android:width="2dp" android:color="#FFFFFF" />
         </shape>
     </item>
 

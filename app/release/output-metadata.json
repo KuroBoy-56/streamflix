@@ -4,15 +4,15 @@
     "type": "APK",
     "kind": "Directory"
   },
-  "applicationId": "com.streamlat.garevynvod",
+  "applicationId": "com.flixlat.garevynvod",
   "variantName": "release",
   "elements": [
     {
       "type": "SINGLE",
       "filters": [],
       "attributes": [],
-      "versionCode": 11,
-      "versionName": "1.7.3",
+      "versionCode": 21,
+      "versionName": "1.8.9",
       "outputFile": "app-release.apk"
     }
   ],

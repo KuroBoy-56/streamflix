@@ -106,7 +106,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
                 android:background="@drawable/bg_login_button"
-                android:gravity="center_vertical|start"
+                android:gravity="center"
                 android:paddingStart="18dp"
                 android:paddingEnd="18dp"
                 android:stateListAnimator="@null"

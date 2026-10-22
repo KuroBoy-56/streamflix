@@ -99,15 +99,14 @@
         <!-- Al iniciar sesión una cuenta de su red, la app activa sola este icono y nombre;    -->
         <!-- con cualquier otra cuenta vuelve al del dueño (.Launcher).                         -->
         <!-- ============================================================================== -->
-        <!--
         <activity-alias
-            android:name=".activities.sync.SyncGatewayActivity.Admin12345"
+            android:name=".activities.sync.SyncGatewayActivity.Admin95925"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_launcher_12345"
-            android:roundIcon="@mipmap/ic_launcher_12345"
-            android:banner="@drawable/tv_banner_12345"
-            android:label="@string/app_name_12345"
+            android:icon="@mipmap/ic_launcher_95925"
+            android:roundIcon="@mipmap/ic_launcher_95925"
+            android:banner="@drawable/tv_banner_95925"
+            android:label="@string/app_name_95925"
             android:targetActivity=".activities.sync.SyncGatewayActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -115,8 +114,6 @@
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        -->
-
         <activity
             android:name=".activities.main.MainMobileActivity"
             android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize"

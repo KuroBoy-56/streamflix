@@ -30,7 +30,7 @@ android {
 
     defaultConfig {
         // AQUÍ CAMBIAS EL NOMBRE DEL PAQUETE
-        applicationId "com.streamlat.garevynvod"
+        applicationId "com.flixlat.garevynvod"
         minSdk 21
         targetSdk 35
         versionCode 21
