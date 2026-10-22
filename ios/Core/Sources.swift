@@ -7,9 +7,15 @@
 import Foundation
 
 public enum Sources {
-    static let siteCuevana = "https://wv3.cuevana3.eu"
-    static let sitePoseidon = "https://www.poseidonhd2.co"
-    static let siteCineCalidad = "https://www.cinecalidad.am"
+    // Dominio de cada sitio: el que el dueño puso en el panel (Dominios de proveedores) o el de la app.
+    static var siteCuevana: String { siteHost("cuevana3", "wv3.cuevana3.eu") }
+    static var sitePoseidon: String { siteHost("poseidonhd2", "www.poseidonhd2.co") }
+    static var siteCineCalidad: String { siteHost("cinecalidad", "www.cinecalidad.am") }
+
+    static func siteHost(_ key: String, _ fallback: String) -> String {
+        let host = Reg.read("domain_" + key)
+        return "https://" + (host.isEmpty ? fallback : host)
+    }
 
     /// Título encontrado en Cuevana/Poseidon: ruta tras "movies/"/"series/" y nombre (slug).
     struct NextFound: Equatable { var path: String; var name: String }

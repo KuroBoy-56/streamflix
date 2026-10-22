@@ -67,6 +67,7 @@ public enum PanelAPI {
         let savedUser = user.isEmpty ? accountName : user
         let limit = min(5, max(1, toInt(json["profile_limit"], 1)))
 
+        if let domains = panelDomains(json["provider_domains"]) { Reg.writeMany(domains) }
         Reg.writeMany([
             "alpha_token": savedUser,
             "beta_token": accountPass,
@@ -157,10 +158,20 @@ public enum PanelAPI {
         if from == 0, master.keys.contains("channel_lines") { values["panel_channel_lines"] = panelLines(master["channel_lines"]).joined(separator: "\n") }
         if from != 0, from == appId, let own, own.keys.contains("channel_lines") { values["panel_channel_lines"] = panelLines(own["channel_lines"]).joined(separator: "\n") }
         if from < 0 { values["panel_channel_lines"] = "" }
+        if let domains = panelDomains(master["provider_domains"]) { values.merge(domains) { _, new in new } }
 
         let changed = values.contains { Reg.read($0.key) != $0.value }
         if changed { Reg.writeMany(values) }
         return changed
+    }
+
+    /// Dominios de los sitios que el dueño cambió en el panel ("" = el de la app). nil si el
+    /// panel no manda "provider_domains" (servidor antiguo): no se cambia nada.
+    static func panelDomains(_ value: Any?) -> [String: String]? {
+        guard let domains = value as? JSON else { return nil }
+        var out: [String: String] = [:]
+        for key in ["cuevana3", "poseidonhd2", "cinecalidad"] { out["domain_" + key] = panelText(domains[key]) }
+        return out
     }
 
     // MARK: Aviso de vencimiento (ntf_api.php): Android lo abre en un WebView, igual que iOS.

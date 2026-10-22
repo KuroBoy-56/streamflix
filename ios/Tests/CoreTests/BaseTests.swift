@@ -22,6 +22,27 @@ final class BaseTests: XCTestCase {
         XCTAssertTrue(Panel.configURL("config.json").hasSuffix("/config.json"))
     }
 
+    func testPanelDomains() {
+        let saved = Reg.store
+        Reg.store = UserDefaults(suiteName: "domaintests")!
+        Reg.clearSession()
+        defer { Reg.clearSession(); Reg.store = saved }
+        // Panel antiguo (sin "provider_domains") o valor que no es objeto: no se cambia nada.
+        XCTAssertNil(PanelAPI.panelDomains(nil))
+        XCTAssertNil(PanelAPI.panelDomains([Any]()))
+        XCTAssertEqual(Sources.siteCuevana, "https://wv3.cuevana3.eu")
+
+        Reg.writeMany(PanelAPI.panelDomains(["cuevana3": " nuevo.cuevana.com ", "poseidonhd2": ""] as JSON)!)
+        XCTAssertEqual(Sources.siteCuevana, "https://nuevo.cuevana.com")
+        XCTAssertEqual(Sources.sitePoseidon, "https://www.poseidonhd2.co")
+        XCTAssertEqual(Sources.siteCineCalidad, "https://www.cinecalidad.am")
+
+        // Vacío o ausente vuelve al dominio de la app.
+        Reg.writeMany(PanelAPI.panelDomains(["cinecalidad": "cine.nuevo"] as JSON)!)
+        XCTAssertEqual(Sources.siteCuevana, "https://wv3.cuevana3.eu")
+        XCTAssertEqual(Sources.siteCineCalidad, "https://cine.nuevo")
+    }
+
     func testMac() {
         XCTAssertEqual(Device.macFrom("6c5bf3a5-b2a5-4918-9aaa-000000000000"), "6C:5B:F3:A5:B2:A5:49:18")
         XCTAssertEqual(Device.macFrom("ab"), "AB:00:00:00:00:00:00:00")
