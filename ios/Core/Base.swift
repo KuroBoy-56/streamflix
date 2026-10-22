@@ -6,9 +6,9 @@ import FoundationNetworking
 #endif
 
 public enum AppInfo {
-    public static let versionName = "1.8.9"
+    public static let versionName = "1.9.0"
     // Mismo versionCode que Android: el panel lo recibe al iniciar sesión.
-    public static let versionCode = 21
+    public static let versionCode = 22
 }
 
 // MARK: - JSON (los JSON del panel mezclan números y textos)

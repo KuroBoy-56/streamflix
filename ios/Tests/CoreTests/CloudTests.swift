@@ -180,6 +180,11 @@ final class CloudTests: XCTestCase {
         r = UserData.merge3(local: doc(["a": fav("a", 10)]), remote: doc([:]), base: doc(["a": fav("a", 10)]))
         XCTAssertNil(r.merged["Cuevana_3"]?["movies"]?["a"])
         XCTAssertFalse(r.needsUpload)
+        // La nube no trae la clave del proveedor (respuesta incompleta): no se borra nada y se sube.
+        r = UserData.merge3(local: doc(["a": fav("a", 10)]), remote: doc(["z": fav("z", 1)], key: "Otro"), base: doc(["a": fav("a", 10)]))
+        XCTAssertNotNil(r.merged["Cuevana_3"]?["movies"]?["a"])
+        XCTAssertNotNil(r.merged["Otro"]?["movies"]?["z"])
+        XCTAssertTrue(r.needsUpload)
         // Borrado en otro equipo pero aquí es más nuevo: se conserva y se sube.
         r = UserData.merge3(local: doc(["a": fav("a", 50)]), remote: doc([:]), base: doc(["a": fav("a", 10)]))
         XCTAssertNotNil(r.merged["Cuevana_3"]?["movies"]?["a"])

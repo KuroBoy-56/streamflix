@@ -157,7 +157,8 @@ public final class UserData {
                     if ru > lu || (ru == lu && hasData(kind, rr) && !hasData(kind, ll)) { m[id] = rr }
                 }
                 // Estaba en la base y ya no en la nube: otro equipo lo quitó (salvo que aquí sea más nuevo).
-                for (id, ll) in l where r[id] == nil {
+                // Solo si la nube trae la clave del proveedor: si falta entera (respuesta incompleta) no se borra nada.
+                for (id, ll) in l where remote[key] != nil && r[id] == nil {
                     if let bb = b[id], updatedAt(kind, ll) <= updatedAt(kind, bb) { m[id] = nil }
                 }
                 part[kind] = m
