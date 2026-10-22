@@ -21,6 +21,8 @@
     <Poster id="backdrop" translation="[640,0]" width="1280" height="720" loadDisplayMode="scaleToZoom" loadWidth="1280" loadHeight="720"/>
     <Poster translation="[640,0]" width="320" height="720" uri="pkg:/images/fade_right.png" rotation="3.14159" scaleRotateCenter="[160,360]"/>
     <Poster width="1920" height="720" uri="pkg:/images/hero_scrim.png"/>
+    <!-- Borde inferior de la portada fundido con el fondo, como los lados (sin línea recta). -->
+    <Poster translation="[640,360]" width="1280" height="360" uri="pkg:/images/fade_bottom.png"/>
     <Label id="heroTitle" translation="[140,230]" width="1100" font="font:LargeBoldSystemFont" color="0xFFFFFFFF"/>
     <Label id="heroMeta" translation="[140,300]" width="1100" font="font:SmallSystemFont" color="0xE5E5E5FF"/>
     <Label id="heroOverview" translation="[140,350]" width="1000" height="160" wrap="true" maxLines="4" font="font:SmallSystemFont" color="0xCFCFCFFF"/>
