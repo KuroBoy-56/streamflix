@@ -6,16 +6,23 @@
 ' shortcut: PelisPlus y SoloLatino no están (bloqueo Cloudflare y prueba de trabajo con navegador);
 ' agregarlos si dejan de exigir navegador.
 
+' Dominio de cada sitio: el que el dueño puso en el panel (Dominios de proveedores) o el de la app.
+function SiteHost(key as string, default as string) as string
+    host = RegRead("domain_" + key)
+    if host = "" then host = default
+    return "https://" + host
+end function
+
 function SiteCuevana() as string
-    return "https://wv3.cuevana3.eu"
+    return SiteHost("cuevana3", "wv3.cuevana3.eu")
 end function
 
 function SitePoseidon() as string
-    return "https://www.poseidonhd2.co"
+    return SiteHost("poseidonhd2", "www.poseidonhd2.co")
 end function
 
 function SiteCineCalidad() as string
-    return "https://www.cinecalidad.am"
+    return SiteHost("cinecalidad", "www.cinecalidad.am")
 end function
 
 function NextData(html as string) as dynamic
