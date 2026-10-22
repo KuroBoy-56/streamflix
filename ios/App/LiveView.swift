@@ -1,5 +1,7 @@
-// En Vivo (LiveMobileFragment): carpetas por categoría o por país, canales con su guía y
-// reproductor a pantalla completa con la lista de la carpeta para cambiar de canal.
+// En Vivo como la versión de celular de Android (LiveBrowser sin TV): vista previa arriba y
+// debajo carpetas (categorías o países) | canales; en horizontal o iPad, tres columnas.
+// Tocar un canal lo reproduce en la vista previa; tocarlo otra vez (o la vista previa) abre
+// el reproductor a pantalla completa con el panel de canales de la carpeta (LiveChannelsOverlay).
 import SwiftUI
 import AVKit
 import Combine
@@ -53,112 +55,244 @@ final class LiveModel: ObservableObject {
 
 struct LiveView: View {
     @StateObject private var model = LiveModel()
-    @State private var playing: LiveTarget?
+    @StateObject private var live = LivePlayerModel()
+    @State private var full = false
+
+    private static let selectedFill = Color(hex: 0x2A2D3A)
+    private static let chipText = Color(hex: 0xD8DCE8)
 
     var body: some View {
-        VStack(spacing: 0) {
-            if let r = model.result {
-                header(r)
-                channelList
+        GeometryReader { geo in
+            if model.result != nil {
+                browser(width: geo.size.width, wide: geo.size.width > geo.size.height)
             } else if !model.error.isEmpty {
                 MessageView(text: model.error) { Task { await model.load(force: true) } }
             } else {
                 LoadingView()
             }
         }
-        .background(Theme.background.ignoresSafeArea())
+        .background(Theme.navy.ignoresSafeArea())
         .navigationTitle("En Vivo")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { SearchButton() }
         .task { if model.result == nil { await model.load() } }
-        .refreshable { await model.load(force: true) }
-        .fullScreenCover(item: $playing) { target in LivePlayerView(target: target, model: model) }
+        // Al volver a la pestaña se retoma el último canal en la vista previa (como Android).
+        .onAppear { if live.channel != nil && live.player.currentItem == nil { live.playChannel() } }
+        .onDisappear { if !full { live.stop() } }
+        .fullScreenCover(isPresented: $full, onDismiss: { live.player.play() }) {
+            LivePlayerView(live: live, model: model)
+        }
     }
 
-    private func header(_ r: LiveResult) -> some View {
+    /// Vertical: vista previa arriba y carpetas | canales debajo. Horizontal: tres columnas.
+    private func browser(width: CGFloat, wide: Bool) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("\(r.total) canales").font(.system(size: 13)).foregroundColor(Theme.textSecondary).padding(.horizontal, 12)
             if model.hasCountries {
-                Picker("", selection: $model.mode) {
-                    Text("Categorías").tag("category")
-                    Text("Países").tag("country")
-                }
-                .pickerStyle(.segmented).padding(.horizontal, 12)
-                .onChange(of: model.mode) { _ in model.folderIndex = 0 }
-            }
-            ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    ForEach(Array(model.folders.enumerated()), id: \.offset) { i, f in
-                        Button { model.folderIndex = i } label: {
-                            Text("\(f.title)  (\(f.channels.count))").font(.system(size: 14, weight: .semibold)).lineLimit(1)
-                                .foregroundColor(i == model.folderIndex ? .black : .white)
-                                .padding(.horizontal, 14).padding(.vertical, 8)
-                                .background(Capsule().fill(i == model.folderIndex ? Color.white : Color.black.opacity(0.2)))
-                                .overlay(Capsule().stroke(Color.white.opacity(i == model.folderIndex ? 0 : 0.5), lineWidth: 1))
+                    chip("Categorías", model.mode != "country") { setMode("category") }
+                    chip("Países", model.mode == "country") { setMode("country") }
+                }
+            }
+            if wide {
+                HStack(alignment: .top, spacing: 0) {
+                    folderColumn.frame(width: 200)
+                    divider.padding(.horizontal, 8)
+                    channelColumn.frame(width: 280)
+                    divider.padding(.leading, 8).padding(.trailing, 16)
+                    preview(width: max(width - 24 - 522, 120), wide: true)
+                    Spacer(minLength: 0)
+                }
+            } else {
+                preview(width: width - 24, wide: false)
+                HStack(spacing: 0) {
+                    folderColumn.frame(width: max(width - 24 - 13, 0) * 0.42)
+                    divider.padding(.horizontal, 6)
+                    channelColumn
+                }
+            }
+        }
+        .padding(.horizontal, 12).padding(.top, 4).padding(.bottom, 8)
+    }
+
+    private func setMode(_ mode: String) {
+        guard model.mode != mode else { return }
+        model.mode = mode
+        model.folderIndex = 0
+    }
+
+    private var divider: some View { Rectangle().fill(Color.white.opacity(0.12)).frame(width: 1) }
+
+    private func chip(_ title: String, _ selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title).font(.system(size: 13, weight: selected ? .bold : .regular)).foregroundColor(Self.chipText)
+                .padding(.horizontal, 16).padding(.vertical, 8)
+                .background(RoundedRectangle(cornerRadius: 12).fill(selected ? Self.selectedFill : Theme.field))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(hex: selected ? 0x4A5064 : 0x2E3242), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: Carpetas y canales
+
+    private var folderColumn: some View {
+        ScrollView {
+            LazyVStack(spacing: 3) {
+                ForEach(Array(model.folders.enumerated()), id: \.offset) { i, f in
+                    Button { model.folderIndex = i } label: {
+                        HStack(spacing: 6) {
+                            Text(f.title).font(.system(size: 14, weight: .bold)).lineLimit(1)
+                            Spacer(minLength: 0)
+                            Text("\(f.channels.count)").font(.system(size: 12))
+                        }
+                        .foregroundColor(i == model.folderIndex ? .white : Color.white.opacity(0.85))
+                    }
+                    .buttonStyle(LiveRowStyle(selected: i == model.folderIndex))
+                }
+            }
+            .padding(.bottom, 24)
+        }
+    }
+
+    private var channelColumn: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(model.folder?.title ?? "").font(.system(size: 15, weight: .bold)).foregroundColor(.white).lineLimit(1)
+                .padding(.horizontal, 10).padding(.bottom, 8)
+            ScrollView {
+                LazyVStack(spacing: 3) {
+                    if let folder = model.folder {
+                        ForEach(Array(folder.channels.enumerated()), id: \.element.id) { i, ch in
+                            channelRow(folder, i, ch)
                         }
                     }
                 }
-                .padding(.horizontal, 12)
+                .padding(.bottom, 24)
             }
+            // Otra carpeta: la lista empieza arriba.
+            .id(model.folder?.id ?? "")
+            .refreshable { await model.load(force: true) }
         }
-        .padding(.vertical, 10)
     }
 
-    private var channelList: some View {
-        List {
-            if let folder = model.folder {
-                ForEach(Array(folder.channels.enumerated()), id: \.element.id) { i, ch in
-                    Button { playing = LiveTarget(folder: folder, index: i) } label: { channelRow(ch, number: i + 1) }
-                        .listRowBackground(Theme.background)
-                }
+    private func channelRow(_ folder: LiveFolder, _ i: Int, _ ch: Channel) -> some View {
+        let playing = live.channel?.id == ch.id
+        return Button {
+            if playing && live.player.currentItem != nil { full = true } else { live.play(folder, i) }
+        } label: {
+            HStack(spacing: 0) {
+                Text("\(i + 1)").font(.system(size: 12)).lineLimit(1).minimumScaleFactor(0.7).frame(minWidth: 30, alignment: .leading)
+                RemoteImage(url: ch.logo, contentMode: .fit).frame(width: 40, height: 28).padding(.trailing, 10)
+                Text(ch.name).font(.system(size: 14)).lineLimit(1)
+                Spacer(minLength: 4)
+                if playing { Text("●").font(.system(size: 12)).foregroundColor(Color(hex: 0xE8EAED)) }
             }
+            .foregroundColor(playing ? .white : Color.white.opacity(0.85))
         }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
+        .buttonStyle(LiveRowStyle(selected: playing))
     }
 
-    private func channelRow(_ ch: Channel, number: Int) -> some View {
-        HStack(spacing: 12) {
-            Text("\(number)").font(.system(size: 13)).foregroundColor(Theme.textSecondary).lineLimit(1).minimumScaleFactor(0.7).frame(width: 30)
-            RemoteImage(url: ch.logo, contentMode: .fit).frame(width: 64, height: 40)
-                .background(RoundedRectangle(cornerRadius: 6).fill(Theme.card))
-            VStack(alignment: .leading, spacing: 3) {
-                Text(ch.name).font(.system(size: 15, weight: .semibold)).foregroundColor(.white).lineLimit(1)
-                if let p = model.now(ch) {
-                    Text("Ahora: " + p.title).font(.system(size: 12)).foregroundColor(Theme.textSecondary).lineLimit(1)
-                } else if !ch.country.isEmpty && ch.country != ch.group {
-                    Text(ch.country).font(.system(size: 12)).foregroundColor(Theme.textSecondary).lineLimit(1)
+    // MARK: Vista previa
+
+    private func preview(width: CGFloat, wide: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ZStack(alignment: .topLeading) {
+                Color.black
+                if let ch = live.channel {
+                    // El logo se ve mientras carga la señal; luego aparece el video.
+                    RemoteImage(url: ch.logo, contentMode: .fit).padding(.horizontal, 40).padding(.vertical, 30)
+                        .opacity(live.ready ? 0 : 1)
+                    PlayerLayerView(player: live.player).opacity(live.ready ? 1 : 0)
+                }
+                if live.loading { ProgressView().tint(.white).frame(maxWidth: .infinity, maxHeight: .infinity) }
+                if live.ready {
+                    Text("EN VIVO").font(.system(size: 11, weight: .bold)).foregroundColor(Theme.navy)
+                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .background(RoundedRectangle(cornerRadius: 4).fill(Color(hex: 0xE8EAED)))
+                        .padding(12)
                 }
             }
-            Spacer(minLength: 0)
+            .frame(width: width, height: width * 9 / 16)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .contentShape(Rectangle())
+            .onTapGesture { if live.channel != nil { full = true } }
+            .animation(.easeInOut(duration: 0.25), value: live.ready)
+
+            Text(live.channel?.name ?? "Elige un canal para verlo aquí").font(.system(size: 17, weight: .bold))
+                .foregroundColor(.white).lineLimit(1).padding(.top, 12)
+            if wide, let f = live.folder {
+                Text(f.title).font(.system(size: 13)).foregroundColor(Color.white.opacity(0.7)).lineLimit(1)
+            }
+            if live.channel != nil {
+                Text(live.failed ? live.status : "Pulsa otra vez para ver en pantalla completa")
+                    .font(.system(size: 12)).foregroundColor(Color.white.opacity(0.5)).lineLimit(2).padding(.top, 6)
+            }
         }
-        .padding(.vertical, 4)
+        .frame(width: width, alignment: .leading)
     }
 }
 
-// MARK: - Reproductor de canales
+/// Fila de carpeta o canal (bg_live_row del celular): elegida en gris oscuro, sin rojo.
+private struct LiveRowStyle: ButtonStyle {
+    var selected = false
 
-struct LiveTarget: Identifiable {
-    let id = UUID()
-    var folder: LiveFolder
-    var index: Int
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .padding(.horizontal, 12).padding(.vertical, 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 10).fill(
+                configuration.isPressed ? Color.white.opacity(0.2) : selected ? Color(hex: 0x2A2D3A) : Color.clear))
+            .contentShape(Rectangle())
+    }
 }
+
+/// Video sin controles para la vista previa (como el PlayerView sin controles de Android).
+struct PlayerLayerView: UIViewRepresentable {
+    let player: AVPlayer
+
+    final class LayerView: UIView {
+        override class var layerClass: AnyClass { AVPlayerLayer.self }
+        var playerLayer: AVPlayerLayer { layer as! AVPlayerLayer }
+    }
+
+    func makeUIView(context: Context) -> LayerView {
+        let view = LayerView()
+        view.backgroundColor = .black
+        // Los toques pasan a SwiftUI (tocar la vista previa abre la pantalla completa).
+        view.isUserInteractionEnabled = false
+        view.playerLayer.videoGravity = .resizeAspect
+        view.playerLayer.player = player
+        return view
+    }
+
+    func updateUIView(_ view: LayerView, context: Context) {
+        if view.playerLayer.player !== player { view.playerLayer.player = player }
+    }
+}
+
+// MARK: - Reproductor de canales (el mismo de la vista previa, a pantalla completa)
 
 @MainActor
 final class LivePlayerModel: ObservableObject {
-    @Published var index: Int
+    @Published private(set) var folder: LiveFolder?
+    @Published private(set) var index = 0
     @Published var status = ""
-    let folder: LiveFolder
     let player = AVPlayer()
     private var sourceIndex = 0
     private var bag = Set<AnyCancellable>()
 
-    init(target: LiveTarget) {
-        folder = target.folder
-        index = target.index
+    var channel: Channel? {
+        guard let folder, folder.channels.indices.contains(index) else { return nil }
+        return folder.channels[index]
     }
 
-    var channel: Channel { folder.channels[index] }
+    var loading: Bool { status.hasPrefix("Cargando") }
+    var failed: Bool { !status.isEmpty && !loading }
+    var ready: Bool { channel != nil && status.isEmpty && player.currentItem != nil }
+
+    func play(_ folder: LiveFolder, _ index: Int) {
+        self.folder = folder
+        self.index = index
+        playChannel()
+    }
 
     func playChannel() {
         sourceIndex = 0
@@ -167,13 +301,15 @@ final class LivePlayerModel: ObservableObject {
 
     /// Si una señal falla pasa sola a la misma señal en otra línea.
     private func playSource() {
+        bag.removeAll()
+        guard let channel else { return }
         let sources = channel.sources
         guard sourceIndex < sources.count, let url = URL(string: sources[sourceIndex].url) else {
-            status = "Este canal no está disponible en este momento."
+            player.replaceCurrentItem(with: nil)
+            status = "Este canal no carga ahora. Prueba otro."
             return
         }
         status = "Cargando canal..."
-        bag.removeAll()
         let asset = AVURLAsset(url: url, options: ["AVURLAssetHTTPHeaderFieldsKey": sources[sourceIndex].headers])
         let item = AVPlayerItem(asset: asset)
         item.publisher(for: \.status).receive(on: RunLoop.main).sink { [weak self] s in
@@ -185,92 +321,108 @@ final class LivePlayerModel: ObservableObject {
         player.play()
     }
 
-    func zap(_ delta: Int) {
-        let n = folder.channels.count
-        guard n > 0 else { return }
-        index = (index + delta + n) % n
-        playChannel()
-    }
-
     func stop() {
         player.pause()
         player.replaceCurrentItem(with: nil)
         bag.removeAll()
+        status = ""
     }
 }
 
 struct LivePlayerView: View {
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var player: LivePlayerModel
+    @ObservedObject var live: LivePlayerModel
     @ObservedObject var model: LiveModel
-    @State private var showList = false
-
-    init(target: LiveTarget, model: LiveModel) {
-        _player = StateObject(wrappedValue: LivePlayerModel(target: target))
-        _model = ObservedObject(wrappedValue: model)
-    }
+    @StateObject private var chrome = AutoHide()
 
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            VideoPlayerController(player: player.player).ignoresSafeArea()
-            if !player.status.isEmpty {
+            VideoPlayerController(player: live.player, onTap: { chrome.toggle() }, onSwipeDown: { dismiss() })
+                .ignoresSafeArea()
+            if !live.status.isEmpty {
                 VStack(spacing: 12) {
-                    if player.status.hasPrefix("Cargando") { ProgressView().tint(.white) }
-                    Text(player.status).foregroundColor(.white)
+                    if live.loading { ProgressView().tint(.white) }
+                    Text(live.status).foregroundColor(.white).multilineTextAlignment(.center)
                 }
                 .padding(20).background(RoundedRectangle(cornerRadius: 14).fill(Color.black.opacity(0.7)))
             }
-            VStack {
-                HStack(spacing: 10) {
-                    Button { player.stop(); dismiss() } label: { circleIcon("xmark") }
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(player.channel.name).font(.system(size: 15, weight: .bold)).foregroundColor(.white).lineLimit(1)
-                        Text("Canal \(player.index + 1) de \(player.folder.channels.count)" + (model.now(player.channel).map { " · " + $0.title } ?? ""))
-                            .font(.system(size: 12)).foregroundColor(.white.opacity(0.8)).lineLimit(1)
-                    }
-                    Spacer()
-                    Button { player.zap(-1) } label: { circleIcon("chevron.up") }
-                    Button { player.zap(1) } label: { circleIcon("chevron.down") }
-                    Button { showList = true } label: { circleIcon("list.bullet") }
+            // Cerrar, nombre y panel de canales: con los controles al tocar, y siempre mientras carga.
+            if chrome.visible || !live.ready {
+                ZStack(alignment: .topTrailing) {
+                    topBar
+                    channelPanel
                 }
-                .padding(.horizontal, 12).padding(.top, 8)
-                Spacer()
+                .transition(.opacity)
             }
         }
         .statusBarHidden()
-        .onAppear { player.playChannel() }
-        .onDisappear { player.stop() }
-        .sheet(isPresented: $showList) {
-            NavigationStack {
-                List {
-                    ForEach(Array(player.folder.channels.enumerated()), id: \.element.id) { i, ch in
-                        Button {
-                            player.index = i
-                            player.playChannel()
-                            showList = false
-                        } label: {
-                            HStack {
-                                RemoteImage(url: ch.logo, contentMode: .fit).frame(width: 48, height: 30)
-                                Text(ch.name).fontWeight(i == player.index ? .bold : .regular)
-                                    .foregroundColor(i == player.index ? .white : Theme.textSecondary).lineLimit(1)
-                                if i == player.index {
-                                    Spacer(minLength: 0)
-                                    Image(systemName: "checkmark").foregroundColor(.white)
-                                }
-                            }
-                        }
+        .onAppear { chrome.show() }
+    }
+
+    private var topBar: some View {
+        VStack {
+            HStack(spacing: 10) {
+                CloseButton { dismiss() }
+                if let ch = live.channel {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(ch.name).font(.system(size: 15, weight: .bold)).foregroundColor(.white).lineLimit(1)
+                        Text("Canal \(live.index + 1) de \(live.folder?.channels.count ?? 0)" + (model.now(ch).map { " · " + $0.title } ?? ""))
+                            .font(.system(size: 12)).foregroundColor(Color.white.opacity(0.8)).lineLimit(1)
                     }
+                    .shadow(color: .black, radius: 3)
                 }
-                .navigationTitle(player.folder.title)
-                .navigationBarTitleDisplayMode(.inline)
+                Spacer(minLength: 0)
             }
-            .presentationDetents([.medium, .large])
+            .padding(.horizontal, 12).padding(.top, 8)
+            Spacer(minLength: 0)
         }
     }
 
-    private func circleIcon(_ name: String) -> some View {
-        Image(systemName: name).font(.system(size: 16, weight: .bold)).foregroundColor(.white)
-            .frame(width: 40, height: 40).background(Circle().fill(Color.black.opacity(0.5)))
+    /// Panel lateral casi transparente con los canales de la carpeta (LiveChannelsOverlay del celular).
+    @ViewBuilder private var channelPanel: some View {
+        if let folder = live.folder {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(folder.title).font(.system(size: 15, weight: .bold)).foregroundColor(.white).lineLimit(1)
+                    .shadow(color: .black, radius: 3)
+                    .padding(.horizontal, 16).padding(.top, 12).padding(.bottom, 8)
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(spacing: 0) {
+                            ForEach(Array(folder.channels.enumerated()), id: \.element.id) { i, ch in
+                                panelRow(folder, i, ch).id(i)
+                            }
+                        }
+                        .padding(.bottom, 16)
+                    }
+                    .onAppear { proxy.scrollTo(live.index, anchor: .center) }
+                }
+            }
+            .frame(width: 260)
+            .background(RoundedRectangle(cornerRadius: 12).fill(Color.black.opacity(0.15)))
+            .padding(.top, 56).padding(.trailing, 8).padding(.bottom, 72)
+        }
+    }
+
+    private func panelRow(_ folder: LiveFolder, _ i: Int, _ ch: Channel) -> some View {
+        let current = i == live.index
+        return Button {
+            if current { chrome.hide() } else { live.play(folder, i); chrome.show() }
+        } label: {
+            HStack(spacing: 0) {
+                Text("\(i + 1)").font(.system(size: 12)).foregroundColor(Color.white.opacity(0.7)).lineLimit(1)
+                    .minimumScaleFactor(0.7).frame(width: 34, alignment: .trailing)
+                RemoteImage(url: ch.logo, contentMode: .fit).frame(width: 40, height: 28).padding(.horizontal, 10)
+                Text(ch.name).font(.system(size: 14, weight: current ? .bold : .regular)).foregroundColor(.white).lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            .shadow(color: .black, radius: 2)
+            .padding(.horizontal, 12).padding(.vertical, 6)
+            .background(RoundedRectangle(cornerRadius: 6).fill(current ? Color.white.opacity(0.15) : Color.clear))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        // Mientras se desliza la lista aparecen filas: los controles siguen visibles.
+        .onAppear { chrome.show() }
     }
 }
