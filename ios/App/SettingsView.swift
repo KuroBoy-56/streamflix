@@ -1,5 +1,5 @@
 // Ajustes (SettingsMobileFragment): perfil, idioma del audio, sincronizar, aviso del panel,
-// datos del equipo y cerrar sesión.
+// datos del equipo y cerrar sesión. Estilo de Ajustes de iPhone (lista agrupada) en grises.
 import SwiftUI
 
 struct SettingsView: View {
@@ -14,34 +14,35 @@ struct SettingsView: View {
                 HStack(spacing: 14) {
                     BrandLogo(size: 54)
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(session.brandName).font(.headline).foregroundColor(.white)
-                        Text("Cuenta: " + Reg.read("alpha_token")).font(.subheadline).foregroundColor(Theme.textSecondary)
+                        Text(session.brandName).font(.headline).foregroundColor(.white).lineLimit(2)
+                        Text("Cuenta: " + Reg.read("alpha_token")).font(.subheadline).foregroundColor(Theme.textSecondary).lineLimit(1)
                     }
                 }
                 .padding(.vertical, 4)
                 if toInt(Reg.read("profile_limit", "1")) >= 2 {
-                    Button { session.switchProfile() } label: { Label("Cambiar de perfil", systemImage: "person.2.fill") }
+                    Button { session.switchProfile() } label: { row("Cambiar de perfil", "person.2.fill") }
                 }
             }
 
-            Section("Reproducción") {
+            Section {
                 Picker(selection: $audioLang) {
                     Text("Español latino").tag("es")
                     Text("Inglés").tag("en")
-                } label: { Label("Idioma del audio", systemImage: "speaker.wave.2.fill") }
+                } label: { row("Idioma del audio", "speaker.wave.2.fill") }
                 .onChange(of: audioLang) { v in Reg.write("audio_lang", v) }
+            } header: {
+                Text("Reproducción")
+            } footer: {
                 Text(audioLang == "es"
                      ? "Se buscan servidores en español latino. Si un título no trae audio en español, se activan los subtítulos en español."
                      : "Se buscan servidores en inglés.")
-                    .font(.footnote).foregroundColor(Theme.textSecondary)
             }
 
             Section("Mi lista") {
                 Button {
-                    session.uploadNow()
                     session.syncDown()
                     synced = true
-                } label: { Label(synced ? "Sincronizado" : "Sincronizar ahora", systemImage: "arrow.triangle.2.circlepath") }
+                } label: { row(synced ? "Sincronizado" : "Sincronizar ahora", "arrow.triangle.2.circlepath") }
             }
 
             if !session.settingsNote.isEmpty {
@@ -54,11 +55,11 @@ struct SettingsView: View {
             }
 
             Section {
-                Button(role: .destructive) { confirmLogout = true } label: { Label("Cerrar sesión", systemImage: "rectangle.portrait.and.arrow.right") }
+                Button { confirmLogout = true } label: { row("Cerrar sesión", "rectangle.portrait.and.arrow.right") }
             }
         }
-        .scrollContentBackground(.hidden)
-        .background(Theme.background.ignoresSafeArea())
+        .listStyle(.insetGrouped)
+        .tint(Theme.accent)
         .navigationTitle("Ajustes")
         .navigationBarTitleDisplayMode(.inline)
         .id(session.brandTick)
@@ -66,5 +67,16 @@ struct SettingsView: View {
             Button("Cerrar sesión", role: .destructive) { session.logout() }
             Button("Cancelar", role: .cancel) {}
         } message: { Text("¿Deseas cerrar la sesión en este equipo?") }
+    }
+
+    /// Fila como en Ajustes de iPhone: icono blanco sobre un cuadrito gris y el texto en blanco.
+    private func row(_ title: String, _ icon: String) -> some View {
+        Label {
+            Text(title).foregroundColor(.white).lineLimit(1)
+        } icon: {
+            Image(systemName: icon).font(.system(size: 14, weight: .semibold)).foregroundColor(.white)
+                .frame(width: 28, height: 28)
+                .background(RoundedRectangle(cornerRadius: 7).fill(Color(hex: 0x48484A)))
+        }
     }
 }

@@ -77,7 +77,7 @@ struct DetailsView: View {
             VStack(alignment: .leading, spacing: 16) {
                 header
                 if !model.error.isEmpty {
-                    Text(model.error).foregroundColor(Color(hex: 0xFF5252)).padding(.horizontal, 16)
+                    Text(model.error).foregroundColor(Theme.textSecondary).padding(.horizontal, 16)
                 }
                 buttons.padding(.horizontal, 16)
                 if !model.item.overview.isEmpty {
@@ -101,13 +101,14 @@ struct DetailsView: View {
     private var header: some View {
         ZStack(alignment: .bottomLeading) {
             RemoteImage(url: model.item.backdrop.isEmpty ? model.item.poster : model.item.backdrop)
-                .frame(maxWidth: .infinity).frame(height: 300).clipped()
+                .frame(maxWidth: .infinity).frame(height: 300)
             LinearGradient(colors: [.clear, Theme.background], startPoint: .center, endPoint: .bottom).frame(height: 300)
             HStack(alignment: .bottom, spacing: 14) {
                 RemoteImage(url: model.item.poster).frame(width: 110, height: 165)
                     .background(Theme.card).clipShape(RoundedRectangle(cornerRadius: 8))
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(model.item.title).font(.system(size: 24, weight: .bold)).foregroundColor(.white).lineLimit(3)
+                    Text(model.item.title).font(.system(size: 24, weight: .bold)).foregroundColor(.white)
+                        .lineLimit(3).minimumScaleFactor(0.75)
                     meta
                     if let g = model.details?.genres, !g.isEmpty {
                         Text(g).font(.system(size: 12)).foregroundColor(Theme.textSecondary).lineLimit(2)
@@ -120,44 +121,55 @@ struct DetailsView: View {
         .padding(.bottom, 70)
     }
 
+    /// Datos en un solo texto que pasa a la línea siguiente en iPhone pequeños (no se sale).
     private var meta: some View {
-        HStack(spacing: 10) {
-            if !model.item.rating.isEmpty {
-                HStack(spacing: 3) { Image(systemName: "star.fill").foregroundColor(Theme.star); Text(model.item.rating) }
-            }
-            if !model.item.year.isEmpty { Text(model.item.year) }
-            if let r = model.details?.runtime, r > 0 { Text("\(r) min") }
-            if model.item.mediaType == "tv", let n = model.details?.seasons.count, n > 0 { Text(n == 1 ? "1 temporada" : "\(n) temporadas") }
-        }
-        .font(.system(size: 13)).foregroundColor(Theme.textSecondary)
+        var parts: [String] = []
+        if !model.item.year.isEmpty { parts.append(model.item.year) }
+        if let r = model.details?.runtime, r > 0 { parts.append("\(r) min") }
+        if model.item.mediaType == "tv", let n = model.details?.seasons.count, n > 0 { parts.append(n == 1 ? "1 temporada" : "\(n) temporadas") }
+        let rest = Text(parts.joined(separator: " · "))
+        let rating: String = " " + model.item.rating + (parts.isEmpty ? "" : " · ")
+        let star: Text = Text(Image(systemName: "star.fill")).foregroundColor(Theme.star)
+        let text: Text = model.item.rating.isEmpty ? rest : star + Text(rating) + rest
+        return text.font(.system(size: 13)).foregroundColor(Theme.textSecondary).lineLimit(2)
     }
 
     private var buttons: some View {
         let ud = UserData.shared
         let fav = ud.isFavorite(model.item, links: model.links)
-        return HStack(spacing: 10) {
+        let resume = model.item.mediaType == "movie" ? ud.movieResume(model.item, links: model.links) : 0
+        // Como en el celular de Android: botón principal a todo lo ancho y debajo las acciones.
+        return VStack(alignment: .leading, spacing: 12) {
             if model.item.mediaType == "movie" {
-                let resume = ud.movieResume(model.item, links: model.links)
                 Button { play(nil, at: resume > 30 ? resume : 0) } label: {
                     Label(resume > 30 ? "Continuar · " + formatClock(resume) : "Ver ahora", systemImage: "play.fill")
+                        .lineLimit(1).frame(maxWidth: .infinity)
                 }.buttonStyle(PrimaryButtonStyle())
-                if resume > 30 {
-                    Button { play(nil, at: 0) } label: { Image(systemName: "arrow.counterclockwise") }.buttonStyle(SecondaryButtonStyle())
-                }
-                let watched = ud.movieWatched(model.item, links: model.links)
-                Button { ud.setWatched(model.request(), watched: !watched) } label: {
-                    Image(systemName: watched ? "checkmark.circle.fill" : "checkmark.circle")
-                }.buttonStyle(SecondaryButtonStyle())
             } else if let last = ud.lastEpisode(model.item, links: model.links) {
                 Button { continueEpisode(last) } label: {
                     Label("Continuar T\(last.season):E\(last.episode)", systemImage: "play.fill")
+                        .lineLimit(1).frame(maxWidth: .infinity)
                 }.buttonStyle(PrimaryButtonStyle())
             } else if let first = model.episodes.first {
-                Button { play(first, at: 0) } label: { Label("Ver ahora", systemImage: "play.fill") }.buttonStyle(PrimaryButtonStyle())
+                Button { play(first, at: 0) } label: {
+                    Label("Ver ahora", systemImage: "play.fill").lineLimit(1).frame(maxWidth: .infinity)
+                }.buttonStyle(PrimaryButtonStyle())
             }
-            Spacer()
-            Button { ud.setFavorite(model.item, links: model.links, favorite: !fav) } label: {
-                Image(systemName: fav ? "heart.fill" : "heart").font(.system(size: 24)).foregroundColor(fav ? Theme.red : .white)
+            HStack(spacing: 10) {
+                Button { ud.setFavorite(model.item, links: model.links, favorite: !fav) } label: {
+                    Label("Mi lista", systemImage: fav ? "heart.fill" : "heart").lineLimit(1)
+                }.buttonStyle(SecondaryButtonStyle())
+                if model.item.mediaType == "movie" {
+                    let watched = ud.movieWatched(model.item, links: model.links)
+                    Button { ud.setWatched(model.request(), watched: !watched) } label: {
+                        Label("Visto", systemImage: watched ? "checkmark.circle.fill" : "checkmark.circle").lineLimit(1)
+                    }.buttonStyle(SecondaryButtonStyle())
+                    if resume > 30 {
+                        Button { play(nil, at: 0) } label: { Image(systemName: "arrow.counterclockwise") }
+                            .buttonStyle(SecondaryButtonStyle())
+                    }
+                }
+                Spacer(minLength: 0)
             }
         }
     }
@@ -170,7 +182,7 @@ struct DetailsView: View {
                     ForEach(d.seasons) { s in
                         Button { Task { await model.loadSeason(s.number) } } label: {
                             Text(s.title.isEmpty ? "Temporada \(s.number)" : s.title)
-                                .font(.system(size: 14, weight: .semibold))
+                                .font(.system(size: 14, weight: .semibold)).lineLimit(1)
                                 .foregroundColor(model.season == s.number ? .black : .white)
                                 .padding(.horizontal, 14).padding(.vertical, 8)
                                 .background(Capsule().fill(model.season == s.number ? Color.white : Color.white.opacity(0.15)))
@@ -229,17 +241,17 @@ struct EpisodeRow: View {
                 RemoteImage(url: episode.poster)
                 if percent > 0 {
                     GeometryReader { g in
-                        Rectangle().fill(Theme.red).frame(width: g.size.width * CGFloat(min(percent, 100)) / 100, height: 3)
+                        Rectangle().fill(Color.white).frame(width: g.size.width * CGFloat(min(percent, 100)) / 100, height: 3)
                             .frame(maxHeight: .infinity, alignment: .bottom)
                     }
                 }
             }
-            .frame(width: 140, height: 79).clipShape(RoundedRectangle(cornerRadius: 6))
+            .frame(width: 124, height: 70).clipShape(RoundedRectangle(cornerRadius: 6))
             VStack(alignment: .leading, spacing: 4) {
                 Text("\(episode.number). \(episode.title)").font(.system(size: 14, weight: .semibold)).foregroundColor(.white).lineLimit(2)
                 HStack(spacing: 8) {
                     if episode.runtime > 0 { Text("\(episode.runtime) min") }
-                    if asStr(record?["isWatched"]) == "true" || percent >= 95 { Text("Visto").foregroundColor(Theme.red) }
+                    if asStr(record?["isWatched"]) == "true" || percent >= 95 { Text("Visto").foregroundColor(.white) }
                 }
                 .font(.system(size: 12)).foregroundColor(Theme.textSecondary)
                 Text(episode.overview).font(.system(size: 12)).foregroundColor(Theme.textSecondary).lineLimit(3)

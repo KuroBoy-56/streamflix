@@ -90,7 +90,7 @@ struct LiveView: View {
                 HStack(spacing: 8) {
                     ForEach(Array(model.folders.enumerated()), id: \.offset) { i, f in
                         Button { model.folderIndex = i } label: {
-                            Text("\(f.title)  (\(f.channels.count))").font(.system(size: 14, weight: .semibold))
+                            Text("\(f.title)  (\(f.channels.count))").font(.system(size: 14, weight: .semibold)).lineLimit(1)
                                 .foregroundColor(i == model.folderIndex ? .black : .white)
                                 .padding(.horizontal, 14).padding(.vertical, 8)
                                 .background(Capsule().fill(i == model.folderIndex ? Color.white : Color.black.opacity(0.2)))
@@ -119,7 +119,7 @@ struct LiveView: View {
 
     private func channelRow(_ ch: Channel, number: Int) -> some View {
         HStack(spacing: 12) {
-            Text("\(number)").font(.system(size: 13)).foregroundColor(Theme.textSecondary).frame(width: 30)
+            Text("\(number)").font(.system(size: 13)).foregroundColor(Theme.textSecondary).lineLimit(1).minimumScaleFactor(0.7).frame(width: 30)
             RemoteImage(url: ch.logo, contentMode: .fit).frame(width: 64, height: 40)
                 .background(RoundedRectangle(cornerRadius: 6).fill(Theme.card))
             VStack(alignment: .leading, spacing: 3) {
@@ -127,10 +127,10 @@ struct LiveView: View {
                 if let p = model.now(ch) {
                     Text("Ahora: " + p.title).font(.system(size: 12)).foregroundColor(Theme.textSecondary).lineLimit(1)
                 } else if !ch.country.isEmpty && ch.country != ch.group {
-                    Text(ch.country).font(.system(size: 12)).foregroundColor(Theme.textSecondary)
+                    Text(ch.country).font(.system(size: 12)).foregroundColor(Theme.textSecondary).lineLimit(1)
                 }
             }
-            Spacer()
+            Spacer(minLength: 0)
         }
         .padding(.vertical, 4)
     }
@@ -252,7 +252,12 @@ struct LivePlayerView: View {
                         } label: {
                             HStack {
                                 RemoteImage(url: ch.logo, contentMode: .fit).frame(width: 48, height: 30)
-                                Text(ch.name).foregroundColor(i == player.index ? Theme.red : .white)
+                                Text(ch.name).fontWeight(i == player.index ? .bold : .regular)
+                                    .foregroundColor(i == player.index ? .white : Theme.textSecondary).lineLimit(1)
+                                if i == player.index {
+                                    Spacer(minLength: 0)
+                                    Image(systemName: "checkmark").foregroundColor(.white)
+                                }
                             }
                         }
                     }

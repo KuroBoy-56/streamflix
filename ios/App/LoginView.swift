@@ -19,7 +19,7 @@ struct LoginView: View {
                 RemoteImage(url: session.backgroundURL).opacity(0.6).ignoresSafeArea()
             }
             ScrollView {
-                card.frame(maxWidth: 400).padding(.horizontal, 20).padding(.vertical, 40)
+                card.frame(maxWidth: 400).padding(.horizontal, 16).padding(.vertical, 40)
                     .frame(maxWidth: .infinity)
             }
             .scrollDismissesKeyboard(.interactively)
@@ -32,6 +32,7 @@ struct LoginView: View {
             BrandLogo(size: 84).padding(.top, 26).padding(.bottom, 14)
             Text("Bienvenido").font(.system(size: 26, weight: .bold)).foregroundColor(.white)
             Text("Inicia sesión para continuar").font(.system(size: 16)).foregroundColor(Color(hex: 0xB4B9C8))
+                .multilineTextAlignment(.center)
                 .padding(.top, 4).padding(.bottom, 22)
 
             field(placeholder: "Usuario", text: $user, secure: false).focused($focus, equals: .user)
@@ -46,12 +47,12 @@ struct LoginView: View {
 
             Button(action: submit) {
                 HStack {
-                    Text("Iniciar sesión").font(.system(size: 17)).foregroundColor(.white)
+                    Text("Iniciar sesión").font(.system(size: 17, weight: .semibold)).foregroundColor(.black)
                     Spacer()
-                    if busy { ProgressView().tint(.white) }
+                    if busy { ProgressView().tint(.black) }
                 }
                 .padding(.horizontal, 18).frame(height: 52)
-                .background(RoundedRectangle(cornerRadius: 12).fill(Theme.red))
+                .background(RoundedRectangle(cornerRadius: 12).fill(Theme.accent))
             }
             .disabled(busy)
 
@@ -61,14 +62,14 @@ struct LoginView: View {
             }
 
             Text("MAC: " + Device.mac).font(.system(size: 14)).foregroundColor(Color(hex: 0xE5E5E5))
-                .textSelection(.enabled)
+                .lineLimit(1).minimumScaleFactor(0.7).textSelection(.enabled).padding(.horizontal, 8)
                 .frame(maxWidth: .infinity).padding(.vertical, 8)
                 .background(RoundedRectangle(cornerRadius: 12).fill(Theme.field))
                 .padding(.top, 22)
             Text("Campos vacíos: entra con la MAC vinculada").font(.system(size: 13)).foregroundColor(Color(hex: 0x8A8FA0))
-                .padding(.top, 8)
+                .multilineTextAlignment(.center).padding(.top, 8)
         }
-        .padding(.horizontal, 28).padding(.bottom, 24)
+        .padding(.horizontal, 22).padding(.bottom, 24)
         .background(RoundedRectangle(cornerRadius: 20).fill(Color(hex: 0x121520, alpha: 0.95)))
         .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color(hex: 0x262A38), lineWidth: 1))
     }

@@ -5,8 +5,9 @@ enum Theme {
     static let background = Color(hex: 0x181818)
     static let card = Color(hex: 0x1C1F2B)
     static let field = Color(hex: 0x1F2230)
-    static let red = Color(hex: 0xE50914)
-    static let loginFocus = Color(hex: 0xD0D4DC) // selector del login: gris claro
+    /// Acento neutro (sin rojo): gris claro para selección, foco y botones.
+    static let accent = Color(hex: 0xD0D4DC)
+    static let loginFocus = accent
     static let navy = Color(hex: 0x0F111A)
     static let textSecondary = Color(hex: 0xBDBDBD)
     static let navInactive = Color(hex: 0x808080)
@@ -40,23 +41,25 @@ final class ImageCache {
     }
 }
 
+/// Ocupa exactamente el tamaño que le dan y recorta: una imagen "fill" nunca agranda la
+/// pantalla (antes la portada ancha empujaba la ficha y el login fuera del iPhone).
 struct RemoteImage: View {
     let url: String
     var contentMode: ContentMode = .fill
     @State private var image: UIImage?
 
     var body: some View {
-        ZStack {
-            if let image {
-                Image(uiImage: image).resizable().aspectRatio(contentMode: contentMode)
-            } else {
-                Color.clear
+        Color.clear
+            .overlay {
+                if let image {
+                    Image(uiImage: image).resizable().aspectRatio(contentMode: contentMode)
+                }
             }
-        }
-        .task(id: url) {
-            image = ImageCache.shared.image(for: url)
-            if image == nil, !url.isEmpty { image = await ImageCache.shared.load(url) }
-        }
+            .clipped()
+            .task(id: url) {
+                image = ImageCache.shared.image(for: url)
+                if image == nil, !url.isEmpty { image = await ImageCache.shared.load(url) }
+            }
     }
 }
 
@@ -109,7 +112,7 @@ struct PosterCard: View {
                 }
                 if favorite {
                     Image(systemName: "heart.fill").font(.system(size: 13)).foregroundColor(.white)
-                        .padding(5).background(Circle().fill(Theme.red)).padding(8)
+                        .padding(5).background(Circle().fill(Color.black.opacity(0.6))).padding(8)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 }
             }
@@ -133,7 +136,7 @@ struct RowView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(row.title).font(.system(size: 18, weight: .bold)).foregroundColor(.white).padding(.horizontal, 12)
+            Text(row.title).font(.system(size: 18, weight: .bold)).foregroundColor(.white).lineLimit(1).padding(.horizontal, 12)
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(alignment: .top, spacing: 10) {
                     ForEach(Array(row.items.enumerated()), id: \.offset) { index, item in

@@ -26,7 +26,7 @@ struct ProfilesView: View {
 
     struct Pending: Identifiable { var action: String; var id: String; var name: String }
 
-    private let columns = [GridItem(.adaptive(minimum: 110), spacing: 22)]
+    private let columns = [GridItem(.adaptive(minimum: 104), spacing: 16)]
 
     var body: some View {
         NavigationStack {
@@ -35,10 +35,11 @@ struct ProfilesView: View {
                     BrandLogo(size: 70).padding(.top, 30)
                     Text(avatarFor == nil ? "¿Quién está viendo?" : "Elige un avatar")
                         .font(.system(size: 28, weight: .bold)).foregroundColor(.white)
+                        .multilineTextAlignment(.center).minimumScaleFactor(0.8)
                     if avatarFor != nil { avatarGrid } else { profileGrid }
-                    if !status.isEmpty { Text(status).foregroundColor(Theme.textSecondary).font(.footnote) }
+                    if !status.isEmpty { Text(status).foregroundColor(Theme.textSecondary).font(.footnote).multilineTextAlignment(.center) }
                 }
-                .padding(.horizontal, 24)
+                .padding(.horizontal, 16)
             }
             .background(Theme.navy.ignoresSafeArea())
             .toolbar {
@@ -79,7 +80,7 @@ struct ProfilesView: View {
                         RoundedRectangle(cornerRadius: 8).stroke(Color(hex: 0x808080), lineWidth: 2)
                             .overlay(Image(systemName: "plus").font(.system(size: 34)).foregroundColor(Color(hex: 0x808080)))
                             .frame(width: 100, height: 100)
-                        Text("Agregar perfil").font(.system(size: 14)).foregroundColor(Color(hex: 0xB3B3B3))
+                        Text("Agregar perfil").font(.system(size: 14)).foregroundColor(Color(hex: 0xB3B3B3)).lineLimit(1)
                     }
                 }.buttonStyle(.plain)
             }

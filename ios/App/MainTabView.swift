@@ -165,6 +165,8 @@ struct RowsScreen: View {
             SearchButton()
         }
         .task { await model.load() }
+        // Inicio visible otra vez: se trae lo que otro equipo guardó (como mucho cada 45 s).
+        .onAppear { if mode == "home" { session.refreshCloud() } }
     }
 }
 
@@ -181,14 +183,14 @@ struct FeaturedSwiper: View {
             }
         }
         .tabViewStyle(.page(indexDisplayMode: .always))
-        .frame(height: 460)
+        .frame(height: 420)
         .onReceive(timer) { _ in withAnimation { index = (index + 1) % max(items.count, 1) } }
     }
 
     private func slide(_ item: Item) -> some View {
         ZStack(alignment: .bottomLeading) {
             RemoteImage(url: item.backdrop.isEmpty ? item.poster : item.backdrop)
-                .frame(maxWidth: .infinity).frame(height: 460).clipped()
+                .frame(maxWidth: .infinity).frame(height: 420)
             LinearGradient(colors: [.clear, Theme.background.opacity(0.7), Theme.background], startPoint: .top, endPoint: .bottom)
             VStack(alignment: .leading, spacing: 8) {
                 Text(item.title).font(.system(size: 20, weight: .bold)).foregroundColor(.white).lineLimit(2)
@@ -199,7 +201,7 @@ struct FeaturedSwiper: View {
                     }
                     Text(item.mediaType == "tv" ? "Serie" : "Película")
                 }
-                .font(.system(size: 13)).foregroundColor(Theme.textSecondary)
+                .font(.system(size: 13)).foregroundColor(Theme.textSecondary).lineLimit(1)
                 Text(item.overview).font(.system(size: 13)).foregroundColor(.white.opacity(0.85)).lineLimit(3)
                 NavigationLink(value: Route.item(item)) { Text("Ver ahora") }
                     .buttonStyle(PrimaryButtonStyle()).padding(.top, 4)
@@ -315,7 +317,7 @@ struct PersonView: View {
                         HStack(alignment: .top, spacing: 14) {
                             RemoteImage(url: page.poster).frame(width: 110, height: 165).clipShape(RoundedRectangle(cornerRadius: 8))
                             VStack(alignment: .leading, spacing: 6) {
-                                Text(page.title).font(.system(size: 22, weight: .bold)).foregroundColor(.white)
+                                Text(page.title).font(.system(size: 22, weight: .bold)).foregroundColor(.white).lineLimit(3)
                                 Text(page.overview).font(.system(size: 13)).foregroundColor(Theme.textSecondary).lineLimit(8)
                             }
                         }
