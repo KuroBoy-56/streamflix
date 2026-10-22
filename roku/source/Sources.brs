@@ -194,13 +194,13 @@ end function
 ' normalizado: "Cuevana 3" -> "cuevana3"). Si no asignó ninguno de ellos, todos (para que igual
 ' reproduzca).
 function AssignedSites() as object
-    known = { cuevana3: "cuevana", poseidonhd2: "poseidon", cinecalidad: "cine" }
+    known = { cuevana3: "cuevana", poseidonhd2: "poseidon", cinecalidad: "cine", vixsrc: "vixsrc" }
     sites = {}
     for each name in RegRead("assigned_servers").Split(",")
         site = known[TitleKey(name)]
         if site <> invalid then sites[site] = true
     end for
-    if sites.Count() = 0 then sites = { cuevana: true, poseidon: true, cine: true }
+    ' Solo los proveedores marcados en el panel para la cuenta (sin ninguno, no se busca en ninguno).
     return sites
 end function
 
@@ -278,9 +278,8 @@ function ApiServers(p as object) as object
             if s.lang = tag and not Unsupported(s.name + " " + s.url) then servers.Push(s)
         end for
     end for
-    ' VixSrc (no es un proveedor del panel) siempre al final: se prueba si ninguno de los sitios
-    ' asignados reproduce.
-    servers.Push({ name: "VixSrc", url: "vixsrc", referer: "", lang: "multi" })
+    ' VixSrc al final, solo si está marcado en el panel: se prueba si ninguno de los sitios reproduce.
+    if AssignedSites().DoesExist("vixsrc") then servers.Push({ name: "VixSrc", url: "vixsrc", referer: "", lang: "multi" })
     return { servers: servers, links: links }
 end function
 

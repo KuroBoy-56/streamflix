@@ -175,7 +175,8 @@ function ApiLogin(p as object) as object
         panel_default_channel_line: PanelText(json.default_channel_line)
         channel_lines_from: ToInt(json.channel_lines_from).ToStr()
         settings_note: PanelText(json.settings_note)
-        live_enabled: AsStr(channelLines.Count() > 0 or personal.Count() > 0)
+        live_provider_lines: PanelLines(json.live_provider_lines).Join(Chr(10))
+        live_enabled: AsStr(channelLines.Count() > 0 or personal.Count() > 0 or PanelLines(json.live_provider_lines).Count() > 0)
         profile_limit: limit.ToStr()
         last_online_check: NowSec().ToStr()
     })
@@ -253,7 +254,7 @@ function ApiBranding() as object
     ' Sin canales del panel, "En Vivo" desaparece también sin volver a iniciar sesión.
     lines = RegRead("panel_channel_lines")
     if values.DoesExist("panel_channel_lines") then lines = values.panel_channel_lines
-    values.live_enabled = AsStr(lines.Trim() <> "" or RegRead("personal_provider_url").Trim() <> "")
+    values.live_enabled = AsStr(lines.Trim() <> "" or RegRead("personal_provider_url").Trim() <> "" or RegRead("live_provider_lines").Trim() <> "")
     if master.provider_domains <> invalid then values.Append(PanelDomains(master.provider_domains))
 
     changed = false
@@ -267,7 +268,7 @@ end function
 ' Dominios de los sitios que el dueño cambió en el panel ("" = el de la app).
 function PanelDomains(domains as object) as object
     out = {}
-    for each key in ["cuevana3", "poseidonhd2", "cinecalidad"]
+    for each key in ["cuevana3", "poseidonhd2", "cinecalidad", "vixsrc"]
         out["domain_" + key] = PanelText(domains[key])
     end for
     return out
