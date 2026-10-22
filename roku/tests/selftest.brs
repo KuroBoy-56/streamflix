@@ -40,6 +40,14 @@ sub Main()
     Check("audio latino", PickAudio(tracks, "es").Track, "3")
     Check("audio inglés", PickAudio(tracks, "en").Track, "1")
     Check("sin audio español", AsStr(PickAudio([{ Track: "1", Language: "ita", Name: "Italiano" }], "es")), "")
+    ' Sin español: inglés, nunca italiano (aunque venga primero).
+    noSpanish = [{ Track: "1", Language: "ita", Name: "Italiano" }, { Track: "2", Language: "eng", Name: "English" }]
+    Check("sin español -> inglés", PickAudio(noSpanish, "es").Track, "2")
+    Check("castellano antes que inglés", PickAudio([tracks[0], tracks[1]], "es").Track, "2")
+    menu = SortAudioTracks([{ Track: "i", Language: "ita" }, tracks[0], tracks[1], tracks[2]])
+    Check("menú audio", menu[0].Track + menu[1].Track + menu[2].Track + menu[3].Track, "321i")
+    Check("servidor latino", ServerLabel(0, { lang: "lat" }), "Servidor 1 · Latino")
+    Check("servidor vix", ServerLabel(4, { lang: "multi" }), "Servidor 5 · Multiaudio")
     subs = [{ TrackName: "a", Language: "spa", Description: "Spanish Forced" }, { TrackName: "b", Language: "spa", Description: "Spanish" }]
     Check("subtítulo completo", PickSubtitle(subs).TrackName, "b")
 

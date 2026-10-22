@@ -46,27 +46,55 @@ sub SetupVideo(video as object)
     video.setHttpAgent(agent)
 end sub
 
-' Pista de audio en el idioma elegido; en español se prefiere el latino al castellano.
+' Prioridad de una pista de audio (interfaz en español): latino 3, español 2, inglés 1, otro 0.
+function AudioRank(t as object) as integer
+    language = LCase(AsStr(t.Language))
+    name = LCase(AsStr(t.Name))
+    if Instr(1, name, "latin") > 0 or Instr(1, name, "lat)") > 0 or Instr(1, name, "[lat") > 0 or Instr(1, language, "419") > 0 or Instr(1, language, "mx") > 0 then return 3
+    if Left(language, 2) = "es" or Left(language, 3) = "spa" or Instr(1, name, "spanish") > 0 or Instr(1, name, "español") > 0 or Instr(1, name, "espanol") > 0 or Instr(1, name, "castellano") > 0 then return 2
+    if Left(language, 2) = "en" or Instr(1, name, "english") > 0 or Instr(1, name, "inglés") > 0 or Instr(1, name, "ingles") > 0 then return 1
+    return 0
+end function
+
+' Pista de audio en el idioma elegido. Español: latino > español > inglés (si falta el español
+' queda el inglés, nunca italiano u otro). Inglés: inglés > latino > español. invalid = ninguna.
 function PickAudio(tracks as dynamic, lang as string) as dynamic
     best = invalid
     bestScore = 0
     if tracks = invalid then return invalid
     for each t in tracks
-        language = LCase(AsStr(t.Language))
-        name = LCase(AsStr(t.Name))
-        score = 0
-        if lang = "es" then
-            if Left(language, 2) = "es" or Left(language, 3) = "spa" or Instr(1, name, "spanish") > 0 or Instr(1, name, "español") > 0 or Instr(1, name, "espanol") > 0 then score = 1
-            if Instr(1, name, "latin") > 0 or Instr(1, name, "lat)") > 0 or Instr(1, name, "[lat") > 0 or Instr(1, language, "419") > 0 or Instr(1, language, "mx") > 0 then score = 2
-        else
-            if Left(language, 2) = "en" or Instr(1, name, "english") > 0 or Instr(1, name, "inglés") > 0 then score = 1
-        end if
+        score = AudioRank(t)
+        if lang = "en" and score = 1 then score = 4
         if score > bestScore then
             best = t
             bestScore = score
         end if
     end for
     return best
+end function
+
+' Pistas para el menú del botón *: latino, español, inglés y luego el resto (en su orden).
+function SortAudioTracks(tracks as dynamic) as object
+    entries = []
+    if tracks = invalid then return entries
+    for each t in tracks
+        entries.Push({ rank: -AudioRank(t), track: t })
+    end for
+    entries.SortBy("rank")
+    out = []
+    for each e in entries
+        out.Push(e.track)
+    end for
+    return out
+end function
+
+' Idioma del servidor en el reproductor ("Servidor 1 · Latino"), sin el nombre del sitio.
+function ServerLabel(index as integer, server as object) as string
+    names = { "lat": "Latino", "cast": "Castellano", "sub": "Subtitulado", "en": "Inglés", "multi": "Multiaudio" }
+    label = "Servidor " + (index + 1).ToStr()
+    lang = names[AsStr(server.lang)]
+    if lang <> invalid then label = label + " · " + lang
+    return label
 end function
 
 ' Subtítulos completos en español (no "forced", que solo traducen partes sueltas).

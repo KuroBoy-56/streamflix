@@ -97,7 +97,7 @@ sub TryServer(index as integer)
     end if
     m.serverIndex = index
     server = m.servers[index]
-    Busy("Servidor " + (index + 1).ToStr() + " de " + m.servers.Count().ToStr()) ' sin el nombre del proveedor
+    Busy(ServerLabel(index, server)) ' idioma sí, nombre del sitio no
     params = BaseParams()
     params.url = server.url
     params.referer = server.referer
@@ -135,22 +135,18 @@ sub onPosition()
     end if
 end sub
 
-' Audio en el idioma de Ajustes (español latino por defecto). Si el video no lo trae en
-' español, se activan los subtítulos en español para no cambiar de idioma a mano.
+' Audio en el idioma de Ajustes (español latino por defecto; si falta el español, inglés y nunca
+' italiano u otro). En VixSrc sin audio en español se activan los subtítulos en español.
 sub onAudioTracks()
     if m.audioChosen then return
     tracks = m.video.availableAudioTracks
     if tracks = invalid or tracks.Count() = 0 then return
     lang = AudioLanguage()
     best = PickAudio(tracks, lang)
+    if best <> invalid and tracks.Count() > 1 and AsStr(m.video.currentAudioTrack) <> AsStr(best.Track) then m.video.audioTrack = best.Track
     if m.siteServer = true then
-        if best <> invalid and tracks.Count() > 1 then m.video.audioTrack = best.Track
         m.audioChosen = true
-    else if best <> invalid then
-        if tracks.Count() > 1 then m.video.audioTrack = best.Track
-        m.video.globalCaptionMode = "Off"
-        m.audioChosen = true
-    else if lang = "es" then
+    else if lang = "es" and (best = invalid or AudioRank(best) < 2) then
         subtitle = PickSubtitle(m.video.availableSubtitleTracks)
         if subtitle <> invalid then
             m.video.subtitleTrack = subtitle.TrackName
@@ -158,6 +154,7 @@ sub onAudioTracks()
             m.audioChosen = true
         end if
     else
+        if best <> invalid then m.video.globalCaptionMode = "Off"
         m.audioChosen = true
     end if
 end sub
@@ -252,8 +249,8 @@ sub OpenTrackMenu()
     labels = []
     m.trackActions = []
     current = AsStr(m.video.currentAudioTrack)
-    tracks = m.video.availableAudioTracks
-    if tracks <> invalid then
+    tracks = SortAudioTracks(m.video.availableAudioTracks)
+    if tracks.Count() > 0 then
         for each t in tracks
             mark = ""
             if AsStr(t.Track) = current or tracks.Count() = 1 then mark = "  (en uso)"

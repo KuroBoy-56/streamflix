@@ -148,20 +148,53 @@ function FindOnSites(p as object) as object
         year = Left(AsStr(info.release_date) + AsStr(info.first_air_date), 4)
     end if
 
+    ' Solo los sitios que el panel asignó a la cuenta.
+    sites = AssignedSites()
     found = {}
     for each title in titles
-        if found.cuevana = invalid or found.poseidon = invalid or found.cine = invalid then
-            q = UrlEnc(title)
-            res = HttpParallel([SiteCuevana() + "/search?q=" + q, SitePoseidon() + "/search?q=" + q, SiteCineCalidad() + "/?s=" + q.Replace("%20", "+")], invalid, 20000)
-            if found.cuevana = invalid then found.cuevana = NextSiteFind(res[0].body, AsStr(p.id), p.mediaType)
-            if found.poseidon = invalid then found.poseidon = NextSiteFind(res[1].body, AsStr(p.id), p.mediaType)
-            if found.cine = invalid then
-                href = CineCalidadFind(res[2].body, title, year, p.mediaType)
-                if href <> "" then found.cine = href
-            end if
+        q = UrlEnc(title)
+        urls = []
+        names = []
+        if sites.cuevana = true and found.cuevana = invalid then
+            urls.Push(SiteCuevana() + "/search?q=" + q)
+            names.Push("cuevana")
+        end if
+        if sites.poseidon = true and found.poseidon = invalid then
+            urls.Push(SitePoseidon() + "/search?q=" + q)
+            names.Push("poseidon")
+        end if
+        if sites.cine = true and found.cine = invalid then
+            urls.Push(SiteCineCalidad() + "/?s=" + q.Replace("%20", "+"))
+            names.Push("cine")
+        end if
+        if urls.Count() > 0 then
+            res = HttpParallel(urls, invalid, 20000)
+            for i = 0 to names.Count() - 1
+                body = res[i].body
+                if names[i] = "cuevana" then found.cuevana = NextSiteFind(body, AsStr(p.id), p.mediaType)
+                if names[i] = "poseidon" then found.poseidon = NextSiteFind(body, AsStr(p.id), p.mediaType)
+                if names[i] = "cine" then
+                    href = CineCalidadFind(body, title, year, p.mediaType)
+                    if href <> "" then found.cine = href
+                end if
+            end for
         end if
     end for
     return { found: found, year: year }
+end function
+
+' Sitios que Roku sabe leer y que el panel asignó a la cuenta (assigned_servers del login, nombre
+' normalizado: "Cuevana 3" -> "cuevana3"). Si no asignó ninguno de ellos, todos (para que igual
+' reproduzca).
+function AssignedSites() as object
+    known = { cuevana3: "cuevana", poseidonhd2: "poseidon", cinecalidad: "cine" }
+    sites = {}
+    for each name in RegRead("assigned_servers").Split(",")
+        site = known[TitleKey(name)]
+        if site <> invalid then sites[site] = true
+    end for
+    if sites.Count() = 0 then sites = { cuevana: true, poseidon: true, cine: true }
+    return sites
 end function
 
 ' IDs del título en cada sitio, con el formato que usa la app Android en la nube (clave =
@@ -191,9 +224,7 @@ end function
 
 function ApiServers(p as object) as object
     lang = AudioLanguage()
-    vix = { name: "VixSrc", url: "vixsrc", referer: "", lang: "multi" }
     servers = []
-    if lang = "en" then servers.Push(vix)
     search = FindOnSites(p)
     found = search.found
     links = SiteLinks(found, p.mediaType)
@@ -228,22 +259,20 @@ function ApiServers(p as object) as object
         end if
     end for
 
-    ' Orden por idioma: en español, latino primero; luego VixSrc (audio o subtítulos en
-    ' español), subtitulado y por último castellano. En inglés: VixSrc y luego subtitulado.
+    ' Orden por idioma: en español (por defecto) latino, castellano y subtitulado. En inglés:
+    ' primero el audio original (subtitulado).
     if lang = "en" then
         order = ["sub", "lat", "cast"]
     else
-        order = ["lat", "vix", "sub", "cast"]
+        order = ["lat", "cast", "sub"]
     end if
     for each tag in order
-        if tag = "vix" then
-            servers.Push(vix)
-        else
-            for each s in found2
-                if s.lang = tag and not Unsupported(s.name + " " + s.url) then servers.Push(s)
-            end for
-        end if
+        for each s in found2
+            if s.lang = tag and not Unsupported(s.name + " " + s.url) then servers.Push(s)
+        end for
     end for
+    ' VixSrc no es un proveedor del panel: solo si los sitios asignados no dieron ningún servidor.
+    if servers.Count() = 0 then servers.Push({ name: "VixSrc", url: "vixsrc", referer: "", lang: "multi" })
     return { servers: servers, links: links }
 end function
 
