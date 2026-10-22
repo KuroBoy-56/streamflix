@@ -179,6 +179,7 @@ function ApiLogin(p as object) as object
         profile_limit: limit.ToStr()
         last_online_check: NowSec().ToStr()
     })
+    if json.provider_domains <> invalid then RegWriteMany(PanelDomains(json.provider_domains))
 
     ' El equipo guarda datos de una sola cuenta: si entra otra, se borra lo local (ya está en su nube).
     owner = RegRead("device_owner")
@@ -249,6 +250,11 @@ function ApiBranding() as object
     if from = 0 and master.DoesExist("channel_lines") then values.panel_channel_lines = PanelLines(master.channel_lines).Join(Chr(10))
     if from <> 0 and from = appId and own <> invalid and own.DoesExist("channel_lines") then values.panel_channel_lines = PanelLines(own.channel_lines).Join(Chr(10))
     if from < 0 then values.panel_channel_lines = ""
+    ' Sin canales del panel, "En Vivo" desaparece también sin volver a iniciar sesión.
+    lines = RegRead("panel_channel_lines")
+    if values.DoesExist("panel_channel_lines") then lines = values.panel_channel_lines
+    values.live_enabled = AsStr(lines.Trim() <> "" or RegRead("personal_provider_url").Trim() <> "")
+    if master.provider_domains <> invalid then values.Append(PanelDomains(master.provider_domains))
 
     changed = false
     for each key in values
@@ -256,6 +262,15 @@ function ApiBranding() as object
     end for
     if changed then RegWriteMany(values)
     return { changed: changed }
+end function
+
+' Dominios de los sitios que el dueño cambió en el panel ("" = el de la app).
+function PanelDomains(domains as object) as object
+    out = {}
+    for each key in ["cuevana3", "poseidonhd2", "cinecalidad"]
+        out["domain_" + key] = PanelText(domains[key])
+    end for
+    return out
 end function
 
 function BrandField(own as dynamic, master as dynamic, key as string) as string
