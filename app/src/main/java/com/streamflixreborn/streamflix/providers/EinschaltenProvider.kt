@@ -42,7 +42,7 @@ object EinschaltenProvider : Provider {
     private interface EinschaltenService {
         companion object {
             fun build(baseUrl: String): EinschaltenService {
-                val clientBuilder = OkHttpClient.Builder()
+                val clientBuilder = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
                     .readTimeout(30, TimeUnit.SECONDS)
                     .connectTimeout(30, TimeUnit.SECONDS)
 

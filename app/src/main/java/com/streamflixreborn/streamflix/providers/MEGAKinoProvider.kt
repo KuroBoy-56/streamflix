@@ -79,7 +79,7 @@ object MEGAKinoProvider : Provider {
 
         companion object {
             fun build(baseUrl: String): MEGAKinoService {
-                val client = OkHttpClient.Builder()
+                val client = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
                     .cookieJar(MyCookieJar())
                     .readTimeout(30, TimeUnit.SECONDS)
                     .connectTimeout(30, TimeUnit.SECONDS)

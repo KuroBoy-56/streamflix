@@ -18,7 +18,7 @@ object PlutoTvFrProvider : IptvProvider {
     private const val PLAYLIST_URL = com.streamflixreborn.streamflix.utils.PanelResources.URL + "pluto_fr"
 
     // 🛡️ La Vacuna Anti-Bots (Edición IPTV con CookieJar integrado) 🛡️
-    private val client = OkHttpClient.Builder()
+    private val client = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .cookieJar(object : CookieJar {

@@ -27,7 +27,7 @@ object CineCalidadProvider : Provider {
     private fun getOkHttpClient(): OkHttpClient {
         val appCache = Cache(File("cacheDir", "okhttpcache"), 10 * 1024 * 1024)
 
-        val clientBuilder = OkHttpClient.Builder()
+        val clientBuilder = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
             .cache(appCache)
             .readTimeout(30, TimeUnit.SECONDS)
             .connectTimeout(30, TimeUnit.SECONDS)

@@ -74,7 +74,7 @@ object CineHaxProvider : Provider {
 
     // region HTTP
 
-    private val httpClient = OkHttpClient.Builder()
+    private val httpClient = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(15, TimeUnit.SECONDS)
         .addInterceptor { chain ->

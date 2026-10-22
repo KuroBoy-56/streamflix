@@ -51,7 +51,7 @@ object StreamingItaProvider : Provider {
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
 
     private fun getOkHttpClient(): OkHttpClient {
-        val clientBuilder = OkHttpClient.Builder()
+        val clientBuilder = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
             .readTimeout(30, TimeUnit.SECONDS)
             .connectTimeout(30, TimeUnit.SECONDS)
         
@@ -539,7 +539,7 @@ object StreamingItaProvider : Provider {
     }
 
     private suspend fun httpGet(url: String, referer: String? = null): String = withContext(Dispatchers.IO) {
-        val client = OkHttpClient.Builder().followRedirects(true).followSslRedirects(true).build()
+        val client = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder().followRedirects(true).followSslRedirects(true).build()
         val reqBuilder = Request.Builder().url(url).header("User-Agent", DEFAULT_USER_AGENT)
         referer?.let { reqBuilder.header("Referer", it) }
         client.newCall(reqBuilder.build()).execute().use { resp ->
@@ -548,7 +548,7 @@ object StreamingItaProvider : Provider {
     }
 
     private suspend fun followRedirect(url: String): String = withContext(Dispatchers.IO) {
-        val client = OkHttpClient.Builder().followRedirects(true).followSslRedirects(true).build()
+        val client = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder().followRedirects(true).followSslRedirects(true).build()
         val request = Request.Builder()
             .url(url)
             .header("Referer", baseUrl)

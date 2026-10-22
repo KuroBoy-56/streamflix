@@ -242,7 +242,7 @@ object FanpelisProvider : Provider {
                 .baseUrl(API_URL)
                 .addConverterFactory(GsonConverterFactory.create())
                 .client(
-                    OkHttpClient.Builder()
+                    com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
                         .connectTimeout(30, TimeUnit.SECONDS)
                         .readTimeout(30, TimeUnit.SECONDS)
                         .dns(DnsResolver.doh)

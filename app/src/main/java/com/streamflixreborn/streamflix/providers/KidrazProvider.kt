@@ -410,7 +410,7 @@ object KidrazProvider : Provider, ProviderPortalUrl, ProviderConfigUrl {
 
     private interface Service {
         companion object {
-            private val client = OkHttpClient.Builder()
+            private val client = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
                 .readTimeout(30, TimeUnit.SECONDS)
                 .connectTimeout(30, TimeUnit.SECONDS)
                 .addInterceptor { chain ->

@@ -453,7 +453,7 @@ object AnikotoProvider : Provider {
     private interface Service {
         companion object {
             fun build(): Service {
-                val client = OkHttpClient.Builder()
+                val client = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
                     .dns(DnsResolver.doh)
                     .addInterceptor { chain ->
                         val request = chain.request().newBuilder()

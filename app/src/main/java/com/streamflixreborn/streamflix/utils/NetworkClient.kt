@@ -74,7 +74,7 @@ object NetworkClient {
     }
 
     private fun buildClient(dns: Dns, customizer: ((OkHttpClient.Builder) -> Unit)? = null): OkHttpClient {
-        val builder = OkHttpClient.Builder()
+        val builder = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
             .addInterceptor { chain ->
                 val original = chain.request()
                 val requestBuilder = original.newBuilder()

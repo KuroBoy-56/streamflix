@@ -652,7 +652,7 @@ object SuperStreamProvider : Provider {
 
         companion object {
             fun build(): SuperStreamApiService {
-                val client = OkHttpClient.Builder().dns(DnsResolver.doh).addInterceptor { chain ->
+                val client = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder().dns(DnsResolver.doh).addInterceptor { chain ->
                     val requestBuilder = chain.request().newBuilder()
                         .addHeader("Accept", "charset=utf-8")
                         .addHeader("Platform", "android")

@@ -64,7 +64,7 @@ object GuardaSerieProvider : Provider {
     private interface GuardaSerieService {
         companion object {
             fun build(baseUrl: String): GuardaSerieService {
-                val clientBuilder = OkHttpClient.Builder()
+                val clientBuilder = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
                     .readTimeout(30, TimeUnit.SECONDS)
                     .connectTimeout(30, TimeUnit.SECONDS)
                     .cookieJar(NetworkClient.cookieJar)

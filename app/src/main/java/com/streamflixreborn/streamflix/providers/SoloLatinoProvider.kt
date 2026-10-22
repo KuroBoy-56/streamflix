@@ -52,7 +52,7 @@ object SoloLatinoProvider : Provider {
     private fun getOkHttpClient(): OkHttpClient {
         val appCache = Cache(File("cacheDir", "okhttpcache"), 10 * 1024 * 1024)
 
-        val clientBuilder = OkHttpClient.Builder()
+        val clientBuilder = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
             .addInterceptor { chain ->
                 val request = chain.request().newBuilder()
                     .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36")

@@ -45,7 +45,7 @@ object TvLibrefutbolProvider : IptvProvider {
     private var cachedChannels: List<TvShow>? = null
     private var cachedHome: List<Category>? = null
 
-    private val client = OkHttpClient.Builder()
+    private val client = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
         .cookieJar(object : CookieJar {
             private val cookieStore = ConcurrentHashMap<String, MutableList<Cookie>>()
 

@@ -44,7 +44,7 @@ object SeriesFlixProvider : Provider {
     }
 
     private val service: SeriesFlixService by lazy {
-        val client = OkHttpClient.Builder()
+        val client = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
             .dns(DnsResolver.doh)
             .readTimeout(30, TimeUnit.SECONDS)
             .connectTimeout(30, TimeUnit.SECONDS)

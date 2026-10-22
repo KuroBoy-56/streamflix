@@ -282,7 +282,7 @@ object OtakufrProvider : Provider {
 
         companion object {
             fun build(): Service {
-                val client = OkHttpClient.Builder()
+                val client = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
                     .readTimeout(30, TimeUnit.SECONDS)
                     .connectTimeout(30, TimeUnit.SECONDS)
                     .dns(DnsResolver.doh)

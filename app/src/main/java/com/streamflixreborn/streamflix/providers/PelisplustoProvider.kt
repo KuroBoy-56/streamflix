@@ -35,7 +35,7 @@ object PelisplustoProvider : Provider {
     override val logo = "https://pelisplus.to/images/logo2.png"
     private const val TAG = "PelisplustoProvider"
 
-    private val client = OkHttpClient.Builder()
+    private val client = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
         .addInterceptor { chain ->
             val request = chain.request().newBuilder()
                 .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36")

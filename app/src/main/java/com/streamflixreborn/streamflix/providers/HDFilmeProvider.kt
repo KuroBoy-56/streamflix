@@ -48,7 +48,7 @@ object HDFilmeProvider : Provider {
     private interface HDFilmeService {
         companion object {
             fun build(baseUrl: String): HDFilmeService {
-                val clientBuilder = OkHttpClient.Builder()
+                val clientBuilder = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
                     .readTimeout(30, TimeUnit.SECONDS)
                     .connectTimeout(30, TimeUnit.SECONDS)
                     .followRedirects(false)

@@ -703,7 +703,7 @@ object AnimeWorldProvider : Provider {
 
         companion object {
             fun build(): AnimeWorldService {
-                val client = OkHttpClient.Builder()
+                val client = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
                     .cookieJar(MyCookieJar())
                     .readTimeout(30, TimeUnit.SECONDS)
                     .connectTimeout(30, TimeUnit.SECONDS)
@@ -732,7 +732,7 @@ object AnimeWorldProvider : Provider {
                 sslContext.init(null, trustAllCerts, SecureRandom())
                 val trustManager = trustAllCerts[0] as X509TrustManager
 
-                val client = OkHttpClient.Builder()
+                val client = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
                     .cookieJar(MyCookieJar())
                     .readTimeout(30, TimeUnit.SECONDS)
                     .connectTimeout(30, TimeUnit.SECONDS)

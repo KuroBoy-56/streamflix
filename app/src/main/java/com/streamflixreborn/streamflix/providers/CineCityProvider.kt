@@ -20,7 +20,7 @@ object CineCityProvider : IptvProvider {
 
     private const val FALLBACK_VIDEO_URL = com.streamflixreborn.streamflix.utils.PanelResources.NO_SIGNAL_VIDEO
 
-    private val client = OkHttpClient.Builder()
+    private val client = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(15, TimeUnit.SECONDS)
         .cookieJar(object : CookieJar {

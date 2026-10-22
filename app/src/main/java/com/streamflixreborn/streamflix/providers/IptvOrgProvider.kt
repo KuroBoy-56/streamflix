@@ -24,7 +24,7 @@ object IptvOrgProvider : IptvProvider {
         "Travel", "Weather", "Undefined"
     )
 
-    private val client = OkHttpClient.Builder()
+    private val client = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .cookieJar(object : CookieJar {

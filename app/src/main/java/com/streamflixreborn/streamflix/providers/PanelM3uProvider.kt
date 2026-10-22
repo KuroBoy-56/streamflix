@@ -64,7 +64,7 @@ abstract class PanelM3uProvider(
     /** Carpeta del lado izquierdo de "En Vivo" (categoría o país) con su cantidad de canales. */
     data class Folder(val name: String, val count: Int)
 
-    private val client = OkHttpClient.Builder()
+    private val client = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .build()

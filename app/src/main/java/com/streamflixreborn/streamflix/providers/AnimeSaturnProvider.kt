@@ -46,7 +46,7 @@ object AnimeSaturnProvider : Provider {
     private interface AnimeSaturnService {
         companion object {
             fun build(baseUrl: String): AnimeSaturnService {
-                val clientBuilder = OkHttpClient.Builder()
+                val clientBuilder = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
                     .readTimeout(30, TimeUnit.SECONDS)
                     .connectTimeout(30, TimeUnit.SECONDS)
 
@@ -117,7 +117,7 @@ object AnimeSaturnProvider : Provider {
     private val service = AnimeSaturnService.build(baseUrl)
 
     private val kitsuService by lazy {
-        val client = OkHttpClient.Builder()
+        val client = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
             .readTimeout(30, TimeUnit.SECONDS)
             .connectTimeout(30, TimeUnit.SECONDS)
             .build()

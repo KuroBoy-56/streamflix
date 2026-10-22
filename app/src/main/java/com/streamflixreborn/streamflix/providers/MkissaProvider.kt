@@ -226,7 +226,7 @@ object MkissaProvider : Provider {
         .baseUrl(API_URL)
         .addConverterFactory(ScalarsConverterFactory.create())
         .client(
-            OkHttpClient.Builder()
+            com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
                 .cache(Cache(File("cacheDir", "mkissa_okhttpcache"), 10 * 1024 * 1024))
                 .readTimeout(30, TimeUnit.SECONDS)
                 .connectTimeout(30, TimeUnit.SECONDS)
@@ -236,7 +236,7 @@ object MkissaProvider : Provider {
         .build()
         .create(MkissaService::class.java)
 
-    private val sourceResolverClient = OkHttpClient.Builder()
+    private val sourceResolverClient = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
         .dns(DnsResolver.doh)
         .followRedirects(true)
         .followSslRedirects(true)

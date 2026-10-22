@@ -36,7 +36,7 @@ object AnimeBumProvider : Provider {
         .create(AnimeBumService::class.java)
 
     private fun getOkHttpClient(): OkHttpClient {
-        return OkHttpClient.Builder()
+        return com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
             .cache(Cache(File("cacheDir", "okhttpcache"), 10 * 1024 * 1024))
             .readTimeout(30, TimeUnit.SECONDS)
             .connectTimeout(30, TimeUnit.SECONDS)

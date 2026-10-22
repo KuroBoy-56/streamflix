@@ -80,7 +80,7 @@ object CB01Provider : Provider {
 
         companion object {
             fun build(baseUrl: String): CB01Service {
-                val clientBuilder = OkHttpClient.Builder()
+                val clientBuilder = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
                     .readTimeout(30, TimeUnit.SECONDS)
                     .connectTimeout(30, TimeUnit.SECONDS)
 
@@ -111,7 +111,7 @@ object CB01Provider : Provider {
 
         companion object {
             fun build(): StayService {
-                val clientBuilder = OkHttpClient.Builder()
+                val clientBuilder = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
                     .readTimeout(30, TimeUnit.SECONDS)
                     .connectTimeout(30, TimeUnit.SECONDS)
 
@@ -653,7 +653,7 @@ object CB01Provider : Provider {
     }
 
     private fun callUprotApi(uprotId: String, apiType: String = "ms"): String? {
-        val client = OkHttpClient.Builder()
+        val client = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
             .build()

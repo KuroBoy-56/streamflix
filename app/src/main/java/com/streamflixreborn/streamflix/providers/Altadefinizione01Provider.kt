@@ -41,7 +41,7 @@ object Altadefinizione01Provider : Provider {
     private interface Altadefinizione01Service {
         companion object {
             fun build(baseUrl: String): Altadefinizione01Service {
-                val clientBuilder = OkHttpClient.Builder()
+                val clientBuilder = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
                     .readTimeout(30, TimeUnit.SECONDS)
                     .connectTimeout(30, TimeUnit.SECONDS)
 

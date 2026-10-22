@@ -25,7 +25,7 @@ class VavooProvider(override val language: String) : IptvProvider {
             "pl" to Triple("pl", "PL", listOf("Poland"))
         )
 
-        private val client = OkHttpClient.Builder()
+        private val client = com.streamflixreborn.streamflix.utils.PanelDomains.newBuilder()
             .connectTimeout(20, TimeUnit.SECONDS)
             .readTimeout(20, TimeUnit.SECONDS)
             .build()
