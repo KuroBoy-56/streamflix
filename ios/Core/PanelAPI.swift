@@ -84,7 +84,6 @@ public enum PanelAPI {
             "panel_default_channel_line": panelText(json["default_channel_line"]),
             "channel_lines_from": String(toInt(json["channel_lines_from"])),
             "settings_note": panelText(json["settings_note"]),
-            "live_enabled": (!channelLines.isEmpty || !personal.isEmpty) ? "true" : "false",
             "profile_limit": String(limit),
             "last_online_check": String(nowSec()),
         ])

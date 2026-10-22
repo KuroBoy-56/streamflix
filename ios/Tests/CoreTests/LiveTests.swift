@@ -92,6 +92,16 @@ final class LiveTests: XCTestCase {
         XCTAssertEqual(espn.sources[1].headers, ["User-Agent": "UA"])
     }
 
+    func testHasLiveFollowsChannelLines() {
+        XCTAssertFalse(Live.hasLive)
+        Reg.write("personal_provider_url", "ftp://x")
+        XCTAssertFalse(Live.hasLive)
+        Reg.write("panel_channel_lines", "http://a/1.m3u")
+        XCTAssertTrue(Live.hasLive)
+        Reg.write("panel_channel_lines", "")
+        XCTAssertFalse(Live.hasLive)
+    }
+
     func testCacheIsUsed() async {
         Reg.write("panel_channel_lines", "http://a/1.m3u")
         var epg: [String] = []

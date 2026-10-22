@@ -35,7 +35,9 @@ struct LiveCache: Codable {
 }
 
 public enum Live {
-    public static var hasLive: Bool { Reg.read("live_enabled") == "true" }
+    /// "En Vivo" solo existe si hay alguna lista http(s) del panel o personal (Android:
+    /// PanelM3uProvider.isConfigured). Se calcula al momento: si el panel quita las líneas, se oculta.
+    public static var hasLive: Bool { !sources().isEmpty }
 
     static let cacheFile = "live_cache.json"
     static let lineUA = "Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
