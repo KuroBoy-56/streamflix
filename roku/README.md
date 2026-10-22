@@ -56,7 +56,7 @@ Para publicarlo en la tienda de canales de Roku, sube ese mismo zip en el
   tres, busca en todos) y arma la lista en el idioma de Ajustes:
   - Español latino (por defecto): latino → castellano → subtitulado.
   - Inglés: audio original (subtitulado) → latino → castellano.
-  - VixSrc solo si esos sitios no dieron ningún servidor.
+  - VixSrc siempre al final: se prueba si ningún servidor de esos sitios reproduce.
   En pantalla se ve "Servidor 1 · Latino", "Servidor 2 · Castellano"... (sin el nombre del sitio).
   Audio: español latino → español → inglés (nunca italiano u otro si hay inglés); el menú * los
   lista en ese orden.

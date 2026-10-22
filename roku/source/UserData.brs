@@ -147,6 +147,9 @@ function UD_Merge3(base as dynamic, remote as dynamic, local as dynamic) as obje
         keys[key] = true
     end for
     for each key in keys
+        ' Clave ausente en la nube (respuesta incompleta; los equipos siempre mandan sus claves):
+        ' no se deduce ningún borrado de esa clave.
+        inRemote = remote.DoesExist(key)
         rpart = remote[key]
         if rpart = invalid then rpart = UD_EmptyPart()
         lpart = local[key]
@@ -190,7 +193,7 @@ function UD_Merge3(base as dynamic, remote as dynamic, local as dynamic) as obje
                     l = lpart[kind][id]
                     b = bpart[kind][id]
                     ' Estaba en la base y no cambió aquí: otro equipo lo borró de la nube.
-                    if b = invalid or UD_UpdatedAt(kind, l) > UD_UpdatedAt(kind, b) then
+                    if not inRemote or b = invalid or UD_UpdatedAt(kind, l) > UD_UpdatedAt(kind, b) then
                         part[kind][id] = l
                         if UD_HasData(kind, l) then upload = true
                     end if

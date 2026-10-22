@@ -1,5 +1,6 @@
 ' Contenido: title (texto), ShortDescriptionLine1 = "left" para alinear a la izquierda,
-' ShortDescriptionLine2 = "primary" para el botón principal (resaltado suave aun sin foco).
+' ShortDescriptionLine2 = "primary" para el botón principal (resaltado suave aun sin foco) o
+' "light" para un botón claro con texto oscuro.
 sub init()
     m.idle = m.top.findNode("idle")
     m.focus = m.top.findNode("focus")
@@ -58,4 +59,6 @@ sub onFocus()
         m.label.color = "0xD8DCE8FF"
         m.label.font = regular
     end if
+    ' Botón claro (login): texto oscuro con y sin foco.
+    if m.top.itemContent <> invalid and m.top.itemContent.ShortDescriptionLine2 = "light" then m.label.color = "0x0F111AFF"
 end sub

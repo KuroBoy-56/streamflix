@@ -271,8 +271,9 @@ function ApiServers(p as object) as object
             if s.lang = tag and not Unsupported(s.name + " " + s.url) then servers.Push(s)
         end for
     end for
-    ' VixSrc no es un proveedor del panel: solo si los sitios asignados no dieron ningún servidor.
-    if servers.Count() = 0 then servers.Push({ name: "VixSrc", url: "vixsrc", referer: "", lang: "multi" })
+    ' VixSrc (no es un proveedor del panel) siempre al final: se prueba si ninguno de los sitios
+    ' asignados reproduce.
+    servers.Push({ name: "VixSrc", url: "vixsrc", referer: "", lang: "multi" })
     return { servers: servers, links: links }
 end function
 

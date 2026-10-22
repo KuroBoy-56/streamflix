@@ -72,6 +72,9 @@ sub Main()
     Check("3v: sin cambios no sube", same.upload.ToStr(), "false")
     ' Sin base (equipo nuevo) no se deduce ningún borrado.
     nobase = UD_Merge3(invalid, remote, local)
+    ' Clave que falta en la respuesta de la nube: no se borra nada de esa clave.
+    partial = UD_Merge3(base, { Poseidonhd2: { movies: { other: fav(2) } } }, local)
+    Check("3v: clave ausente conserva", partial.data.Cuevana_3.movies.DoesExist("delRemote").ToStr() + partial.data.Cuevana_3.movies.DoesExist("keep").ToStr(), "truetrue")
     Check("3v: sin base conserva", nobase.data.Cuevana_3.movies.DoesExist("delLocal").ToStr() + nobase.data.Cuevana_3.movies.DoesExist("delRemote").ToStr(), "truetrue")
     RegClearSession()
     if m.failures = 0 then print "OK: nube" else print "FALLARON " + m.failures.ToStr()
