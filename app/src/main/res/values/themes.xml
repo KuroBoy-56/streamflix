@@ -3,6 +3,10 @@
     <style name="AppTheme.Mobile" parent="Theme.AppCompat">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
+        <!-- Base neutra (sin rojo): blanco para lo activo y gris oscuro para interruptores apagados. -->
+        <item name="colorAccent">#FFFFFF</item>
+        <item name="colorControlActivated">#FFFFFF</item>
+        <item name="colorSwitchThumbNormal">#6E6E73</item>
         <item name="app_background_color">#181818</item>
         <item name="home_gradient_drawable">@drawable/bg_home_gradient_default</item>
         <item name="movie_banner_gradient_drawable">@drawable/bg_movie_banner_gradient_default</item>

@@ -487,7 +487,7 @@ class ProfilesActivity : AppCompatActivity() {
                 isClickable = true
                 setPadding(dp(3), dp(3), dp(3), dp(3))
             }
-            fun mark() { item.background = if (url == avatar) rounded(Color.TRANSPARENT, dp(6), Color.parseColor("#E50914"), dp(3)) else null }
+            fun mark() { item.background = if (url == avatar) rounded(Color.TRANSPARENT, dp(6), Color.WHITE, dp(3)) else null }
             mark()
             Glide.with(this).load(url).transform(CenterCrop(), RoundedCorners(dp(6))).into(item)
             item.setOnClickListener {
@@ -625,22 +625,22 @@ class ProfilesActivity : AppCompatActivity() {
         background = rounded(Color.parseColor("#1F2230"), dp(10), Color.parseColor("#2E3242"), dp(1))
         setOnClickListener { onClick() }
         setOnFocusChangeListener { v, f ->
-            (v as TextView).setTextColor(if (f) Color.WHITE else Color.parseColor("#D8DCE8"))
-            v.background = if (f) rounded(Color.parseColor("#E50914"), dp(10)) else rounded(Color.parseColor("#1F2230"), dp(10), Color.parseColor("#2E3242"), dp(1))
+            (v as TextView).setTextColor(if (f) Color.parseColor("#0F111A") else Color.parseColor("#D8DCE8"))
+            v.background = if (f) rounded(Color.parseColor("#E8EAED"), dp(10)) else rounded(Color.parseColor("#1F2230"), dp(10), Color.parseColor("#2E3242"), dp(1))
         }
     }
 
     private fun solidButton(text: String) = TextView(this).apply {
         this.text = text
-        setTextColor(Color.WHITE)
+        setTextColor(Color.parseColor("#0F111A"))
         textSize = 15f
         typeface = Typeface.DEFAULT_BOLD
         isFocusable = true
         isClickable = true
         gravity = Gravity.CENTER
         setPadding(dp(26), dp(10), dp(26), dp(10))
-        background = rounded(Color.parseColor("#7A1018"), dp(10))
-        setOnFocusChangeListener { v, f -> v.background = rounded(if (f) Color.parseColor("#E50914") else Color.parseColor("#7A1018"), dp(10)) }
+        background = rounded(Color.parseColor("#C9CDD4"), dp(10))
+        setOnFocusChangeListener { v, f -> v.background = rounded(if (f) Color.WHITE else Color.parseColor("#C9CDD4"), dp(10)) }
     }
 
     private fun rounded(color: Int, radius: Int, strokeColor: Int? = null, strokeWidth: Int = 0) = GradientDrawable().apply {

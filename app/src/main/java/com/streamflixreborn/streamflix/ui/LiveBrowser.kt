@@ -264,11 +264,11 @@ class LiveBrowser(
         previewBox.addView(previewProgress, FrameLayout.LayoutParams(dp(40), dp(40), Gravity.CENTER))
         previewBadge.apply {
             text = context.getString(R.string.live_now)
-            setTextColor(Color.WHITE)
+            setTextColor(Color.parseColor("#0F111A"))
             textSize = 11f
             typeface = Typeface.DEFAULT_BOLD
             setPadding(dp(8), dp(3), dp(8), dp(3))
-            background = GradientDrawable().apply { setColor(Color.parseColor("#E50914")); cornerRadius = dp(4).toFloat() }
+            background = GradientDrawable().apply { setColor(Color.parseColor("#E8EAED")); cornerRadius = dp(4).toFloat() }
             visibility = View.GONE
         }
         previewBox.addView(previewBadge, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.START).apply { setMargins(dp(12), dp(12), 0, 0) })
@@ -293,7 +293,7 @@ class LiveBrowser(
             epgNow.apply { setTextColor(Color.WHITE); textSize = 16f; maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END }
             epgBar.apply {
                 max = 1000
-                progressTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#E50914"))
+                progressTintList = android.content.res.ColorStateList.valueOf(Color.WHITE)
                 progressBackgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#33FFFFFF"))
             }
             epgNext.apply { setTextColor(Color.parseColor("#B3FFFFFF")); textSize = 14f; maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END }
@@ -764,7 +764,7 @@ class LiveBrowser(
             val name = rowText(if (isTv) 16f else 14f)
             val live = TextView(context).apply {
                 text = "●"
-                setTextColor(Color.parseColor("#E50914"))
+                setTextColor(Color.parseColor("#E8EAED"))
                 textSize = 12f
                 visibility = View.GONE
             }

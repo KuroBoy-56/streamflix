@@ -49,6 +49,10 @@ object CloudSyncManager {
     private var isWatchdogRunning = false
 
     private const val UPLOAD_DEBOUNCE_MS = 2_500L
+    /** Cada cuánto, como mínimo, se vuelve a leer la nube al volver al Inicio. */
+    private const val REFRESH_MIN_MS = 30_000L
+    @Volatile
+    private var lastDownloadAt = 0L
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val syncMutex = Mutex()
     private var initJob: Job? = null
@@ -59,7 +63,11 @@ object CloudSyncManager {
     private var initialSyncDone = false
     @Volatile
     private var syncedUserId: String? = null
-    /** Último documento conocido de la nube (clave de proveedor -> datos). */
+    /**
+     * Último documento conocido de la nube (clave de proveedor -> datos): lo último que se bajó
+     * o se subió. Es la base de la fusión de tres vías con lo que otros equipos (Roku, iPhone)
+     * escribieron después.
+     */
     @Volatile
     private var remoteSnapshot: Map<String, Any?> = emptyMap()
 
@@ -136,6 +144,19 @@ object CloudSyncManager {
             initJob = scope.launch { downloadAndApply(appContext, userId, ProfileManager.activeId) }
         }
         startLivePanelWatchdog(appContext)
+    }
+
+    /**
+     * Vuelve a leer la nube (al volver al Inicio) para ver lo que Roku o iPhone guardaron con la
+     * app abierta. Como mucho una vez cada [REFRESH_MIN_MS].
+     */
+    fun refresh(context: Context) {
+        val appContext = context.applicationContext
+        val userId = getActiveUserId(appContext) ?: return
+        // Sin la primera lectura aún (arranque o cambio de perfil): de eso se encarga initialize().
+        if (!initialSyncDone || syncedUserId != syncKey(userId, ProfileManager.activeId)) return
+        if (System.currentTimeMillis() - lastDownloadAt < REFRESH_MIN_MS || initJob?.isActive == true) return
+        initJob = scope.launch { downloadAndApply(appContext, userId, ProfileManager.activeId, force = true) }
     }
 
     private fun startLivePanelWatchdog(context: Context) {
@@ -222,9 +243,10 @@ object CloudSyncManager {
      * Descarga el documento del usuario y lo fusiona con lo local (gana el registro más reciente).
      * Devuelve true si la nube respondió (con datos o vacía), false si no se pudo leer.
      */
-    private suspend fun downloadAndApply(context: Context, userId: String, profileId: String): Boolean = syncMutex.withLock {
+    private suspend fun downloadAndApply(context: Context, userId: String, profileId: String, force: Boolean = false): Boolean = syncMutex.withLock {
         val key = syncKey(userId, profileId)
-        if (initialSyncDone && syncedUserId == key) return@withLock true
+        val synced = initialSyncDone && syncedUserId == key
+        if (synced && !force) return@withLock true
         // Cambió el perfil mientras se esperaba: no se aplica la nube de otro perfil.
         if (profileId != ProfileManager.activeId) return@withLock false
         try {
@@ -250,8 +272,11 @@ object CloudSyncManager {
                 return@withLock false
             }
 
-            if (cloudData.isNotEmpty()) {
-                applyRemoteToLocal(context, cloudData)
+            lastDownloadAt = System.currentTimeMillis()
+            // Primera lectura: gana el más reciente. Después: solo lo que cambió en la nube.
+            val base = if (synced) remoteSnapshot else null
+            if (cloudData.isNotEmpty() || base?.isNotEmpty() == true) {
+                applyRemoteToLocal(context, cloudData, base)
                 Log.i(TAG, "✅ Datos de la nube descargados y fusionados (${cloudData.size} proveedores).")
             } else {
                 Log.i(TAG, "☁️ Nube vacía para este usuario.")
@@ -313,8 +338,9 @@ object CloudSyncManager {
         val profileId = ProfileManager.activeId
         val key = syncKey(userId, profileId)
 
-        // Nunca subir antes de haber leído la nube: en un dispositivo nuevo borraría datos de otros.
-        if (!(initialSyncDone && syncedUserId == key) && !downloadAndApply(context, userId, profileId)) {
+        // Siempre se lee la nube justo antes de subir: el servidor reemplaza el documento entero y,
+        // sin esto, lo que Roku o iPhone guardaron desde que se abrió la app se borraba.
+        if (!downloadAndApply(context, userId, profileId, force = true)) {
             Log.w(TAG, "⚠️ Subida pospuesta: no se pudo leer la nube todavía.")
             return false
         }
@@ -391,43 +417,108 @@ object CloudSyncManager {
     // Fusión
     // ------------------------------------------------------------------------------------
 
-    private fun applyRemoteToLocal(context: Context, cloudData: Map<String, Any?>) {
+    /** Cómo se lee, compara, guarda y limpia cada tipo de registro de la nube. */
+    internal class Kind<T : Any>(
+        val name: String,
+        val clazz: Class<T>,
+        val updatedAt: (T) -> Long,
+        val hasData: (T) -> Boolean,
+        val get: (AppDatabase, String) -> T?,
+        val put: (AppDatabase, T) -> Unit,
+        val clear: (T) -> Unit,
+    )
+
+    internal val movieKind = Kind("movies", Movie::class.java, { it.updatedAt() }, { it.hasUserData() },
+        { db, id -> db.movieDao().getById(id) }, { db, it -> db.movieDao().insert(it) }) {
+        it.isFavorite = false
+        it.favoritedAtMillis = null
+        it.isWatched = false
+        it.watchedDate = null
+        it.watchHistory = null
+        it.lastPlayedAtMillis = null
+    }
+    internal val tvShowKind = Kind("tv_shows", TvShow::class.java, { it.updatedAt() }, { it.hasUserData() },
+        { db, id -> db.tvShowDao().getById(id) }, { db, it -> db.tvShowDao().insert(it) }) {
+        it.isFavorite = false
+        it.favoritedAtMillis = null
+        it.isWatching = true
+        it.lastPlayedAtMillis = null
+    }
+    internal val episodeKind = Kind("episodes", Episode::class.java, { it.updatedAt() }, { it.hasUserData() },
+        { db, id -> db.episodeDao().getById(id) }, { db, it -> db.episodeDao().insert(it) }) {
+        it.isWatched = false
+        it.watchedDate = null
+        it.watchHistory = null
+    }
+
+    private fun records(doc: Map<String, Any?>?, key: String, kind: String): Map<*, *> =
+        ((doc?.get(key) as? Map<*, *>)?.get(kind) as? Map<*, *>) ?: emptyMap<String, Any?>()
+
+    /**
+     * Fusión de tres vías de un tipo de registro. [base] es lo que este equipo vio en la nube la
+     * última vez (null en la primera lectura: entonces gana siempre el más reciente).
+     * - Lo que no cambió en la nube desde [base] no se toca (respeta lo que se quitó aquí).
+     * - Lo que cambió o es nuevo en la nube entra si es más reciente que lo local.
+     * - Lo que estaba en [base] y otro equipo quitó de la nube se quita aquí, salvo que se haya
+     *   cambiado aquí después.
+     * Devuelve los registros locales que cambiaron.
+     */
+    internal fun <T : Any> mergeKind(
+        kind: Kind<T>,
+        remote: Map<*, *>,
+        base: Map<*, *>?,
+        get: (String) -> T?,
+        put: (T) -> Unit,
+    ): List<T> {
+        val changed = mutableListOf<T>()
+        remote.forEach { (id, data) ->
+            val r = mapToObject(data, kind.clazz) ?: return@forEach
+            val b = base?.get(id)?.let { mapToObject(it, kind.clazz) }
+            if (b != null && kind.updatedAt(b) == kind.updatedAt(r) && kind.hasData(b) == kind.hasData(r)) return@forEach
+            val local = get(id.toString())
+            if (shouldApply(kind.updatedAt(r), kind.hasData(r), local?.let { kind.updatedAt(it) to kind.hasData(it) })) {
+                put(r)
+                changed.add(r)
+            }
+        }
+        base?.forEach { (id, data) ->
+            if (remote.containsKey(id)) return@forEach
+            val b = mapToObject(data, kind.clazz) ?: return@forEach
+            val local = get(id.toString()) ?: return@forEach
+            if (kind.hasData(local) && kind.updatedAt(local) <= kind.updatedAt(b)) {
+                kind.clear(local)
+                put(local)
+                changed.add(local)
+            }
+        }
+        return changed
+    }
+
+    private fun applyRemoteToLocal(context: Context, cloudData: Map<String, Any?>, base: Map<String, Any?>?) {
         var dataChanged = false
         val providersByKey = allProviders().distinctBy { it.name }.associateBy { safeName(it.name) }
 
-        cloudData.forEach { (key, value) ->
+        (cloudData.keys + base?.keys.orEmpty()).forEach { key ->
             // Se aplican todos los proveedores de la nube, existan o no en este dispositivo.
             val provider = providersByKey[key] ?: return@forEach
-            val providerData = value as? Map<*, *> ?: return@forEach
 
-            val newMovies = mutableListOf<Movie>()
-            val newShows = mutableListOf<TvShow>()
-            val newEpisodes = mutableListOf<Episode>()
+            var newMovies = emptyList<Movie>()
+            var newShows = emptyList<TvShow>()
+            var newEpisodes = emptyList<Episode>()
 
             try {
                 withDatabase(context, provider) { db ->
                     db.runInTransaction {
-                        (providerData["movies"] as? Map<*, *>)?.values?.forEach { data ->
-                            val remote = mapToObject(data, Movie::class.java) ?: return@forEach
-                            if (shouldApply(remote.updatedAt(), remote.hasUserData(), db.movieDao().getById(remote.id)?.let { it.updatedAt() to it.hasUserData() })) {
-                                db.movieDao().insert(remote)
-                                newMovies.add(remote)
-                            }
-                        }
-                        (providerData["tv_shows"] as? Map<*, *>)?.values?.forEach { data ->
-                            val remote = mapToObject(data, TvShow::class.java) ?: return@forEach
-                            if (shouldApply(remote.updatedAt(), remote.hasUserData(), db.tvShowDao().getById(remote.id)?.let { it.updatedAt() to it.hasUserData() })) {
-                                db.tvShowDao().insert(remote)
-                                newShows.add(remote)
-                            }
-                        }
-                        (providerData["episodes"] as? Map<*, *>)?.values?.forEach { data ->
-                            val remote = mapToObject(data, Episode::class.java) ?: return@forEach
-                            if (shouldApply(remote.updatedAt(), remote.hasUserData(), db.episodeDao().getById(remote.id)?.let { it.updatedAt() to it.hasUserData() })) {
-                                db.episodeDao().insert(remote)
-                                newEpisodes.add(remote)
-                            }
-                        }
+                        // Un proveedor que falta entero en la nube no borra nada aquí (respuesta
+                        // incompleta del servidor); los demás equipos siempre envían su clave.
+                        val keyBase = base?.takeIf { cloudData.containsKey(key) }
+                        fun <T : Any> merge(kind: Kind<T>) = mergeKind(
+                            kind, records(cloudData, key, kind.name), keyBase?.let { records(it, key, kind.name) },
+                            { id -> kind.get(db, id) }, { kind.put(db, it) },
+                        )
+                        newMovies = merge(movieKind)
+                        newShows = merge(tvShowKind)
+                        newEpisodes = merge(episodeKind)
                     }
                 }
             } catch (e: Exception) {

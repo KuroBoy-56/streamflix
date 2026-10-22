@@ -44,6 +44,7 @@
     <string name="home_recently_watched">Ostatnio oglądane</string>
     <string name="home_favorite_movies">Ulubione filmy</string>
     <string name="home_favorite_tv_shows">Ulubione seriale</string>
+    <string name="home_favorites">Moje ulubione</string>
 
     <string name="option_episode_open_tv_show">Przejdz do serialu</string>
     <string name="option_show_favorite">Dodaj do ulubionych</string>

@@ -50,7 +50,7 @@ class Category(
         const val FEATURED = ""
         const val CONTINUE_WATCHING = "Continue Watching"
         const val RECENTLY_WATCHED = "Recently Watched"
-        const val FAVORITE_MOVIES = "Favorite movies"
-        const val FAVORITE_TV_SHOWS = "Favorite TV shows"
+        /** Una sola fila: películas y series favoritas juntas (como en Roku y iPhone). */
+        const val FAVORITES = "Favorites"
     }
 }

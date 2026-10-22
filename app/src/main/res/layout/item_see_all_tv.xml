@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Tarjeta "Ver todo" al final de cada fila de género (mismo tamaño ampliado que una portada). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="167dp"
-    android:layout_height="250dp"
+    android:layout_width="@dimen/tv_poster_width"
+    android:layout_height="@dimen/tv_poster_height"
     android:background="@drawable/bg_item_see_all"
     android:focusable="true"
     android:focusableInTouchMode="true"

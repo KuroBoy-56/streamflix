@@ -65,8 +65,7 @@ class LiveViewModel : ViewModel() {
             category.list.isNotEmpty() &&
                     category.name != Category.CONTINUE_WATCHING &&
                     category.name != Category.RECENTLY_WATCHED &&
-                    category.name != Category.FAVORITE_MOVIES &&
-                    category.name != Category.FAVORITE_TV_SHOWS &&
+                    category.name != Category.FAVORITES &&
                     !blacklisted.any { category.name.contains(it, ignoreCase = true) }
         }
     }

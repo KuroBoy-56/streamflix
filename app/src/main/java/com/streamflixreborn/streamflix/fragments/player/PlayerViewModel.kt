@@ -9,6 +9,7 @@ import com.streamflixreborn.streamflix.models.Movie
 import com.streamflixreborn.streamflix.models.TvShow
 import com.streamflixreborn.streamflix.models.Video
 import com.streamflixreborn.streamflix.providers.Provider
+import com.streamflixreborn.streamflix.utils.ServerLanguage
 import com.streamflixreborn.streamflix.utils.CustomTabHelper
 import com.streamflixreborn.streamflix.utils.EpisodeManager
 import com.streamflixreborn.streamflix.utils.OpenSubtitles
@@ -112,7 +113,7 @@ class PlayerViewModel(
                 lastVideoType = result.first
                 lastId = result.second
                 _providerSwitchEvents.emit(ProviderSwitchEvent.AutoFallback(failed.orEmpty(), target.name))
-                _state.emit(State.SuccessLoadingServers(result.third))
+                _state.emit(State.SuccessLoadingServers(ServerLanguage.latinoFirst(result.third)))
                 return@launch
             }
             com.streamflixreborn.streamflix.utils.ErrorReporter.report(
@@ -209,7 +210,7 @@ class PlayerViewModel(
             Log.i("StreamFlixES", "[SERVERS LIST] -> Found ${servers.size} servers: ${servers.joinToString { it.name }}")
 
             Log.d("PlayerViewModel", "Ricerca server completata: ${servers.size} server trovati")
-            _state.emit(State.SuccessLoadingServers(servers))
+            _state.emit(State.SuccessLoadingServers(ServerLanguage.latinoFirst(servers)))
         } catch (e: Exception) {
             Log.e("PlayerViewModel", "Errore ricerca server: ", e)
             com.streamflixreborn.streamflix.utils.ErrorReporter.report("PlayerViewModel.FailedLoadingServers", e.message, e)
@@ -244,7 +245,7 @@ class PlayerViewModel(
             lastVideoType = resolvedType
             lastId = resolvedId
             _providerSwitchEvents.emit(ProviderSwitchEvent.Switched(target.name))
-            _state.emit(State.SuccessLoadingServers(servers))
+            _state.emit(State.SuccessLoadingServers(ServerLanguage.latinoFirst(servers)))
         } catch (e: Exception) {
             Log.e("PlayerViewModel", "switchProvider(${target.name}): ", e)
             _providerSwitchEvents.emit(ProviderSwitchEvent.NotFound(target.name))

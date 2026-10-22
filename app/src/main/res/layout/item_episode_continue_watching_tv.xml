@@ -11,7 +11,7 @@
     <ImageView
         android:id="@+id/iv_episode_tv_show_poster"
         android:layout_width="0dp"
-        android:layout_height="250dp"
+        android:layout_height="@dimen/tv_poster_height"
         android:background="@drawable/bg_poster_card"
         android:clipToOutline="true"
         android:scaleType="centerCrop"

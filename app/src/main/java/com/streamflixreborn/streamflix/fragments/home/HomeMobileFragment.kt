@@ -65,6 +65,12 @@ class HomeMobileFragment : Fragment() {
         return binding.root
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Lo que Roku o iPhone guardaron con la app abierta aparece al volver al Inicio.
+        com.streamflixreborn.streamflix.sync.CloudSyncManager.refresh(requireContext())
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -184,8 +190,7 @@ class HomeMobileFragment : Fragment() {
             }
         }
 
-        categories.find { it.name == Category.FAVORITE_MOVIES }?.also { it.name = getString(R.string.home_favorite_movies) }
-        categories.find { it.name == Category.FAVORITE_TV_SHOWS }?.also { it.name = getString(R.string.home_favorite_tv_shows) }
+        categories.find { it.name == Category.FAVORITES }?.also { it.name = getString(R.string.home_favorites) }
 
         val blacklisted = listOf("soporte", "ayuda", "support", "help", "telegram", "discord", "whatsapp")
 
@@ -222,10 +227,9 @@ class HomeMobileFragment : Fragment() {
 
         val excluded = setOf(
             Category.CONTINUE_WATCHING, Category.RECENTLY_WATCHED,
-            Category.FAVORITE_MOVIES, Category.FAVORITE_TV_SHOWS,
+            Category.FAVORITES,
             getString(R.string.home_continue_watching),
-            getString(R.string.home_favorite_movies),
-            getString(R.string.home_favorite_tv_shows),
+            getString(R.string.home_favorites),
         )
         val blacklisted = listOf("soporte", "ayuda", "support", "help", "telegram", "discord", "whatsapp")
         val featured = categories

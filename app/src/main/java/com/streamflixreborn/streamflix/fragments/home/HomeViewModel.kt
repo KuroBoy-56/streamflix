@@ -287,20 +287,11 @@ class HomeViewModel(database: AppDatabase) : ViewModel() {
                         list = history.recentlyWatched.filterNot(::isLiveChannel),
                     ),
 
-                    // FAVORITES
                     Category(
-                        name = Category.FAVORITE_MOVIES,
-                        list = history.favoritesMovies.sortedByDescending {
+                        name = Category.FAVORITES,
+                        list = (history.favoritesMovies + history.favoriteTvShows).sortedByDescending {
                             when (it) {
                                 is Movie -> it.favoritedAtMillis ?: 0L
-                                else -> 0L
-                            }
-                        },
-                    ),
-                    Category(
-                        name = Category.FAVORITE_TV_SHOWS,
-                        list = history.favoriteTvShows.sortedByDescending {
-                            when (it) {
                                 is TvShow -> it.favoritedAtMillis ?: 0L
                                 else -> 0L
                             }

@@ -112,7 +112,7 @@
                 android:stateListAnimator="@null"
                 android:text="Iniciar sesión"
                 android:textAllCaps="false"
-                android:textColor="#FFFFFF"
+                android:textColor="#0F111A"
                 android:textSize="17sp"
                 android:focusable="true" />
 

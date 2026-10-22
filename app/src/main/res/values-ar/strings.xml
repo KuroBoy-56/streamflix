@@ -48,6 +48,7 @@
 	<string name="home_recently_watched">شوهد مؤخرًا</string>
 	<string name="home_favorite_movies">الأفلام المفضلة</string>
 	<string name="home_favorite_tv_shows">المسلسلات المفضلة</string>
+	<string name="home_favorites">المفضلة</string>
 
 	<string name="option_episode_open_tv_show">اذهب إلى المسلسل</string>
 	<string name="option_show_favorite">أضف إلى المفضلة</string>

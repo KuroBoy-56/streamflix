@@ -63,6 +63,7 @@
     <string name="home_recently_watched">Recently Watched</string>
     <string name="home_favorite_movies">Favorite movies</string>
     <string name="home_favorite_tv_shows">Favorite TV shows</string>
+    <string name="home_favorites">My favorites</string>
     <string name="favorites_empty">You have no favorites yet</string>
     <string name="favorites_reorder_categories">Sort favorites</string>
     <string name="favorites_sort_title">Sort favorites</string>
@@ -600,6 +601,11 @@
     <string name="player_provider_auto_fallback">Playback restored</string>
     <string name="player_provider_auto_searching">Trying Server %1$d, don\'t close the player…</string>
     <string name="player_server_label">Server %1$d</string>
+    <string name="player_server_label_lang">Server %1$d · %2$s</string>
+    <string name="server_lang_latino">Latin Spanish</string>
+    <string name="server_lang_castellano">Castilian Spanish</string>
+    <string name="server_lang_subtitulado">Subtitled</string>
+    <string name="server_lang_ingles">English</string>
     <string name="main_menu_live">Live</string>
     <string name="live_select_provider">Live provider</string>
     <string name="live_empty">No live channels available</string>

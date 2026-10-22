@@ -130,11 +130,12 @@ object UserDataCache {
 
         val newData = current.copy(
             favoritesMovies = current.favoritesMovies.mapNotNull { cached ->
-                moviesById[cached.id]?.takeIf { it.isFavorite }?.toCached()
+                // Lo que no viene en la lista se conserva (p. ej. la nube trae solo lo que cambió).
+                if (moviesById.containsKey(cached.id)) moviesById[cached.id]?.takeIf { it.isFavorite }?.toCached() else cached
             } + movies.filter { it.isFavorite && current.favoritesMovies.none { cached -> cached.id == it.id } }
                 .map { it.toCached() },
             continueWatchingMovies = current.continueWatchingMovies.mapNotNull { cached ->
-                moviesById[cached.id]?.takeIf { it.watchHistory != null }?.toCached()
+                if (moviesById.containsKey(cached.id)) moviesById[cached.id]?.takeIf { it.watchHistory != null }?.toCached() else cached
             } + movies.filter { it.watchHistory != null && current.continueWatchingMovies.none { cached -> cached.id == it.id } }
                 .map { it.toCached() }
         )
@@ -148,7 +149,7 @@ object UserDataCache {
 
         val newData = current.copy(
             favoritesTvShows = current.favoritesTvShows.mapNotNull { cached ->
-                tvShowsById[cached.id]?.takeIf { it.isFavorite }?.toCached()
+                if (tvShowsById.containsKey(cached.id)) tvShowsById[cached.id]?.takeIf { it.isFavorite }?.toCached() else cached
             } + tvShows.filter { it.isFavorite && current.favoritesTvShows.none { cached -> cached.id == it.id } }
                 .map { it.toCached() }
         )
@@ -162,7 +163,7 @@ object UserDataCache {
 
         val newData = current.copy(
             continueWatchingEpisodes = current.continueWatchingEpisodes.mapNotNull { cached ->
-                episodesById[cached.id]?.takeIf { it.watchHistory != null }?.toCached()
+                if (episodesById.containsKey(cached.id)) episodesById[cached.id]?.takeIf { it.watchHistory != null }?.toCached() else cached
             } + episodes.filter { it.watchHistory != null && current.continueWatchingEpisodes.none { cached -> cached.id == it.id } }
                 .map { it.toCached() }
         )

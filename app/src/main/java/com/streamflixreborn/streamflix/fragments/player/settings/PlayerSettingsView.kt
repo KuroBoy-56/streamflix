@@ -1270,11 +1270,13 @@ abstract class PlayerSettingsView @JvmOverloads constructor(
 
                 fun init(player: ExoPlayer, resources: Resources) {
                     list.clear()
-                    // Solo se muestra "Servidor N": el nombre real (proveedor/host) nunca se enseña.
+                    // "Servidor N · Latino": el idioma sí, el nombre real (proveedor/host) nunca.
                     list.addAll(player.playlistMetadata.mediaServers.mapIndexed { index, it ->
                         Server(
                             id = it.id,
-                            name = resources.getString(R.string.player_server_label, index + 1),
+                            name = com.streamflixreborn.streamflix.utils.ServerLanguage.of(it.name)
+                                ?.let { lang -> resources.getString(R.string.player_server_label_lang, index + 1, resources.getString(lang.label)) }
+                                ?: resources.getString(R.string.player_server_label, index + 1),
                         )
                     })
 

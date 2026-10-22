@@ -205,14 +205,14 @@ class LiveChannelsOverlay(
             (row.getChildAt(2) as TextView).apply {
                 text = show.title
                 typeface = if (playing) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
-                setTextColor(if (playing) Color.parseColor("#FF5252") else Color.WHITE)
+                setTextColor(Color.WHITE)
             }
             fun paint(focused: Boolean) {
-                // Igual que Roku: la fila enfocada en rojo con el texto en blanco.
-                (row.getChildAt(2) as TextView).setTextColor(if (playing && !focused) Color.parseColor("#FF5252") else Color.WHITE)
+                // La fila enfocada en gris claro con el texto oscuro (sin rojo, como el resto de la app).
+                (row.getChildAt(2) as TextView).setTextColor(if (focused) Color.parseColor("#0F111A") else Color.WHITE)
                 row.background = when {
-                    focused -> rounded(Color.parseColor("#E50914"))
-                    playing -> rounded(Color.parseColor("#26E50914"))
+                    focused -> rounded(Color.parseColor("#E8EAED"))
+                    playing -> rounded(Color.parseColor("#26FFFFFF"))
                     else -> null
                 }
             }
@@ -243,8 +243,8 @@ class LiveChannelsOverlay(
                 text = item.name
                 fun paint(focused: Boolean) {
                     val selected = item.name == category?.name
-                    background = if (focused) rounded(Color.parseColor("#E50914")) else null
-                    setTextColor(if (selected) Color.WHITE else Color.parseColor("#99FFFFFF"))
+                    background = if (focused) rounded(Color.parseColor("#E8EAED")) else null
+                    setTextColor(if (focused) Color.parseColor("#0F111A") else if (selected) Color.WHITE else Color.parseColor("#99FFFFFF"))
                     typeface = if (selected) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
                 }
                 paint(hasFocus())
