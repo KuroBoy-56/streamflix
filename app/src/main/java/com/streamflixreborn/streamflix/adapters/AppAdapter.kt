@@ -3,6 +3,7 @@ package com.streamflixreborn.streamflix.adapters
 import android.os.Parcelable
 import android.view.LayoutInflater
 import android.view.KeyEvent
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
@@ -113,6 +114,7 @@ class AppAdapter(
         SEASON_MOBILE_ITEM, SEASON_TV_ITEM,
         TV_SHOW_MOBILE_ITEM, TV_SHOW_TV_ITEM, TV_SHOW_GRID_MOBILE_ITEM, TV_SHOW_GRID_TV_ITEM, TV_SHOW_SWIPER_MOBILE_ITEM,
         TV_SHOW_MOBILE, TV_SHOW_TV, TV_SHOW_SEASONS_MOBILE, TV_SHOW_SEASONS_TV, TV_SHOW_DIRECTORS_MOBILE, TV_SHOW_DIRECTORS_TV, TV_SHOW_CAST_MOBILE, TV_SHOW_CAST_TV, TV_SHOW_RECOMMENDATIONS_MOBILE, TV_SHOW_RECOMMENDATIONS_TV,
+        EPISODE_ROW_TV_ITEM,
     }
 
     private val states = mutableMapOf<Int, Parcelable?>()
@@ -125,6 +127,18 @@ class AppAdapter(
     private var onLoadMoreListener: (() -> Unit)? = null
     private var footer: Footer<ViewBinding>? = null
 
+    /**
+     * Carátula de TV del mismo tamaño que en Roku: 284 de 1080 del alto real de la pantalla (unas
+     * 8 por fila), en 2:3. Se calcula aquí porque la densidad de cada TV cambia los dp.
+     */
+    private fun rokuPosterSize(view: View, withWidth: Boolean = false) {
+        val height = view.resources.displayMetrics.heightPixels * 284 / 1080
+        view.layoutParams = view.layoutParams.apply {
+            this.height = height
+            if (withWidth) width = height * 2 / 3
+        }
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder =
         when (Type.entries[viewType]) {
             Type.CATEGORY_MOBILE_ITEM -> CategoryViewHolder(ItemCategoryMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
@@ -133,18 +147,20 @@ class AppAdapter(
             Type.CATEGORY_TV_SWIPER -> CategoryViewHolder(ContentCategorySwiperTvBinding.inflate(LayoutInflater.from(parent.context), parent, false))
             Type.EPISODE_MOBILE_ITEM -> EpisodeViewHolder(ItemEpisodeMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
             Type.EPISODE_TV_ITEM -> EpisodeViewHolder(ItemEpisodeTvBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            // Lista de episodios estilo Roku: otro diseño con los mismos ids, misma lógica.
+            Type.EPISODE_ROW_TV_ITEM -> EpisodeViewHolder(ItemEpisodeTvBinding.bind(LayoutInflater.from(parent.context).inflate(com.streamflixreborn.streamflix.R.layout.item_episode_row_tv, parent, false)))
             Type.EPISODE_CONTINUE_WATCHING_MOBILE_ITEM -> EpisodeViewHolder(ItemEpisodeContinueWatchingMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
-            Type.EPISODE_CONTINUE_WATCHING_TV_ITEM -> EpisodeViewHolder(ItemEpisodeContinueWatchingTvBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.EPISODE_CONTINUE_WATCHING_TV_ITEM -> EpisodeViewHolder(ItemEpisodeContinueWatchingTvBinding.inflate(LayoutInflater.from(parent.context), parent, false).also { rokuPosterSize(it.ivEpisodeTvShowPoster) })
             Type.FOOTER -> FooterViewHolder(footer!!.binding(parent))
             Type.FAVORITE_SECTION_HEADER -> FavoriteSectionHeaderViewHolder(ItemFavoriteSectionHeaderBinding.inflate(LayoutInflater.from(parent.context), parent, false))
             Type.GENRE_GRID_MOBILE_ITEM -> GenreViewHolder(ItemGenreGridMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
             Type.GENRE_GRID_TV_ITEM -> GenreViewHolder(ItemGenreGridTvBinding.inflate(LayoutInflater.from(parent.context), parent, false))
             Type.GENRE_SEE_ALL_MOBILE_ITEM -> GenreViewHolder(com.streamflixreborn.streamflix.databinding.ItemSeeAllMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
-            Type.GENRE_SEE_ALL_TV_ITEM -> GenreViewHolder(com.streamflixreborn.streamflix.databinding.ItemSeeAllTvBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.GENRE_SEE_ALL_TV_ITEM -> GenreViewHolder(com.streamflixreborn.streamflix.databinding.ItemSeeAllTvBinding.inflate(LayoutInflater.from(parent.context), parent, false).also { rokuPosterSize(it.root, withWidth = true) })
             Type.HEADER -> HeaderViewHolder(header!!.binding(parent))
             Type.LOADING_ITEM -> LoadingViewHolder(ItemLoadingBinding.inflate(LayoutInflater.from(parent.context), parent, false))
             Type.MOVIE_CONTINUE_WATCHING_MOBILE_ITEM, Type.MOVIE_MOBILE_ITEM -> MovieViewHolder(ItemMovieMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
-            Type.MOVIE_CONTINUE_WATCHING_TV_ITEM, Type.MOVIE_TV_ITEM -> MovieViewHolder(ItemMovieTvBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.MOVIE_CONTINUE_WATCHING_TV_ITEM, Type.MOVIE_TV_ITEM -> MovieViewHolder(ItemMovieTvBinding.inflate(LayoutInflater.from(parent.context), parent, false).also { rokuPosterSize(it.ivMoviePoster) })
             Type.MOVIE_GRID_MOBILE_ITEM -> MovieViewHolder(ItemMovieGridMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
             Type.MOVIE_GRID_TV_ITEM -> MovieViewHolder(ItemMovieGridTvBinding.inflate(LayoutInflater.from(parent.context), parent, false))
             Type.MOVIE_SWIPER_MOBILE_ITEM -> MovieViewHolder(ItemCategorySwiperMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
@@ -163,7 +179,7 @@ class AppAdapter(
             Type.SEASON_MOBILE_ITEM -> SeasonViewHolder(ItemSeasonMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
             Type.SEASON_TV_ITEM -> SeasonViewHolder(ItemSeasonTvBinding.inflate(LayoutInflater.from(parent.context), parent, false))
             Type.TV_SHOW_MOBILE_ITEM -> TvShowViewHolder(ItemTvShowMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
-            Type.TV_SHOW_TV_ITEM -> TvShowViewHolder(ItemTvShowTvBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            Type.TV_SHOW_TV_ITEM -> TvShowViewHolder(ItemTvShowTvBinding.inflate(LayoutInflater.from(parent.context), parent, false).also { rokuPosterSize(it.ivTvShowPoster) })
             Type.TV_SHOW_GRID_MOBILE_ITEM -> TvShowViewHolder(ItemTvShowGridMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))
             Type.TV_SHOW_GRID_TV_ITEM -> TvShowViewHolder(ItemTvShowGridBinding.inflate(LayoutInflater.from(parent.context), parent, false))
             Type.TV_SHOW_SWIPER_MOBILE_ITEM -> TvShowViewHolder(ItemCategorySwiperMobileBinding.inflate(LayoutInflater.from(parent.context), parent, false))

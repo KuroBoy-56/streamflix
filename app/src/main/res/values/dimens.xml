@@ -3,7 +3,7 @@
     <dimen name="providers_spacing">20dp</dimen>
     <dimen name="search_spacing">16dp</dimen>
     <dimen name="home_spacing">10dp</dimen>
-    <!-- Carátula en TV en la misma proporción que en Roku: 284 de 1080 de alto (26 %) y 2:3. -->
+    <!-- Carátula en TV (vista previa del diseño): en la app se ajusta al 26 % del alto real, como Roku (AppAdapter). -->
     <dimen name="tv_poster_height">142dp</dimen>
     <dimen name="tv_poster_width">95dp</dimen>
     <dimen name="movies_spacing">16dp</dimen>

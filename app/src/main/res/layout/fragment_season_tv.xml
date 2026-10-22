@@ -1,49 +1,91 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Igual que Roku: título de la serie arriba, temporadas a la izquierda y episodios en lista a la derecha. -->
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/roku_background"
     tools:context=".fragments.season.SeasonTvFragment">
+
+    <ImageView
+        android:id="@+id/iv_season_backdrop"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:alpha="0.18"
+        android:scaleType="centerCrop"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:ignore="ContentDescription" />
 
     <TextView
         android:id="@+id/tv_season_title"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="40dp"
+        android:layout_marginStart="50dp"
+        android:layout_marginTop="28dp"
+        android:layout_marginEnd="50dp"
+        android:ellipsize="end"
+        android:maxLines="1"
         android:textColor="#FFFFFF"
-        android:textSize="24sp"
+        android:textSize="28sp"
         android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        tools:text="Season #" />
+        tools:text="Serie" />
 
-    <androidx.leanback.widget.HorizontalGridView
-        android:id="@+id/hgv_episodes"
+    <androidx.leanback.widget.VerticalGridView
+        android:id="@+id/vgv_seasons"
+        android:layout_width="190dp"
+        android:layout_height="0dp"
+        android:layout_marginStart="50dp"
+        android:layout_marginTop="85dp"
+        android:layout_marginBottom="40dp"
+        android:clipToPadding="false"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <androidx.leanback.widget.VerticalGridView
+        android:id="@+id/vgv_episodes"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginTop="30dp"
-        android:clipChildren="false"
+        android:layout_marginStart="30dp"
+        android:layout_marginTop="85dp"
+        android:layout_marginEnd="50dp"
+        android:layout_marginBottom="40dp"
         android:clipToPadding="false"
-        android:paddingStart="40dp"
-        android:paddingTop="20dp"
-        android:paddingEnd="40dp"
-        android:paddingBottom="20dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tv_season_title"
-        tools:listitem="@layout/item_episode_tv" />
+        app:layout_constraintStart_toEndOf="@id/vgv_seasons"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:listitem="@layout/item_episode_row_tv" />
+
+    <TextView
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="12dp"
+        android:gravity="center"
+        android:text="@string/season_tv_hint"
+        android:textColor="#8A8A8A"
+        android:textSize="11sp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="@id/vgv_episodes"
+        app:layout_constraintStart_toStartOf="@id/vgv_episodes" />
 
     <include
         android:id="@+id/is_loading"
         layout="@layout/layout_is_loading_tv"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintBottom_toBottomOf="@id/vgv_episodes"
+        app:layout_constraintEnd_toEndOf="@id/vgv_episodes"
+        app:layout_constraintStart_toStartOf="@id/vgv_episodes"
+        app:layout_constraintTop_toTopOf="@id/vgv_episodes" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

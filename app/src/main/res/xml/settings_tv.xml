@@ -2,6 +2,11 @@
 <androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
+    <!-- CUENTA Y DISPOSITIVO (como Roku: los datos se ven en la tarjeta de la derecha) -->
+    <Preference
+        android:key="p_settings_account"
+        android:title="@string/settings_tv_account" />
+
     <!-- NOTA DEL DUEÑO / ADMINISTRADOR (se abre a pantalla completa) -->
     <Preference
         android:key="p_settings_note"
@@ -113,14 +118,17 @@
         </PreferenceCategory>
     </PreferenceScreen>
 
-    <!-- INFORMACIÓN DE LA APP -->
-    <PreferenceCategory
-        android:title="@string/settings_category_application">
+    <Preference
+        android:key="p_settings_switch_profile"
+        android:title="@string/settings_tv_switch_profile" />
 
-        <Preference
-            android:icon="@drawable/ic_settings_about"
-            android:key="p_settings_about"
-            android:title="@string/settings_about" />
-    </PreferenceCategory>
+    <Preference
+        android:key="p_settings_sync_now"
+        android:title="@string/settings_tv_sync_now" />
+
+    <!-- INFORMACIÓN DE LA APP -->
+    <Preference
+        android:key="p_settings_about"
+        android:title="@string/settings_about" />
 
 </androidx.preference.PreferenceScreen>

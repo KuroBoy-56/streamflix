@@ -18,30 +18,15 @@ import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceGroupAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.streamflixreborn.streamflix.R
-import com.streamflixreborn.streamflix.utils.ThemeManager
-import com.streamflixreborn.streamflix.utils.UserPreferences
 
 internal object SettingsListStyler {
     private const val IOS_SECONDARY = 0xFF8E8E93.toInt()
     private const val IOS_SEPARATOR = 0xFF38383A.toInt()
     private const val IOS_ICON = 0xFFC7C7CC.toInt()
+    private const val ROKU_IDLE = 0xFFB4B9C8.toInt()
+    private const val ROKU_SUMMARY = 0xFF8A8F9E.toInt()
+    private const val ROKU_SECTION = 0xFF8E8E93.toInt()
 
-    private data class DefaultRowStyle(
-        val background: Drawable?,
-        val minHeight: Int,
-        val paddingLeft: Int,
-        val paddingTop: Int,
-        val paddingRight: Int,
-        val paddingBottom: Int,
-        val marginLeft: Int,
-        val marginTop: Int,
-        val marginRight: Int,
-        val marginBottom: Int,
-        val titleColor: Int,
-        val titleSizePx: Float,
-        val summaryColor: Int?,
-        val summarySizePx: Float?,
-    )
 
     fun attach(root: View, isTv: Boolean) {
         val recyclerView = findRecyclerView(root) ?: return
@@ -94,110 +79,53 @@ internal object SettingsListStyler {
     }
 
     private fun styleRow(view: View, isTv: Boolean) {
-        if (!isTv) return styleGroupedRow(view)
+        if (isTv) styleRokuRow(view) else styleGroupedRow(view)
+    }
+
+    /**
+     * TV: igual que el menú de Roku. Texto gris que se vuelve blanco con un fondo blanco
+     * translúcido redondeado al enfocar; sin flechas ni bordes. Las secciones, en gris pequeño.
+     */
+    @SuppressLint("RestrictedApi")
+    private fun styleRokuRow(view: View) {
+        val recyclerView = view.parent as? RecyclerView ?: return
+        val adapter = recyclerView.adapter as? PreferenceGroupAdapter ?: return
+        val position = recyclerView.getChildAdapterPosition(view)
+        if (position == RecyclerView.NO_POSITION) return
         val title = view.findViewById<TextView>(android.R.id.title) ?: return
         val summary = view.findViewById<TextView>(android.R.id.summary)
-        val icon = view.findViewById<ImageView>(android.R.id.icon)
-        val layoutParams = view.layoutParams as? ViewGroup.MarginLayoutParams
         val context = view.context
-        val defaults = (view.getTag(R.id.settings_row_defaults) as? DefaultRowStyle) ?: DefaultRowStyle(
-            background = view.background,
-            minHeight = view.minimumHeight,
-            paddingLeft = view.paddingLeft,
-            paddingTop = view.paddingTop,
-            paddingRight = view.paddingRight,
-            paddingBottom = view.paddingBottom,
-            marginLeft = layoutParams?.leftMargin ?: 0,
-            marginTop = layoutParams?.topMargin ?: 0,
-            marginRight = layoutParams?.rightMargin ?: 0,
-            marginBottom = layoutParams?.bottomMargin ?: 0,
-            titleColor = title.currentTextColor,
-            titleSizePx = title.textSize,
-            summaryColor = summary?.currentTextColor,
-            summarySizePx = summary?.textSize,
-        ).also {
-            view.setTag(R.id.settings_row_defaults, it)
-        }
-        val titleText = title.text?.toString().orEmpty()
-        val hasChevron = view.findViewById<View>(R.id.settings_chevron) != null
-        if (!hasChevron) {
-            layoutParams?.setMargins(
-                defaults.marginLeft,
-                defaults.marginTop,
-                defaults.marginRight,
-                defaults.marginBottom,
-            )
+        val layoutParams = view.layoutParams as? ViewGroup.MarginLayoutParams
+
+        if (adapter.getItem(position) is PreferenceCategory) {
+            layoutParams?.setMargins(0, context.dp(12), 0, context.dp(2))
             view.layoutParams = layoutParams
-            view.background = defaults.background
-            view.minimumHeight = defaults.minHeight
-            view.setPadding(
-                defaults.paddingLeft,
-                defaults.paddingTop,
-                defaults.paddingRight,
-                defaults.paddingBottom,
-            )
-
-            title.setTextColor(defaults.titleColor)
-            title.setTextSize(TypedValue.COMPLEX_UNIT_PX, defaults.titleSizePx)
-            title.typeface = Typeface.DEFAULT
-            title.letterSpacing = 0f
-
-            summary?.apply {
-                visibility = if (text.isNullOrBlank()) View.GONE else View.VISIBLE
-                defaults.summaryColor?.let(::setTextColor)
-                defaults.summarySizePx?.let { setTextSize(TypedValue.COMPLEX_UNIT_PX, it) }
-            }
-            icon?.imageTintList = null
+            view.background = null
+            view.setPadding(context.dp(14), 0, context.dp(10), 0)
+            title.setTextColor(ROKU_SECTION)
+            title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+            title.isAllCaps = true
             return
         }
 
-        val palette = ThemeManager.palette(UserPreferences.selectedTheme)
-        val surfaceColor = resolveThemeColor(view, R.attr.app_background_color, 0xFF181818.toInt())
-        val titleColor = palette.tvHeaderPrimary
-        val summaryColor = palette.tvHeaderSecondary
-        val accentColor = palette.mobileNavActive
-        val rowBackgroundColor = ColorUtils.blendARGB(surfaceColor, titleColor, if (isTv) 0.09f else 0.07f)
-        val rowBorderColor = ColorUtils.blendARGB(surfaceColor, summaryColor, 0.42f)
-        val rowHighlightColor = ColorUtils.blendARGB(surfaceColor, accentColor, if (isTv) 0.22f else 0.18f)
-        val rowHighlightBorderColor = ColorUtils.blendARGB(surfaceColor, accentColor, 0.62f)
-
-        layoutParams?.setMargins(
-            context.dp(if (isTv) 28 else 16),
-            context.dp(if (isTv) 8 else 6),
-            context.dp(if (isTv) 28 else 16),
-            context.dp(if (isTv) 8 else 6),
-        )
+        layoutParams?.setMargins(0, context.dp(2), 0, context.dp(2))
         view.layoutParams = layoutParams
-        view.background = createRowBackground(
-            view = view,
-            isTv = isTv,
-            defaultColor = rowBackgroundColor,
-            defaultStrokeColor = rowBorderColor,
-            activeColor = rowHighlightColor,
-            activeStrokeColor = rowHighlightBorderColor,
-        )
-        view.minimumHeight = context.dp(if (isTv) 88 else 72)
-        view.setPadding(
-            context.dp(if (isTv) 28 else 20),
-            context.dp(if (isTv) 18 else 16),
-            context.dp(if (isTv) 28 else 20),
-            context.dp(if (isTv) 18 else 16),
-        )
-
-        title.setTextColor(titleColor)
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, if (isTv) 20f else 16f)
-        title.typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-        title.letterSpacing = 0f
-
+        view.setBackgroundResource(R.drawable.bg_settings_row_tv)
+        view.minimumHeight = context.dp(36)
+        view.setPadding(context.dp(14), context.dp(6), context.dp(10), context.dp(6))
+        view.findViewById<View>(R.id.settings_chevron)?.visibility = View.GONE
+        view.findViewById<ImageView>(android.R.id.icon)?.imageTintList = ColorStateList.valueOf(ROKU_IDLE)
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+        title.typeface = Typeface.DEFAULT
+        title.isAllCaps = false
         summary?.apply {
-            setTextColor(summaryColor)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, if (isTv) 14f else 13f)
+            setTextColor(ROKU_SUMMARY)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             maxLines = 2
         }
-
-        icon?.drawable?.let {
-            icon.imageTintList = ColorStateList.valueOf(accentColor)
-        }
+        fun paint(focused: Boolean) = title.setTextColor(if (focused) Color.WHITE else ROKU_IDLE)
+        paint(view.hasFocus())
+        view.setOnFocusChangeListener { _, focused -> paint(focused) }
     }
 
     /**
@@ -272,53 +200,7 @@ internal object SettingsListStyler {
         icon?.imageTintList = ColorStateList.valueOf(IOS_ICON)
     }
 
-    private fun createRowBackground(
-        view: View,
-        isTv: Boolean,
-        defaultColor: Int,
-        defaultStrokeColor: Int,
-        activeColor: Int,
-        activeStrokeColor: Int,
-    ): Drawable {
-        val radiusDp = if (isTv) 22 else 18
-        val defaultStrokeDp = 1
-        val activeStrokeDp = if (isTv) 2 else 1
 
-        return StateListDrawable().apply {
-            if (isTv) {
-                addState(
-                    intArrayOf(android.R.attr.state_focused),
-                    createRoundedRect(view, activeColor, activeStrokeColor, radiusDp, activeStrokeDp)
-                )
-                addState(
-                    intArrayOf(android.R.attr.state_selected),
-                    createRoundedRect(view, activeColor, activeStrokeColor, radiusDp, activeStrokeDp)
-                )
-            } else {
-                addState(
-                    intArrayOf(android.R.attr.state_pressed),
-                    createRoundedRect(view, activeColor, activeStrokeColor, radiusDp, activeStrokeDp)
-                )
-            }
-            addState(
-                intArrayOf(),
-                createRoundedRect(view, defaultColor, defaultStrokeColor, radiusDp, defaultStrokeDp)
-            )
-        }
-    }
-
-    private fun createRoundedRect(
-        view: View,
-        fillColor: Int,
-        strokeColor: Int,
-        radiusDp: Int,
-        strokeDp: Int,
-    ): Drawable = GradientDrawable().apply {
-        shape = GradientDrawable.RECTANGLE
-        cornerRadius = view.context.dp(radiusDp).toFloat()
-        setColor(fillColor)
-        setStroke(view.context.dp(strokeDp), strokeColor)
-    }
 
     private fun resolveThemeColor(view: View, attr: Int, fallback: Int): Int {
         val typedValue = android.util.TypedValue()

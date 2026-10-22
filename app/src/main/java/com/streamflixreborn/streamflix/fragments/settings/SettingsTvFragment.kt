@@ -24,6 +24,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.view.View
+import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -217,6 +218,47 @@ class SettingsTvFragment : LeanbackPreferenceFragmentCompat() {
 
     private fun applyScreenTitle() {
         activity?.title = currentScreenState.title ?: getString(R.string.player_settings_title)
+        view?.findViewById<TextView>(R.id.tv_settings_title)?.text = activity?.title
+    }
+
+    /** Como Roku: la lista va a la izquierda dentro de un marco con título y tarjeta de información. */
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        val frame = inflater.inflate(R.layout.fragment_settings_tv_frame, container, false)
+        val listContainer = frame.findViewById<ViewGroup>(R.id.settings_list_container)
+        val list = super.onCreateView(inflater, listContainer, savedInstanceState)
+        list.findViewById<View>(androidx.leanback.preference.R.id.decor_title_container)?.visibility = View.GONE
+        list.background = null
+        listContainer.addView(list)
+        return frame
+    }
+
+    /** Título y descripción de la opción enfocada en la tarjeta de la derecha (como Roku). */
+    private fun showInfo(preference: Preference) {
+        val root = view ?: return
+        root.findViewById<TextView>(R.id.tv_settings_info_title)?.text = preference.title
+        root.findViewById<TextView>(R.id.tv_settings_info)?.text = when (preference.key) {
+            "p_settings_account" -> {
+                val prefs = requireContext().getSharedPreferences("SecureGatewayPrefs", android.content.Context.MODE_PRIVATE)
+                getString(
+                    R.string.settings_tv_account_info,
+                    prefs.getString("brand_name", null).orEmpty().ifEmpty { "-" },
+                    prefs.getString("alpha_token", null).orEmpty().ifEmpty { "-" },
+                    com.streamflixreborn.streamflix.profiles.ProfileManager.activeProfile(requireContext())?.name ?: "-",
+                    com.streamflixreborn.streamflix.utils.DeviceMac.get(requireContext()),
+                    android.os.Build.MODEL,
+                    BuildConfig.VERSION_NAME,
+                )
+            }
+            "p_settings_note" -> getString(R.string.settings_tv_info_note)
+            "screen_content" -> getString(R.string.settings_tv_info_content)
+            "screen_playback" -> getString(R.string.settings_tv_info_playback)
+            "screen_appearance" -> getString(R.string.settings_tv_info_appearance)
+            "screen_provider" -> getString(R.string.settings_tv_info_provider)
+            "p_settings_switch_profile" -> getString(R.string.settings_tv_info_switch_profile)
+            "p_settings_sync_now" -> getString(R.string.settings_tv_info_sync_now)
+            "p_settings_about" -> getString(R.string.settings_tv_info_about)
+            else -> preference.summary ?: ""
+        }
     }
 
     private fun renderCurrentScreen() {
@@ -231,10 +273,31 @@ class SettingsTvFragment : LeanbackPreferenceFragmentCompat() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         SettingsListStyler.attach(view, isTv = true)
+        (listView as? androidx.leanback.widget.BaseGridView)?.setOnChildViewHolderSelectedListener(
+            object : androidx.leanback.widget.OnChildViewHolderSelectedListener() {
+                @android.annotation.SuppressLint("RestrictedApi")
+                override fun onChildViewHolderSelected(parent: androidx.recyclerview.widget.RecyclerView, child: androidx.recyclerview.widget.RecyclerView.ViewHolder?, position: Int, subposition: Int) {
+                    val preference = (parent.adapter as? androidx.preference.PreferenceGroupAdapter)?.getItem(position) ?: return
+                    if (preference !is PreferenceCategory) showInfo(preference)
+                }
+            }
+        )
+        applyScreenTitle()
         view.post { listView?.requestFocus() }
     }
 
     private fun displaySettings() {
+        findPreference<Preference>("p_settings_switch_profile")?.setOnPreferenceClickListener {
+            com.streamflixreborn.streamflix.profiles.ProfilesActivity.start(requireContext(), fromApp = true)
+            true
+        }
+        findPreference<Preference>("p_settings_sync_now")?.setOnPreferenceClickListener {
+            viewLifecycleOwner.lifecycleScope.launch {
+                val ok = runCatching { com.streamflixreborn.streamflix.sync.CloudSyncManager.syncNow(requireContext()) }.getOrDefault(false)
+                Toast.makeText(requireContext(), getString(if (ok) R.string.cloud_sync_ok else R.string.cloud_sync_failed), Toast.LENGTH_LONG).show()
+            }
+            true
+        }
         updateOverviewLabels()
         updateProviderVisibilityState()
         SupabaseSettingsController.bind(this, lifecycleScope) { key ->

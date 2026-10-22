@@ -600,6 +600,24 @@
     <string name="player_provider_not_found">No server available</string>
     <string name="player_provider_auto_fallback">Playback restored</string>
     <string name="player_provider_auto_searching">Trying Server %1$d, don\'t close the player…</string>
+    <string name="settings_tv_account">Account and device</string>
+    <string name="settings_tv_switch_profile">Switch profile</string>
+    <string name="settings_tv_sync_now">Sync now</string>
+    <string name="settings_tv_account_info">Distributor: %1$s
+User: %2$s
+Profile: %3$s
+MAC: %4$s
+Device: %5$s
+Version: %6$s</string>
+    <string name="settings_tv_info_content">TMDb and app language.</string>
+    <string name="settings_tv_info_playback">Autoplay and player options.</string>
+    <string name="settings_tv_info_appearance">Theme and screen size.</string>
+    <string name="settings_tv_info_provider">Options of the current provider.</string>
+    <string name="settings_tv_info_switch_profile">Opens Who is watching? to choose another profile. Each profile has its own history and favorites.</string>
+    <string name="settings_tv_info_sync_now">Uploads your favorites and history to your account cloud now. They sync with your other devices (Roku, iPhone, phone).</string>
+    <string name="settings_tv_info_about">App version and information.</string>
+    <string name="settings_tv_info_note">Message from your distributor. Press OK to read it.</string>
+    <string name="season_tv_hint">OK: play   Hold OK: options</string>
     <string name="player_server_label">Server %1$d</string>
     <string name="player_server_label_lang">Server %1$d · %2$s</string>
     <string name="server_lang_latino">Latin Spanish</string>

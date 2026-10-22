@@ -1,15 +1,22 @@
 package com.streamflixreborn.streamflix.fragments.season
 
+import android.graphics.Typeface
 import android.os.Bundle
+import android.text.TextUtils
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
+import android.widget.TextView
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavOptions
+import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -17,12 +24,16 @@ import com.streamflixreborn.streamflix.R
 import com.streamflixreborn.streamflix.adapters.AppAdapter
 import com.streamflixreborn.streamflix.database.AppDatabase
 import com.streamflixreborn.streamflix.databinding.FragmentSeasonTvBinding
+import com.bumptech.glide.Glide
 import com.streamflixreborn.streamflix.models.Episode
+import com.streamflixreborn.streamflix.models.Season
 import com.streamflixreborn.streamflix.utils.CacheUtils
 import com.streamflixreborn.streamflix.utils.LoggingUtils
 import com.streamflixreborn.streamflix.utils.dp
 import com.streamflixreborn.streamflix.utils.viewModelsFactory
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class SeasonTvFragment : Fragment() {
 
@@ -113,13 +124,70 @@ class SeasonTvFragment : Fragment() {
 
 
     private fun initializeSeason() {
-        binding.tvSeasonTitle.text = args.seasonTitle
+        binding.tvSeasonTitle.text = args.tvShowTitle.ifEmpty { args.seasonTitle.orEmpty() }
+        Glide.with(this).load(args.tvShowBanner).into(binding.ivSeasonBackdrop)
 
-        binding.hgvEpisodes.apply {
+        binding.vgvEpisodes.apply {
             adapter = appAdapter.apply {
                 stateRestorationPolicy = RecyclerView.Adapter.StateRestorationPolicy.PREVENT_WHEN_EMPTY
             }
-            setItemSpacing(resources.getDimension(R.dimen.season_episodes_spacing).toInt())
+            setItemSpacing(8.dp(requireContext()))
+        }
+        binding.vgvSeasons.setItemSpacing(3.dp(requireContext()))
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            val seasons = withContext(Dispatchers.IO) { database.seasonDao().getByTvShowId(args.tvShowId) }
+                .sortedBy { it.number }
+                .ifEmpty { listOf(Season(id = args.seasonId, number = args.seasonNumber, title = args.seasonTitle)) }
+            binding.vgvSeasons.adapter = SeasonsAdapter(seasons)
+            binding.vgvSeasons.selectedPosition = seasons.indexOfFirst { it.id == args.seasonId }.coerceAtLeast(0)
+        }
+    }
+
+    /** Temporadas a la izquierda, como en Roku: al elegir una se abre en esta misma pantalla. */
+    private inner class SeasonsAdapter(private val seasons: List<Season>) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+        override fun getItemCount() = seasons.size
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = object : RecyclerView.ViewHolder(TextView(parent.context).apply {
+            layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 35.dp(context))
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(14.dp(context), 0, 10.dp(context), 0)
+            textSize = 16f
+            maxLines = 1
+            ellipsize = TextUtils.TruncateAt.END
+            setTextColor(ContextCompat.getColorStateList(context, R.color.season_row_text_tv))
+            setBackgroundResource(R.drawable.bg_season_row_tv)
+            isFocusable = true
+            isFocusableInTouchMode = true
+        }) {}
+
+        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+            val season = seasons[position]
+            val title = season.title ?: getString(R.string.season_number, season.number)
+            (holder.itemView as TextView).apply {
+                text = title
+                isSelected = season.id == args.seasonId
+                typeface = if (isSelected) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+                setOnClickListener {
+                    if (season.id == args.seasonId) {
+                        binding.vgvEpisodes.requestFocus()
+                        return@setOnClickListener
+                    }
+                    findNavController().navigate(
+                        R.id.season,
+                        SeasonTvFragmentArgs(
+                            tvShowId = args.tvShowId,
+                            tvShowTitle = args.tvShowTitle,
+                            tvShowPoster = args.tvShowPoster,
+                            tvShowBanner = args.tvShowBanner,
+                            seasonId = season.id,
+                            seasonNumber = season.number,
+                            seasonTitle = title,
+                        ).toBundle(),
+                        NavOptions.Builder().setPopUpTo(R.id.season, true).build(),
+                    )
+                }
+            }
         }
     }
 
@@ -127,7 +195,7 @@ class SeasonTvFragment : Fragment() {
 
     private fun displaySeason(episodes: List<Episode>) {
         val preparedEpisodes = episodes.onEach { episode ->
-            episode.itemType = AppAdapter.Type.EPISODE_TV_ITEM
+            episode.itemType = AppAdapter.Type.EPISODE_ROW_TV_ITEM
         }
 
         val lastWatchedIndex = episodes
@@ -145,7 +213,7 @@ class SeasonTvFragment : Fragment() {
                 lastWatchedIndex < episodes.lastIndex -> lastWatchedIndex + 1
                 else -> lastWatchedIndex
             }
-            binding.hgvEpisodes.scrollAndFocus(scrollIndex)
+            binding.vgvEpisodes.scrollAndFocus(scrollIndex)
             focusedEpisodeIndex = scrollIndex
         }
     }

@@ -515,6 +515,24 @@
     <string name="player_provider_not_found">No se encontró un servidor disponible</string>
     <string name="player_provider_auto_fallback">Reproducción recuperada</string>
     <string name="player_provider_auto_searching">Probando Servidor %1$d, no cierres el reproductor…</string>
+    <string name="settings_tv_account">Cuenta y dispositivo</string>
+    <string name="settings_tv_switch_profile">Cambiar de perfil</string>
+    <string name="settings_tv_sync_now">Sincronizar ahora</string>
+    <string name="settings_tv_account_info">Distribuidor: %1$s
+Usuario: %2$s
+Perfil: %3$s
+MAC: %4$s
+Equipo: %5$s
+Versión: %6$s</string>
+    <string name="settings_tv_info_content">TMDb e idioma de la app.</string>
+    <string name="settings_tv_info_playback">Reproducción automática y opciones del reproductor.</string>
+    <string name="settings_tv_info_appearance">Tema y tamaño de la pantalla.</string>
+    <string name="settings_tv_info_provider">Opciones del proveedor actual.</string>
+    <string name="settings_tv_info_switch_profile">Abre ¿Quién está viendo? para elegir otro perfil. Cada perfil tiene su propio historial y favoritos.</string>
+    <string name="settings_tv_info_sync_now">Sube ahora tus favoritos e historial a la nube de tu cuenta. Se sincronizan con tus otros equipos (Roku, iPhone, celular).</string>
+    <string name="settings_tv_info_about">Versión e información de la app.</string>
+    <string name="settings_tv_info_note">Mensaje de tu distribuidor. Pulsa OK para leerlo.</string>
+    <string name="season_tv_hint">OK: reproducir   Mantén OK: opciones</string>
     <string name="player_server_label">Servidor %1$d</string>
     <string name="player_server_label_lang">Servidor %1$d · %2$s</string>
     <string name="server_lang_latino">Latino</string>
