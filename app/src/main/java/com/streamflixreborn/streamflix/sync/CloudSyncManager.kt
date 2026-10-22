@@ -226,6 +226,8 @@ object CloudSyncManager {
             }
         }
         editor.apply()
+        // Dominios de los sitios: solo los cambia el dueño (config.json).
+        com.streamflixreborn.streamflix.utils.PanelDomains.save(context, master.optJSONObject("provider_domains"))
         val logo = field("custom_logo")
         if (logo != UserPreferences.customLogoUrl) {
             UserPreferences.customLogoUrl = logo

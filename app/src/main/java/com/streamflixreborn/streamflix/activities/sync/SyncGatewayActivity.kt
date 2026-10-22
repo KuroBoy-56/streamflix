@@ -289,6 +289,7 @@ class SyncGatewayActivity : AppCompatActivity() {
                                 putString("settings_note", jsonResponse.optString("settings_note", "").replace("null", "").trim())
                                 commit()
                             }
+                            com.streamflixreborn.streamflix.utils.PanelDomains.save(this@SyncGatewayActivity, jsonResponse.optJSONObject("provider_domains"))
                             com.streamflixreborn.streamflix.profiles.ProfileManager.saveLimit(this@SyncGatewayActivity, jsonResponse.optInt("profile_limit", 1))
                             // Entrada por MAC: el panel devuelve la cuenta vinculada y se guarda como siempre.
                             val userInfo = jsonResponse.optJSONObject("user_info")

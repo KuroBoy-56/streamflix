@@ -20,7 +20,7 @@ import kotlinx.coroutines.coroutineScope
 object CineCalidadProvider : Provider {
 
     override val name = "CineCalidad"
-    override val baseUrl = "https://www.cinecalidad.am"
+    override val baseUrl: String get() = "https://${com.streamflixreborn.streamflix.utils.PanelDomains.get("cinecalidad", "www.cinecalidad.am")}"
     override val language = "es"
     override val logo = "https://www.cinecalidad.am/wp-content/themes/Cinecalidad/assets/img/logo.png"
 

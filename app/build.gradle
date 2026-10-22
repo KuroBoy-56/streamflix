@@ -33,8 +33,8 @@ android {
         applicationId "com.flixlat.garevynvod"
         minSdk 21
         targetSdk 35
-        versionCode 24
-        versionName "1.9.2"
+        versionCode 25
+        versionName "1.9.3"
 
         buildConfigField "String", "APP_LAYOUT", "\"${properties.getProperty("APP_LAYOUT")}\""
         buildConfigField "String", "TMDB_API_KEY", "\"${properties.getProperty("TMDB_API_KEY")}\""
