@@ -4,4 +4,5 @@
     <item name="profiles_tag_background" type="id" />
     <item name="settings_row_style_kind" type="id" />
     <item name="settings_row_defaults" type="id" />
+    <item name="roku_poster_card" type="id" />
 </resources>

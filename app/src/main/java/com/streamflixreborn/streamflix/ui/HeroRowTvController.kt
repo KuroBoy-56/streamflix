@@ -68,7 +68,7 @@ class HeroRowTvController(
             }
             setRowHeight(ViewGroup.LayoutParams.WRAP_CONTENT)
             val spacing = resources.getDimension(R.dimen.home_spacing)
-            setItemSpacing((if (compactRow) spacing * 0.6f else spacing).toInt())
+            setItemSpacing(spacing.toInt())
 
             // Movimiento fluido: sin animaciones de cambio de lista (evitan parpadeos al cambiar
             // de fila), tarjetas ya creadas en caché y desplazamiento suave.
@@ -380,6 +380,8 @@ class HeroRowTvController(
      * cuadrículas y otras pantallas mantienen su tamaño). Se hace una sola vez por tarjeta.
      */
     private fun shrinkCard(card: View) {
+        // Las portadas ya vienen del tamaño de Roku (AppAdapter.rokuPosterSize): no se achican.
+        if (card.getTag(R.id.roku_poster_card) == true) return
         if (!scaledCards.add(card)) return
         scaleView(card)
     }
