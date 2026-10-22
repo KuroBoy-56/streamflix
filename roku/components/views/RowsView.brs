@@ -21,10 +21,17 @@ sub onActive()
     if not m.top.active then return
     if not m.loaded then Load()
     if m.dirty then RefreshLocalRows()
+    AskCloud()
 end sub
 
 sub onResumed()
     if m.dirty then RefreshLocalRows()
+    AskCloud()
+end sub
+
+' Inicio visible otra vez: MainScene vuelve a leer la nube (con espera mínima de un minuto).
+sub AskCloud()
+    if m.top.params <> invalid and m.top.params.mode = "home" and m.top.visible then m.top.action = { type: "homeVisible" }
 end sub
 
 sub onUserData()

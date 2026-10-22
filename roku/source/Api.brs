@@ -348,54 +348,55 @@ end function
 ' Nube del perfil (CloudSyncManager -> sync_userdata.php?u=<usuario>&p=<perfil>)
 ' =======================================================================================
 
-function CloudFile(profileId as string) as string
-    return "cachefs:/cloud_" + profileId + ".json"
-end function
-
+' Lee la nube. No cambia la base guardada: la escribe quien fusiona (MainScene o ApiSyncUp).
+' -> { ok, profileId, doc, base } (base = copia anterior o invalid si no hay).
 function ApiSyncDown(profileId as string) as object
-    if RegRead("alpha_token") = "" then return { ok: false }
+    if RegRead("alpha_token") = "" then return { ok: false, profileId: profileId }
     url = PanelApiUrl("sync_userdata.php") + "?u=" + ActiveUserId() + "&p=" + profileId
     r = Http(url, { headers: SyncHeaders(), timeout: 10000 })
-    if r.code <> 200 then return { ok: false }
+    if r.code <> 200 then return { ok: false, profileId: profileId }
     doc = {}
     if r.body.Trim() <> "" then
         json = JsonOf(r.body)
-        if json = invalid or GetInterface(json, "ifAssociativeArray") = invalid then return { ok: false }
+        if json = invalid or GetInterface(json, "ifAssociativeArray") = invalid then return { ok: false, profileId: profileId }
         if AsStr(json.status) <> "empty" then
             for each key in json
                 if Left(key, 1) <> "_" and GetInterface(json[key], "ifAssociativeArray") <> invalid then doc[key] = json[key]
             end for
         end if
     end if
-    ' Copia completa de la nube: al subir se conservan los proveedores que Roku no usa.
-    WriteAsciiFile(CloudFile(profileId), FormatJson(doc))
-    return { ok: true, profileId: profileId, doc: doc }
+    return { ok: true, profileId: profileId, doc: doc, base: JsonOf(ReadAsciiFile(UD_CloudFile(profileId))) }
 end function
 
+' Antes de cada subida se lee la nube y se fusiona en tres vías (base = última nube leída o
+' subida): así no se borra lo que Android o iOS escribieron mientras tanto. Devuelve lo
+' fusionado para que la interfaz muestre lo que agregaron los otros equipos.
 function ApiSyncUp(profileId as string, data as object) as object
-    ' Nunca se sube sin haber leído la nube antes: en un equipo nuevo borraría datos de otros.
-    text = ReadAsciiFile(CloudFile(profileId))
-    if text = "" then
-        down = ApiSyncDown(profileId)
-        if not down.ok then return { ok: false }
-        text = ReadAsciiFile(CloudFile(profileId))
+    down = ApiSyncDown(profileId)
+    if not down.ok then return { ok: false, profileId: profileId }
+    ' Nube igual a la base: lo fusionado es lo mismo que se mandó y la interfaz no necesita nada.
+    remoteChanged = down.base = invalid or FormatJson(down.doc) <> FormatJson(down.base)
+    merged = UD_Merge3(down.base, down.doc, data)
+    doc = down.doc
+    ok = true
+    if merged.upload then
+        ' Se parte de la nube de ahora: los proveedores que Roku no conoce quedan como están.
+        parts = UD_ForUpload(merged.data)
+        for each key in parts
+            doc[key] = parts[key]
+        end for
+        url = PanelApiUrl("sync_userdata.php") + "?u=" + ActiveUserId() + "&p=" + profileId
+        headers = SyncHeaders()
+        headers["Content-Type"] = "application/json"
+        r = Http(url, { method: "POST", body: FormatJson(doc), headers: headers, timeout: 10000 })
+        ' El servidor responde 200 también en errores: se revisa "status".
+        json = JsonOf(r.body)
+        ok = r.code = 200 and (json = invalid or json.status = invalid or AsStr(json.status) = "success")
     end if
-    doc = JsonOf(text)
-    if doc = invalid then doc = {}
-    ' Se parte de la copia de la nube y se reemplazan los proveedores que tiene Roku.
-    for each key in data
-        doc[key] = data[key]
-    end for
-
-    url = PanelApiUrl("sync_userdata.php") + "?u=" + ActiveUserId() + "&p=" + profileId
-    headers = SyncHeaders()
-    headers["Content-Type"] = "application/json"
-    r = Http(url, { method: "POST", body: FormatJson(doc), headers: headers, timeout: 10000 })
-    ' El servidor responde 200 también en errores: se revisa "status".
-    json = JsonOf(r.body)
-    ok = r.code = 200 and (json = invalid or json.status = invalid or AsStr(json.status) = "success")
-    if ok then WriteAsciiFile(CloudFile(profileId), FormatJson(doc))
-    return { ok: ok }
+    if not ok then return { ok: false, profileId: profileId }
+    WriteAsciiFile(UD_CloudFile(profileId), FormatJson(doc))
+    if not remoteChanged then return { ok: true, profileId: profileId }
+    return { ok: true, profileId: profileId, data: merged.data }
 end function
 
 ' =======================================================================================

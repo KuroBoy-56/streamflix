@@ -129,51 +129,108 @@ function UD_HasData(kind as string, rec as object) as boolean
     return rec.isWatched = true or rec.watchHistory <> invalid
 end function
 
-' Fusiona el documento de la nube (todos los proveedores). Devuelve true si lo local tiene algo
-' que la nube no (hay que subir).
-function UD_MergeRemote(remote as dynamic) as boolean
+' Fusión de tres vías (la misma regla en Android, Roku e iOS). base = última nube que este equipo
+' leyó o subió; remote = la nube de ahora; local = lo del equipo. -> { data, upload }
+' upload = true si lo local tiene algo que la nube no (hay que subir). Sin base (invalid) no se
+' deduce ningún borrado: solo gana el registro más reciente.
+function UD_Merge3(base as dynamic, remote as dynamic, local as dynamic) as object
+    base = UD_Normalize(base)
     remote = UD_Normalize(remote)
-    local = UD_Data()
-    needsUpload = false
+    local = UD_Normalize(local)
+    out = {}
+    upload = false
+    keys = {}
     for each key in remote
-        lpart = UD_Part(local, key)
+        keys[key] = true
+    end for
+    for each key in local
+        keys[key] = true
+    end for
+    for each key in keys
         rpart = remote[key]
+        if rpart = invalid then rpart = UD_EmptyPart()
+        lpart = local[key]
+        if lpart = invalid then lpart = UD_EmptyPart()
+        bpart = base[key]
+        if bpart = invalid then bpart = UD_EmptyPart()
+        part = UD_EmptyPart()
         for each kind in ["movies", "tv_shows", "episodes"]
             for each id in rpart[kind]
                 r = rpart[kind][id]
-                if GetInterface(r, "ifAssociativeArray") <> invalid then
-                    l = lpart[kind][id]
-                    if l = invalid then
-                        lpart[kind][id] = r
-                    else
-                        ru& = UD_UpdatedAt(kind, r)
-                        lu& = UD_UpdatedAt(kind, l)
-                        if ru& > lu& or (ru& = lu& and UD_HasData(kind, r) and not UD_HasData(kind, l)) then
-                            lpart[kind][id] = r
-                        else if lu& > ru& then
-                            needsUpload = true
+                l = lpart[kind][id]
+                if GetInterface(r, "ifAssociativeArray") = invalid then
+                    if l <> invalid then part[kind][id] = l
+                else
+                    b = bpart[kind][id]
+                    ' Sin cambios en la nube desde la base: manda lo local (también un borrado local).
+                    unchanged = b <> invalid and UD_UpdatedAt(kind, b) = UD_UpdatedAt(kind, r) and UD_HasData(kind, b) = UD_HasData(kind, r)
+                    takeRemote = false
+                    if not unchanged then
+                        if l = invalid then
+                            takeRemote = true
+                        else
+                            ru& = UD_UpdatedAt(kind, r)
+                            lu& = UD_UpdatedAt(kind, l)
+                            takeRemote = ru& > lu& or (ru& = lu& and UD_HasData(kind, r) and not UD_HasData(kind, l))
                         end if
+                    end if
+                    if takeRemote then
+                        part[kind][id] = r
+                    else if l <> invalid then
+                        part[kind][id] = l
+                        if UD_HasData(kind, l) and (UD_UpdatedAt(kind, l) <> UD_UpdatedAt(kind, r) or not UD_HasData(kind, r)) then upload = true
+                    else
+                        ' Borrado en este equipo: la nube también debe perderlo.
+                        upload = true
+                    end if
+                end if
+            end for
+            for each id in lpart[kind]
+                if not rpart[kind].DoesExist(id) then
+                    l = lpart[kind][id]
+                    b = bpart[kind][id]
+                    ' Estaba en la base y no cambió aquí: otro equipo lo borró de la nube.
+                    if b = invalid or UD_UpdatedAt(kind, l) > UD_UpdatedAt(kind, b) then
+                        part[kind][id] = l
+                        if UD_HasData(kind, l) then upload = true
                     end if
                 end if
             end for
         end for
+        out[key] = part
     end for
-    for each key in local
-        for each kind in ["movies", "tv_shows", "episodes"]
-            for each id in local[key][kind]
-                if remote[key] = invalid or remote[key][kind][id] = invalid then needsUpload = true
-            end for
-        end for
-    end for
-    m.global.userData = local
-    WriteAsciiFile(UD_File(m.global.profileId), FormatJson(local))
-    m.global.userDataTick = m.global.userDataTick + 1
-    return needsUpload
+    return { data: out, upload: upload }
+end function
+
+' Aplica a lo local del perfil lo que trajo la nube (en el hilo de la interfaz). Lo que cambió
+' en el equipo mientras la tarea trabajaba se conserva: base = lo que había antes. Devuelve true
+' si hay que subir.
+function UD_ApplyCloud(profileId as string, base as dynamic, remote as dynamic) as boolean
+    active = profileId = m.global.profileId
+    if active then
+        local = UD_Data()
+    else
+        ' Se cambió de perfil mientras tanto: se fusiona en su archivo.
+        text = ReadAsciiFile(UD_File(profileId))
+        local = invalid
+        if text <> "" then local = ParseJson(text)
+    end if
+    merged = UD_Merge3(base, remote, local)
+    WriteAsciiFile(UD_File(profileId), FormatJson(merged.data))
+    if active then
+        m.global.userData = merged.data
+        m.global.userDataTick = m.global.userDataTick + 1
+    end if
+    return merged.upload
+end function
+
+' Copia de la nube que este equipo leyó o subió por última vez (la "base" de la fusión).
+function UD_CloudFile(profileId as string) as string
+    return "cachefs:/cloud_" + profileId + ".json"
 end function
 
 ' Lo que se sube: todos los proveedores, solo registros con datos del usuario.
-function UD_ForUpload() as object
-    data = UD_Data()
+function UD_ForUpload(data as object) as object
     out = {}
     for each key in data
         part = {}

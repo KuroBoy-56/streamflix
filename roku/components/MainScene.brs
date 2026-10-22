@@ -8,6 +8,7 @@ sub init()
     m.stack = []
     m.syncedProfile = ""
     m.sessionStarted = false
+    m.lastPull = 0
 
     m.securityTimer = m.top.findNode("securityTimer")
     m.securityTimer.observeField("fire", "onSecurityTimer")
@@ -19,6 +20,8 @@ sub init()
     m.noticeTimer.observeField("fire", "onNoticeTimer")
     m.splashTimer = m.top.findNode("splashTimer")
     m.splashTimer.observeField("fire", "onSplashTimer")
+    m.splashImage = m.top.findNode("splashImage")
+    m.splashImage.observeField("loadStatus", "onSplashLoad")
     m.global.observeField("userDataTick", "onUserDataChanged")
 
     ApplyBranding()
@@ -87,6 +90,8 @@ sub onScreenAction(event as object)
         Logout("")
     else if t = "syncNow" then
         UploadNow()
+    else if t = "homeVisible" then
+        RefreshCloud()
     end if
 end sub
 
@@ -133,12 +138,7 @@ sub EnterProfile(profileId as string)
     SyncDown()
     if not m.sessionStarted then
         m.sessionStarted = true
-        splash = RegRead("custom_splash_url")
-        if splash <> "" then
-            m.top.findNode("splashImage").uri = splash
-            m.splash.visible = true
-            m.splashTimer.control = "start"
-        end if
+        ShowSplash()
         m.noticeTimer.control = "start"
         m.securityTimer.control = "start"
         m.brandingTimer.control = "start"
@@ -163,7 +163,37 @@ sub Logout(message as string)
     ReplaceAll("LoginScreen", { message: message })
 end sub
 
+' Splash del panel (config_<APP ID>.json o config.json del dueño). La imagen se descarga al
+' momento (en el primer inicio de sesión no está en el equipo): los 2,3 s cuentan desde que se
+' ve, con hasta 8 s de espera para la descarga.
+sub ShowSplash()
+    splash = RegRead("custom_splash_url")
+    if splash = "" then return
+    m.splash.visible = true
+    m.splashTimer.control = "stop"
+    if m.splashImage.uri = splash and m.splashImage.loadStatus = "ready" then
+        m.splashTimer.duration = 2.3
+    else
+        m.splashTimer.duration = 8
+        m.splashImage.uri = splash
+    end if
+    m.splashTimer.control = "start"
+end sub
+
+sub onSplashLoad()
+    if not m.splash.visible then return
+    status = m.splashImage.loadStatus
+    if status = "ready" then
+        m.splashTimer.control = "stop"
+        m.splashTimer.duration = 2.3
+        m.splashTimer.control = "start"
+    else if status = "failed" then
+        onSplashTimer()
+    end if
+end sub
+
 sub onSplashTimer()
+    m.splashTimer.control = "stop"
     m.splash.visible = false
 end sub
 
@@ -206,15 +236,29 @@ end sub
 ' ---------------------------------------------------------------------------------------
 
 sub SyncDown()
+    m.lastPull = NowSec()
     RunTask("syncDown", { profileId: m.global.profileId }, "onSyncDown")
 end sub
 
+' Fusión de tres vías con la copia anterior de la nube como base; luego la nube leída pasa a
+' ser la base. Solo se sube si lo local tiene algo que la nube no.
 sub onSyncDown(event as object)
     res = TaskResult(event)
     if res = invalid or res.ok <> true or res.profileId <> m.global.profileId then return
     m.syncedProfile = res.profileId
-    needsUpload = UD_MergeRemote(res.doc)
+    needsUpload = UD_ApplyCloud(res.profileId, res.base, res.doc)
+    WriteAsciiFile(UD_CloudFile(res.profileId), FormatJson(res.doc))
     if needsUpload or m.global.uploadPending then UploadNow()
+end sub
+
+' Al volver al Inicio se lee la nube otra vez (como mucho una vez por minuto) para ver lo que se
+' marcó en Android o iOS sin reiniciar. No mientras se sube (esa subida ya trae la nube).
+sub RefreshCloud()
+    profileId = m.global.profileId
+    if not m.sessionStarted or m.syncedProfile <> profileId then return
+    if NowSec() - m.lastPull < 60 then return
+    if m.tasks <> invalid and m.tasks["syncUp" + profileId] <> invalid then return
+    SyncDown()
 end sub
 
 sub onUserDataChanged()
@@ -236,11 +280,31 @@ sub UploadNow()
         return
     end if
     m.uploadTimer.control = "stop"
+    ' Una subida a la vez: si una respuesta se descartara, su base no coincidiría con lo local.
+    ' La siguiente sale al terminar esta (onSyncUp).
+    if m.tasks <> invalid and m.tasks["syncUp" + profileId] <> invalid then
+        m.global.uploadPending = true
+        return
+    end if
     m.global.uploadPending = false
-    RunTask("syncUp", { profileId: profileId, data: UD_ForUpload() }, "onSyncUp", "syncUp" + profileId)
+    m.lastPull = NowSec()
+    RunTask("syncUp", { profileId: profileId, data: UD_ForUpload(UD_Data()) }, "onSyncUp", "syncUp" + profileId)
 end sub
 
+' La subida devuelve lo fusionado con la nube (lo que agregaron Android/iOS). Base = lo que se
+' mandó: así se conserva lo que cambió en el Roku mientras subía.
 sub onSyncUp(event as object)
     res = TaskResult(event)
-    if res <> invalid and res.ok <> true then m.global.uploadPending = true
+    if res = invalid then return
+    if res.ok <> true then
+        m.global.uploadPending = true
+        return
+    end if
+    if not m.sessionStarted then
+        ' Sesión cerrada mientras subía: sin base, la próxima fusión no deduce borrados.
+        DeleteFile(UD_CloudFile(res.profileId))
+        return
+    end if
+    if res.data <> invalid then UD_ApplyCloud(res.profileId, res.request.data, res.data)
+    if m.global.uploadPending then m.uploadTimer.control = "start"
 end sub

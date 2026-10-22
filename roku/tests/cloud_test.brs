@@ -51,6 +51,28 @@ sub Main()
     end for
     UD_ApplyWatch(rec, true, invalid)
     Check("visto con fecha", (Instr(1, FormatJson(rec), Chr(34) + "dayOfMonth" + Chr(34)) > 0).ToStr(), "true")
+
+    ' Fusión de tres vías: lo que Android escribió después de la base no se pierde al subir.
+    fav = function(t as integer) as object
+        return { isFavorite: true, favoritedAtMillis: t }
+    end function
+    base = { Cuevana_3: { movies: { keep: fav(1), delLocal: fav(1), delRemote: fav(1), both: fav(1) } } }
+    remote = { Cuevana_3: { movies: { keep: fav(1), delLocal: fav(1), both: fav(5), android: fav(3) } }, Poseidonhd2: { movies: { other: fav(2) } } }
+    local = { Cuevana_3: { movies: { keep: fav(1), delRemote: fav(1), both: fav(4), roku: fav(6) } } }
+    merged = UD_Merge3(base, remote, local)
+    mv = merged.data.Cuevana_3.movies
+    Check("3v: nuevo de Android", mv.DoesExist("android").ToStr(), "true")
+    Check("3v: nuevo de Roku", mv.DoesExist("roku").ToStr(), "true")
+    Check("3v: borrado en Roku", mv.DoesExist("delLocal").ToStr(), "false")
+    Check("3v: borrado en Android", mv.DoesExist("delRemote").ToStr(), "false")
+    Check("3v: gana el más reciente", ToLong(mv.both.favoritedAtMillis).ToStr(), "5")
+    Check("3v: proveedor ajeno", merged.data.Poseidonhd2.movies.DoesExist("other").ToStr(), "true")
+    Check("3v: hay que subir", merged.upload.ToStr(), "true")
+    same = UD_Merge3(remote, remote, remote)
+    Check("3v: sin cambios no sube", same.upload.ToStr(), "false")
+    ' Sin base (equipo nuevo) no se deduce ningún borrado.
+    nobase = UD_Merge3(invalid, remote, local)
+    Check("3v: sin base conserva", nobase.data.Cuevana_3.movies.DoesExist("delLocal").ToStr() + nobase.data.Cuevana_3.movies.DoesExist("delRemote").ToStr(), "truetrue")
     RegClearSession()
     if m.failures = 0 then print "OK: nube" else print "FALLARON " + m.failures.ToStr()
 end sub
