@@ -12,19 +12,23 @@ sub onParams()
     m.top.findNode("title").text = AsStr(p.title)
     if p.numeric = true then
         m.input = m.pinpad
-        m.pinpad.pin = AsStr(p.text)
     else
         m.input = m.keyboard
-        m.keyboard.text = AsStr(p.text)
         m.keyboard.textEditBox.secureMode = p.secure = true
+        ' Dictado por voz: contraseña o usuario/correo.
+        if p.secure = true then m.keyboard.textEditBox.voiceEntryType = "password" else m.keyboard.textEditBox.voiceEntryType = "email"
     end if
+    m.input.textEditBox.voiceEnabled = true
+    m.input.text = AsStr(p.text)
+    ' Centrado según el tamaño real del teclado en este Roku.
+    rect = m.input.boundingRect()
+    m.input.translation = [Int((1920 - rect.width) / 2), 200]
     m.input.visible = true
     FocusOn(m.input)
 end sub
 
 function CurrentText() as string
-    if m.input.isSameNode(m.pinpad) then return m.pinpad.pin
-    return m.keyboard.text
+    return m.input.text
 end function
 
 sub Finish(accepted as boolean)

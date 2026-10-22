@@ -9,6 +9,7 @@ sub init()
     m.user = ""
     m.pass = ""
     m.loading = false
+    m.askedEmail = false
     m.top.findNode("mac").text = "MAC: " + DeviceMac()
     InitScreen(m.form)
     RenderForm()
@@ -51,6 +52,15 @@ sub onFormSelected()
     if m.loading then return
     index = m.form.itemSelected
     if index = 0 then
+        ' Requisito de Roku (RFI): primero se ofrece el correo de la cuenta Roku; luego, el teclado.
+        if not m.askedEmail then
+            m.askedEmail = true
+            m.store = CreateObject("roSGNode", "ChannelStore")
+            m.store.requestedUserData = "email"
+            m.store.observeField("userData", "onUserData")
+            m.store.command = "getUserData"
+            return
+        end if
         AskInput("Usuario", m.user, "user")
     else if index = 1 then
         AskInput("Contraseña", m.pass, "pass", true)
@@ -62,6 +72,19 @@ sub onFormSelected()
         end if
         DoLogin(false)
     end if
+end sub
+
+sub onUserData()
+    data = m.store.userData
+    email = ""
+    if data <> invalid then email = AsStr(data.email).Trim()
+    if email = "" then
+        AskInput("Usuario", m.user, "user")
+        return
+    end if
+    m.user = email
+    RenderForm()
+    m.form.jumpToItem = 1
 end sub
 
 sub onResult()
