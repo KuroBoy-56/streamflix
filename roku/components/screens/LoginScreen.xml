@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Inicio de sesión con el panel (SyncGatewayActivity): usuario/contraseña o MAC vinculada. -->
+<component name="LoginScreen" extends="Group">
+  <interface>
+    <field id="params" type="assocarray" onChange="onParams"/>
+    <field id="action" type="assocarray" alwaysNotify="true"/>
+    <field id="result" type="assocarray" alwaysNotify="true" onChange="onResult"/>
+    <field id="resumed" type="boolean" alwaysNotify="true"/>
+  </interface>
+  <script type="text/brightscript" uri="pkg:/source/Utils.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Tasks.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Screen.brs"/>
+  <script type="text/brightscript" uri="pkg:/components/screens/LoginScreen.brs"/>
+  <children>
+    <Poster id="background" width="1920" height="1080" loadDisplayMode="scaleToZoom"/>
+    <Poster width="1920" height="1080" uri="pkg:/images/login_scrim.png"/>
+    <Label id="brand" translation="[120,920]" width="900" font="font:LargeBoldSystemFont" color="0xFFFFFFFF"/>
+
+    <Poster translation="[1140,80]" width="680" height="920" uri="pkg:/images/card.9.png"/>
+    <Poster id="logo" translation="[1230,130]" width="500" height="170" loadDisplayMode="scaleToFit"/>
+    <Label translation="[1180,325]" width="600" horizAlign="center" font="font:LargeBoldSystemFont" color="0xFFFFFFFF" text="Bienvenido"/>
+    <Label translation="[1180,385]" width="600" horizAlign="center" font="font:SmallSystemFont" color="0x9AA0B4FF" text="Inicia sesión para continuar"/>
+
+    <MarkupList id="form" translation="[1190,460]" itemComponentName="PillItem" itemSize="[580,88]" itemSpacing="[0,22]" numRows="3" drawFocusFeedback="false" vertFocusAnimationStyle="floatingFocus"/>
+
+    <BusySpinner id="spinner" translation="[1432,790]" visible="false" spinInterval="1"/>
+    <Label id="status" translation="[1180,790]" width="600" height="80" wrap="true" horizAlign="center" vertAlign="center" font="font:SmallSystemFont" color="0xFF6B6BFF"/>
+
+    <Poster translation="[1200,880]" width="560" height="52" uri="pkg:/images/chip.9.png"/>
+    <Label id="mac" translation="[1200,880]" width="560" height="52" horizAlign="center" vertAlign="center" font="font:SmallestSystemFont" color="0xE5E5E5FF"/>
+    <Label translation="[1180,942]" width="600" horizAlign="center" font="font:SmallestSystemFont" color="0x7E8496FF" text="Campos vacíos: entra con la MAC vinculada"/>
+  </children>
+</component>

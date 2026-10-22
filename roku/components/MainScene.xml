@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component name="MainScene" extends="Scene">
+  <interface>
+    <field id="exitApp" type="boolean" value="false"/>
+  </interface>
+  <script type="text/brightscript" uri="pkg:/source/Utils.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Tasks.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/UserData.brs"/>
+  <script type="text/brightscript" uri="pkg:/components/MainScene.brs"/>
+  <children>
+    <Rectangle id="bg" width="1920" height="1080" color="0x0F111AFF"/>
+    <Poster id="bgImage" width="1920" height="1080" loadDisplayMode="scaleToZoom" opacity="0.25"/>
+    <Group id="screens"/>
+    <Rectangle id="splash" width="1920" height="1080" color="0x0F111AFF" visible="false">
+      <Poster id="splashImage" width="1920" height="1080" loadDisplayMode="scaleToFit"/>
+    </Rectangle>
+    <Timer id="securityTimer" duration="1800" repeat="true"/>
+    <Timer id="brandingTimer" duration="300" repeat="true"/>
+    <Timer id="uploadTimer" duration="2.5" repeat="false"/>
+    <Timer id="noticeTimer" duration="2.3" repeat="false"/>
+    <Timer id="splashTimer" duration="2.3" repeat="false"/>
+  </children>
+</component>

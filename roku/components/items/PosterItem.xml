@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tarjeta de película, serie, persona o canal: esquinas redondeadas, aro blanco y acercamiento al enfocar. -->
+<component name="PosterItem" extends="Group">
+  <interface>
+    <field id="itemContent" type="node" onChange="onContent"/>
+    <field id="width" type="float" onChange="onLayout"/>
+    <field id="height" type="float" onChange="onLayout"/>
+    <field id="focusPercent" type="float" onChange="onFocusPercent"/>
+    <field id="rowListHasFocus" type="boolean" onChange="onFocusPercent"/>
+    <field id="gridHasFocus" type="boolean" onChange="onFocusPercent"/>
+  </interface>
+  <script type="text/brightscript" uri="pkg:/source/CjkText.brs"/>
+  <script type="text/brightscript" uri="pkg:/components/items/PosterItem.brs"/>
+  <children>
+    <Group id="card">
+      <Rectangle id="frame" color="0x1C1F2BFF"/>
+      <Label id="fallback" color="0xC8C8C8FF" font="font:SmallSystemFont" horizAlign="center" vertAlign="center" wrap="true" maxLines="3"/>
+      <Poster id="poster" loadDisplayMode="scaleToZoom"/>
+      <Rectangle id="progressBg" color="0x000000AA" height="8" visible="false"/>
+      <Rectangle id="progress" color="0xE5E5E5FF" height="8" visible="false"/>
+      <Poster id="mask" uri="pkg:/images/poster_mask.9.png"/>
+      <Poster id="ring" uri="pkg:/images/poster_ring.9.png" opacity="0"/>
+    </Group>
+    <Label id="title" color="0xFFFFFFFF" font="font:SmallestSystemFont" horizAlign="center" opacity="0.7"/>
+  </children>
+</component>

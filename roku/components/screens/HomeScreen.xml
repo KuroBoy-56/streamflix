@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pantalla principal (MainTvActivity): menú lateral y secciones. -->
+<component name="HomeScreen" extends="Group">
+  <interface>
+    <field id="params" type="assocarray" onChange="onParams"/>
+    <field id="action" type="assocarray" alwaysNotify="true"/>
+    <field id="result" type="assocarray" alwaysNotify="true" onChange="onResult"/>
+    <field id="resumed" type="boolean" alwaysNotify="true" onChange="onResumed"/>
+  </interface>
+  <script type="text/brightscript" uri="pkg:/source/Utils.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Screen.brs"/>
+  <script type="text/brightscript" uri="pkg:/components/screens/HomeScreen.brs"/>
+  <children>
+    <Group id="views"/>
+    <Rectangle id="navBar" width="90" height="1080" color="0x00000080">
+      <Poster id="navMini" translation="[15,40]" width="60" height="60" loadDisplayMode="scaleToFit"/>
+    </Rectangle>
+    <Rectangle id="nav" width="380" height="1080" color="0x0B0D14FF" visible="false">
+      <Poster translation="[380,0]" width="60" height="1080" uri="pkg:/images/shadow_right.png"/>
+      <Poster id="navLogo" translation="[40,40]" width="300" height="110" loadDisplayMode="scaleToFit"/>
+      <MarkupList id="menu" translation="[40,220]" numRows="9" itemSize="[300,72]" itemSpacing="[0,8]" itemComponentName="MenuItem" drawFocusFeedback="false" vertFocusAnimationStyle="floatingFocus"/>
+      <Poster id="avatar" translation="[40,940]" width="64" height="64" loadDisplayMode="scaleToZoom"/>
+      <Label id="profileName" translation="[120,955]" width="240" font="font:SmallSystemFont" color="0xFFFFFFFF"/>
+    </Rectangle>
+  </children>
+</component>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Inicio, Películas y Series (HomeTvFragment / MoviesTvFragment / TvShowsTvFragment):
+     portada del elemento enfocado y filas que cargan más al llegar al final. -->
+<component name="RowsView" extends="Group">
+  <interface>
+    <field id="params" type="assocarray"/>
+    <field id="action" type="assocarray" alwaysNotify="true"/>
+    <field id="result" type="assocarray" alwaysNotify="true"/>
+    <field id="resumed" type="boolean" alwaysNotify="true" onChange="onResumed"/>
+    <field id="active" type="boolean" onChange="onActive"/>
+  </interface>
+  <script type="text/brightscript" uri="pkg:/source/Utils.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Tasks.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Nodes.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/UserData.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Screen.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/CjkText.brs"/>
+  <script type="text/brightscript" uri="pkg:/components/views/RowsView.brs"/>
+  <children>
+    <Rectangle width="1920" height="1080" color="0x0F111AFF"/>
+    <!-- Portada en 16:9 exacto a la derecha: en 1920x720 el zoom recortaba la parte de arriba. -->
+    <Poster id="backdrop" translation="[640,0]" width="1280" height="720" loadDisplayMode="scaleToZoom" loadWidth="1280" loadHeight="720"/>
+    <Poster translation="[640,0]" width="320" height="720" uri="pkg:/images/fade_right.png" rotation="3.14159" scaleRotateCenter="[160,360]"/>
+    <Poster width="1920" height="720" uri="pkg:/images/hero_scrim.png"/>
+    <!-- Borde inferior de la portada fundido con el fondo, como los lados (sin línea recta). -->
+    <Poster translation="[640,360]" width="1280" height="360" uri="pkg:/images/fade_bottom.png"/>
+    <Label id="heroTitle" translation="[140,230]" width="1100" font="font:LargeBoldSystemFont" color="0xFFFFFFFF"/>
+    <Label id="heroMeta" translation="[140,300]" width="1100" font="font:SmallSystemFont" color="0xE5E5E5FF"/>
+    <Label id="heroOverview" translation="[140,350]" width="1000" height="160" wrap="true" maxLines="4" font="font:SmallSystemFont" color="0xCFCFCFFF"/>
+    <RowList id="rows" translation="[130,610]" itemComponentName="PosterItem" drawFocusFeedback="false" numRows="2" itemSize="[1790,420]" rowItemSize="[[200,340]]" rowItemSpacing="[[22,0]]" itemSpacing="[0,24]" showRowLabel="[true]" rowLabelOffset="[[0,12]]" rowLabelColor="0xFFFFFFFF" rowLabelFont="font:MediumBoldSystemFont" rowFocusAnimationStyle="floatingFocus" vertFocusAnimationStyle="fixedFocus"/>
+    <Poster translation="[1760,560]" width="160" height="520" uri="pkg:/images/fade_right.png"/>
+    <BusySpinner id="spinner" translation="[912,700]" visible="false"/>
+    <Label id="message" translation="[200,700]" width="1520" horizAlign="center" wrap="true" font="font:MediumSystemFont" color="0xFFFFFFFF" visible="false"/>
+  </children>
+</component>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ajustes (SettingsTvFragment): cuenta, aviso del distribuidor, perfiles, nube y sesión. -->
+<component name="SettingsView" extends="Group">
+  <interface>
+    <field id="params" type="assocarray" onChange="onParams"/>
+    <field id="action" type="assocarray" alwaysNotify="true"/>
+    <field id="result" type="assocarray" alwaysNotify="true" onChange="onResult"/>
+    <field id="resumed" type="boolean" alwaysNotify="true"/>
+    <field id="active" type="boolean" onChange="onActive"/>
+  </interface>
+  <script type="text/brightscript" uri="pkg:/source/Utils.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Tasks.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Screen.brs"/>
+  <script type="text/brightscript" uri="pkg:/components/views/SettingsView.brs"/>
+  <children>
+    <Rectangle width="1920" height="1080" color="0x0F111AF0"/>
+    <Label translation="[130,60]" font="font:LargeBoldSystemFont" color="0xFFFFFFFF" text="Ajustes"/>
+    <MarkupList id="list" translation="[130,170]" numRows="10" itemSize="[560,72]" itemSpacing="[0,8]" itemComponentName="MenuItem" drawFocusFeedback="false" vertFocusAnimationStyle="floatingFocus"/>
+    <Poster translation="[760,170]" width="1040" height="760" uri="pkg:/images/card.9.png">
+      <Label id="infoTitle" translation="[50,40]" width="940" font="font:MediumBoldSystemFont" color="0xFFFFFFFF"/>
+      <Label id="info" translation="[50,100]" width="940" height="620" wrap="true" font="font:SmallSystemFont" color="0xD8D8D8FF"/>
+    </Poster>
+  </children>
+</component>

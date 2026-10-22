@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ficha de película o serie (MovieTvFragment / TvShowTvFragment). -->
+<component name="DetailsScreen" extends="Group">
+  <interface>
+    <field id="params" type="assocarray" onChange="onParams"/>
+    <field id="action" type="assocarray" alwaysNotify="true"/>
+    <field id="result" type="assocarray" alwaysNotify="true" onChange="onResult"/>
+    <field id="resumed" type="boolean" alwaysNotify="true" onChange="onResumed"/>
+  </interface>
+  <script type="text/brightscript" uri="pkg:/source/Utils.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Tasks.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Nodes.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/UserData.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Screen.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/CjkText.brs"/>
+  <script type="text/brightscript" uri="pkg:/components/screens/DetailsScreen.brs"/>
+  <children>
+    <Rectangle width="1920" height="1080" color="0x0F111AFF"/>
+    <Poster id="backdrop" width="1920" height="1080" loadDisplayMode="scaleToZoom" opacity="0.45" loadWidth="1280" loadHeight="720"/>
+    <Poster width="1920" height="1080" uri="pkg:/images/hero_scrim.png"/>
+    <Poster id="poster" translation="[130,170]" width="300" height="450" loadDisplayMode="scaleToZoom"/>
+    <Label id="title" translation="[480,170]" width="1300" font="font:LargeBoldSystemFont" color="0xFFFFFFFF" wrap="true" maxLines="2"/>
+    <Label id="meta" translation="[480,280]" width="1300" font="font:SmallSystemFont" color="0xE5E5E5FF"/>
+    <Label id="tagline" translation="[480,322]" width="1300" font="font:SmallSystemFont" color="0xB0B0B0FF"/>
+    <Label id="overview" translation="[480,365]" width="1300" height="170" wrap="true" maxLines="4" font="font:SmallSystemFont" color="0xD8D8D8FF"/>
+    <MarkupGrid id="buttons" translation="[480,560]" itemComponentName="PillItem" drawFocusFeedback="false" numRows="1" numColumns="4" itemSize="[320,80]" itemSpacing="[20,0]"/>
+    <RowList id="rows" translation="[130,680]" itemComponentName="PosterItem" drawFocusFeedback="false" numRows="1" itemSize="[1790,400]" rowItemSize="[[180,310]]" rowItemSpacing="[[22,0]]" showRowLabel="[true]" rowLabelOffset="[[0,10]]" rowLabelColor="0xFFFFFFFF" rowLabelFont="font:MediumBoldSystemFont" rowFocusAnimationStyle="floatingFocus" vertFocusAnimationStyle="fixedFocus"/>
+    <Label id="message" translation="[480,660]" width="1300" wrap="true" font="font:SmallSystemFont" color="0xFF5252FF"/>
+  </children>
+</component>

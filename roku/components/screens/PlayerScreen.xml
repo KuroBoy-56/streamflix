@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Reproductor (PlayerTvFragment): películas, episodios (con siguiente episodio) y canales
+     en vivo (cambio de canal con arriba/abajo y respaldo automático a otra línea). -->
+<component name="PlayerScreen" extends="Group">
+  <interface>
+    <field id="params" type="assocarray" onChange="onParams"/>
+    <field id="action" type="assocarray" alwaysNotify="true"/>
+    <field id="result" type="assocarray" alwaysNotify="true"/>
+    <field id="resumed" type="boolean" alwaysNotify="true"/>
+  </interface>
+  <script type="text/brightscript" uri="pkg:/source/Utils.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Tasks.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/UserData.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Playback.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/Screen.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/CjkText.brs"/>
+  <script type="text/brightscript" uri="pkg:/components/screens/PlayerScreen.brs"/>
+  <children>
+    <Rectangle width="1920" height="1080" color="0x000000FF"/>
+    <Video id="video" width="1920" height="1080"/>
+    <Group id="osd" visible="false">
+      <Rectangle translation="[0,820]" width="1920" height="260" color="0x000000B0"/>
+      <Poster id="osdLogo" translation="[100,860]" width="200" height="130" loadDisplayMode="scaleToFit"/>
+      <Label id="osdNumber" translation="[340,860]" font="font:SmallSystemFont" color="0xB0B0B0FF"/>
+      <Label id="osdTitle" translation="[340,900]" width="1400" font="font:LargeBoldSystemFont" color="0xFFFFFFFF"/>
+      <Label id="osdHint" translation="[340,970]" width="1400" font="font:SmallestSystemFont" color="0x9A9A9AFF" text="OK: lista de canales   ·   ▲ ▼ cambiar de canal"/>
+    </Group>
+    <Group id="channelMenu" visible="false">
+      <Rectangle width="780" height="1080" color="0x0B0D14EB"/>
+      <Label id="menuTitle" translation="[70,50]" width="640" font="font:MediumBoldSystemFont" color="0xFFFFFFFF"/>
+      <MarkupList id="menuList" translation="[70,120]" itemComponentName="ChannelItem" itemSize="[640,84]" itemSpacing="[0,4]" numRows="10" drawFocusFeedback="false" vertFocusAnimationStyle="floatingFocus"/>
+      <Label translation="[70,1010]" width="640" font="font:SmallestSystemFont" color="0x9A9A9AFF" text="OK: ver canal   ·   Atrás: cerrar"/>
+    </Group>
+    <Group id="trackMenu" visible="false">
+      <Rectangle translation="[1180,0]" width="740" height="1080" color="0x0B0D14EB"/>
+      <Label translation="[1240,60]" width="620" font="font:LargeBoldSystemFont" color="0xFFFFFFFF" text="Idioma"/>
+      <Label translation="[1240,125]" width="620" font="font:SmallestSystemFont" color="0x9A9A9AFF" text="Audio y subtítulos que trae este video"/>
+      <MarkupList id="trackList" translation="[1240,190]" itemComponentName="PillItem" itemSize="[620,72]" itemSpacing="[0,12]" numRows="10" drawFocusFeedback="false" vertFocusAnimationStyle="floatingFocus"/>
+    </Group>
+    <BusySpinner id="spinner" translation="[912,492]" visible="false"/>
+    <Label id="status" translation="[160,620]" width="1600" horizAlign="center" wrap="true" font="font:MediumSystemFont" color="0xFFFFFFFF"/>
+    <Timer id="osdTimer" duration="4" repeat="false"/>
+  </children>
+</component>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Episodio: imagen, número, título, sinopsis, progreso y "Visto". -->
+<component name="EpisodeItem" extends="Group">
+  <interface>
+    <field id="itemContent" type="node" onChange="onContent"/>
+    <field id="focusPercent" type="float" onChange="onFocusPercent"/>
+  </interface>
+  <script type="text/brightscript" uri="pkg:/source/CjkText.brs"/>
+  <script type="text/brightscript" uri="pkg:/components/items/EpisodeItem.brs"/>
+  <children>
+    <Rectangle id="bg" width="1240" height="190" color="0x1A1D29FF"/>
+    <Rectangle translation="[10,10]" width="300" height="170" color="0x2A2E3DFF"/>
+    <Poster id="still" translation="[10,10]" width="300" height="170" loadDisplayMode="scaleToZoom"/>
+    <Rectangle id="progressBg" translation="[10,172]" width="300" height="8" color="0x00000099" visible="false"/>
+    <Rectangle id="progress" translation="[10,172]" width="0" height="8" color="0xE5E5E5FF" visible="false"/>
+    <Label id="title" translation="[340,18]" width="860" font="font:MediumBoldSystemFont" color="0xFFFFFFFF"/>
+    <Label id="meta" translation="[340,62]" width="860" font="font:SmallestSystemFont" color="0xB0B0B0FF"/>
+    <Label id="overview" translation="[340,96]" width="860" height="84" wrap="true" maxLines="2" font="font:SmallestSystemFont" color="0xCFCFCFFF"/>
+  </children>
+</component>

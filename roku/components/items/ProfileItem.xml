@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Perfil en "¿Quién está viendo?": avatar redondeado, nombre y aviso si tiene PIN. -->
+<component name="ProfileItem" extends="Group">
+  <interface>
+    <field id="itemContent" type="node" onChange="onContent"/>
+    <field id="focusPercent" type="float" onChange="onFocusPercent"/>
+    <field id="gridHasFocus" type="boolean" onChange="onFocusPercent"/>
+  </interface>
+  <script type="text/brightscript" uri="pkg:/components/items/ProfileItem.brs"/>
+  <children>
+    <Group id="tile" scaleRotateCenter="[116,116]">
+      <Poster translation="[8,8]" width="216" height="216" uri="pkg:/images/tile.9.png"/>
+      <Label id="plus" translation="[8,8]" width="216" height="216" horizAlign="center" vertAlign="center" font="font:LargeBoldSystemFont" color="0xFFFFFFFF"/>
+      <Poster id="avatar" translation="[8,8]" width="216" height="216" loadDisplayMode="scaleToZoom"/>
+      <Poster translation="[8,8]" width="216" height="216" uri="pkg:/images/poster_mask.9.png"/>
+      <Poster id="ring" width="232" height="232" uri="pkg:/images/profile_ring.9.png" opacity="0"/>
+    </Group>
+    <Label id="name" translation="[0,250]" width="232" horizAlign="center" font="font:MediumSystemFont" color="0xBBBBBBFF"/>
+    <Label id="lock" translation="[0,290]" width="232" horizAlign="center" font="font:SmallestSystemFont" color="0x8A8A8AFF"/>
+  </children>
+</component>

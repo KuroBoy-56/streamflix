@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component name="ChannelItem" extends="Group">
+  <interface>
+    <field id="itemContent" type="node" onChange="onContent"/>
+    <field id="focusPercent" type="float" onChange="onFocusPercent"/>
+  </interface>
+  <script type="text/brightscript" uri="pkg:/source/CjkText.brs"/>
+  <script type="text/brightscript" uri="pkg:/components/items/ChannelItem.brs"/>
+  <children>
+    <Poster id="bg" width="620" height="84" uri="pkg:/images/menu_focus.9.png" opacity="0"/>
+    <Poster translation="[14,10]" width="112" height="64" uri="pkg:/images/chip_dark.9.png"/>
+    <Poster id="logo" translation="[20,14]" width="100" height="56" loadDisplayMode="scaleToFit"/>
+    <Label id="name" translation="[146,0]" width="460" height="84" vertAlign="center" font="font:SmallSystemFont" color="0xE5E5E5FF"/>
+  </children>
+</component>
