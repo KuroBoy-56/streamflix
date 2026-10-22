@@ -18,7 +18,7 @@ end sub
 sub onParams()
     p = m.top.params
     m.item = p.item
-    m.top.findNode("title").text = m.item.title
+    SetText(m.top.findNode("title"), m.item.title)
     m.top.findNode("backdrop").uri = m.item.backdrop
     content = CreateObject("roSGNode", "ContentNode")
     start = 0

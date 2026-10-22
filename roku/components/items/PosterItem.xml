@@ -9,6 +9,7 @@
     <field id="rowListHasFocus" type="boolean" onChange="onFocusPercent"/>
     <field id="gridHasFocus" type="boolean" onChange="onFocusPercent"/>
   </interface>
+  <script type="text/brightscript" uri="pkg:/source/CjkText.brs"/>
   <script type="text/brightscript" uri="pkg:/components/items/PosterItem.brs"/>
   <children>
     <Group id="card">

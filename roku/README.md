@@ -94,7 +94,7 @@ Pruebas sin un Roku (necesita Node.js):
 
 ```
 cd roku
-npx brs tests/selftest.brs source/Utils.brs source/Live.brs source/Api.brs source/Catalog.brs source/Playback.brs source/Nodes.brs source/UserData.brs
+npx brs tests/selftest.brs source/Utils.brs source/Live.brs source/Api.brs source/Catalog.brs source/Playback.brs source/Nodes.brs source/UserData.brs source/CjkText.brs
 cat tests/extract_test.brs source/Utils.brs source/Live.brs source/Playback.brs source/Sources.brs source/Extract.brs source/Api.brs source/Catalog.brs > /tmp/t.brs
 npx -p brs-node brs-cli -n /tmp/t.brs
 cat tests/cloud_test.brs source/Utils.brs source/UserData.brs > /tmp/c.brs

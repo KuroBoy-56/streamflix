@@ -5,9 +5,9 @@ end sub
 sub onContent()
     c = m.top.itemContent
     if c = invalid then return
-    m.top.findNode("title").text = c.title
+    SetText(m.top.findNode("title"), c.title)
     m.top.findNode("meta").text = c.ShortDescriptionLine1
-    m.top.findNode("overview").text = c.description
+    SetText(m.top.findNode("overview"), c.description)
     m.top.findNode("still").uri = c.HDPosterUrl
     progress = c.progress
     m.top.findNode("progressBg").visible = progress > 0

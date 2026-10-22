@@ -175,7 +175,7 @@ end function
 sub onChannelFocused()
     node = FocusedChannel()
     if node = invalid then return
-    m.top.findNode("channelName").text = node.title
+    SetText(m.top.findNode("channelName"), node.title)
     meta = []
     if node.group <> "" then meta.Push(node.group)
     if node.country <> "" and node.country <> node.group then meta.Push(node.country)
@@ -204,9 +204,9 @@ sub ShowEpg(node as object)
             end if
         end for
     end if
-    m.top.findNode("nowTitle").text = nowTitle
-    m.top.findNode("nowDesc").text = nowDesc
-    m.top.findNode("nextTitle").text = nextTitle
+    SetText(m.top.findNode("nowTitle"), nowTitle)
+    SetText(m.top.findNode("nowDesc"), nowDesc)
+    SetText(m.top.findNode("nextTitle"), nextTitle)
     m.top.findNode("nowBarBg").visible = progress >= 0
     bar = m.top.findNode("nowBar")
     bar.visible = progress >= 0

@@ -5,7 +5,7 @@ end sub
 sub onContent()
     c = m.top.itemContent
     if c = invalid then return
-    m.top.findNode("name").text = c.title
+    SetText(m.top.findNode("name"), c.title)
     m.top.findNode("logo").uri = c.HDPosterUrl
 end sub
 

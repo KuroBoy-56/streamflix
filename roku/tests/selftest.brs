@@ -1,5 +1,5 @@
 ' Pruebas de la lógica sin interfaz (se ejecutan fuera del Roku con el intérprete "brs"):
-'   npx brs tests/selftest.brs source/Utils.brs source/Live.brs source/Api.brs source/Catalog.brs source/Playback.brs
+'   npx brs tests/selftest.brs source/Utils.brs source/Live.brs source/Api.brs source/Catalog.brs source/Playback.brs source/CjkText.brs
 ' No se incluye en el paquete del canal.
 
 sub Main()
@@ -26,6 +26,10 @@ sub Main()
     Check("m3u grupo", list[0].group, "Deportes")
     Check("m3u epg", epg.Join(","), "http://g.tv/epg.xml")
     Check("key", ChannelKey("ESPN (720p) HD"), "espn")
+    Check("cjk latino", CjkScript("Película ñ á"), "")
+    Check("cjk coreano", CjkScript("사랑의 불시착"), "ko")
+    Check("cjk japonés", CjkScript("千と千尋"), "han")
+    Check("cjk chino", CjkScript("陳情令"), "han")
 
     other = CleanChannels(ParseM3u("#EXTM3U" + Chr(10) + "#EXTINF:-1,ESPN" + Chr(10) + "http://o/espn.m3u8" + Chr(10) + "#EXTINF:-1,ESPN 3" + Chr(10) + "http://o/espn3.m3u8" + Chr(10), []))
     merged = MergeLines([list, other])

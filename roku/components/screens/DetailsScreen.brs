@@ -19,8 +19,8 @@ sub onParams()
 end sub
 
 sub ShowItem(item as object)
-    m.top.findNode("title").text = item.title
-    m.top.findNode("overview").text = item.overview
+    SetText(m.top.findNode("title"), item.title)
+    SetText(m.top.findNode("overview"), item.overview)
     m.top.findNode("poster").uri = item.poster
     m.top.findNode("backdrop").uri = item.backdrop
 end sub
@@ -48,7 +48,7 @@ sub onDetails(event as object)
     end if
     if res.genres <> "" then meta.Push(res.genres)
     m.top.findNode("meta").text = meta.Join("   ·   ")
-    m.top.findNode("tagline").text = res.tagline
+    SetText(m.top.findNode("tagline"), res.tagline)
 
     root = CreateObject("roSGNode", "ContentNode")
     if res.cast.Count() > 0 then root.appendChild(RowNode("Reparto", res.cast))

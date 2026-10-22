@@ -194,7 +194,7 @@ sub PlayChannel()
     m.sourceIndex = 0
     m.top.findNode("osdLogo").uri = node.HDPosterUrl
     m.top.findNode("osdNumber").text = "Canal " + (m.channelIndex + 1).ToStr() + " de " + m.p.folder.getChildCount().ToStr()
-    m.top.findNode("osdTitle").text = node.title
+    SetText(m.top.findNode("osdTitle"), node.title)
     ShowOsd()
     PlaySource()
 end sub

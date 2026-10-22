@@ -12,6 +12,7 @@
   <script type="text/brightscript" uri="pkg:/source/Nodes.brs"/>
   <script type="text/brightscript" uri="pkg:/source/UserData.brs"/>
   <script type="text/brightscript" uri="pkg:/source/Screen.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/CjkText.brs"/>
   <script type="text/brightscript" uri="pkg:/components/screens/DetailsScreen.brs"/>
   <children>
     <Rectangle width="1920" height="1080" color="0x0F111AFF"/>

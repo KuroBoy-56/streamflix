@@ -14,8 +14,8 @@ end sub
 sub onContent()
     c = m.top.itemContent
     if c = invalid then return
-    m.title.text = c.title
-    m.fallback.text = c.title
+    SetText(m.title, c.title)
+    SetText(m.fallback, c.title)
     m.poster.uri = c.HDPosterUrl
     m.fallback.visible = c.HDPosterUrl = ""
     ' Logos de canales: se ven completos; carátulas: llenan la tarjeta.

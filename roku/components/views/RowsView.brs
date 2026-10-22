@@ -151,14 +151,14 @@ end function
 sub onFocused()
     node = FocusedNode()
     if node = invalid then return
-    m.top.findNode("heroTitle").text = node.title
+    SetText(m.top.findNode("heroTitle"), node.title)
     meta = []
     if node.year <> "" then meta.Push(node.year)
     if node.rating <> "" then meta.Push("★ " + node.rating)
     if node.mediaType = "movie" then meta.Push("Película")
     if node.mediaType = "tv" then meta.Push("Serie")
     m.top.findNode("heroMeta").text = meta.Join("   ·   ")
-    m.top.findNode("heroOverview").text = node.description
+    SetText(m.top.findNode("heroOverview"), node.description)
     m.top.findNode("backdrop").uri = node.backdrop
 
     ' Al acercarse al final de una fila se pide la página siguiente.
