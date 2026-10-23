@@ -114,6 +114,21 @@
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <activity-alias
+            android:name=".activities.sync.SyncGatewayActivity.Admin76098"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_76098"
+            android:roundIcon="@mipmap/ic_launcher_76098"
+            android:banner="@drawable/tv_banner_76098"
+            android:label="@string/app_name_76098"
+            android:targetActivity=".activities.sync.SyncGatewayActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <activity
             android:name=".activities.main.MainMobileActivity"
             android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize"

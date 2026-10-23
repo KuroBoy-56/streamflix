@@ -2,6 +2,7 @@
 <resources>
     <string name="app_name">VOD Pro</string>
     <string name="app_name_95925">Power Stream VOD+</string>
+    <string name="app_name_76098">Javiemi VOD+</string>
 
     <string name="loading_error_title">Ha ocurrido un error</string>
     <string name="loading_error_retry">Reintentar</string>
