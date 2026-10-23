@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Botón del reproductor enfocado: círculo blanco translúcido con borde suave (el icono blanco se sigue viendo). -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
 
     <item android:state_focused="true">
         <shape android:shape="rectangle">
             <corners android:radius="360dp" />
-            <solid android:color="#FFFFFF" />
+            <solid android:color="#40FFFFFF" />
+            <stroke android:width="2dp" android:color="#99FFFFFF" />
         </shape>
     </item>
 
